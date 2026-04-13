@@ -169,6 +169,7 @@ function render(){
   if(VW==="clientEdit"&&ED)return renderClientEdit(app);
   if(VW==="sessionEdit"&&ED&&getCl())return renderSessionEdit(app);
   if(VW==="compassEdit"&&ED&&getCl())return renderCompassEdit(app);
+  if(VW==="dossier"&&getCl())return renderDossier(app);
   if(VW==="detail"&&getCl())return renderDetail(app);
   renderList(app);
 }
@@ -250,6 +251,11 @@ function renderDetail(app){
   const ev=h("div",{className:"action-card",style:{borderColor:"#5b9bd544"}});
   const evL=h("div");evL.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"2px",color:"#5b9bd5",fontWeight:"700"}},"HANDLER INDEX™ EVAL"));evL.appendChild(h("div",{style:{fontSize:"9px",color:"#706858"}},"Full diagnostic walkthrough"));
   ev.appendChild(evL);ev.appendChild(h("button",{className:"btn btn-bl",onClick:()=>{TAB="diagnose";ED=mkEval();VW="eval";render()}},"+ Eval"));acts.appendChild(ev);
+
+  // Dossier button
+  const dos=h("div",{className:"action-card",style:{borderColor:"#8a805044",cursor:"pointer"},onClick:()=>{VW="dossier";render()}});
+  const dosL=h("div");dosL.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"2px",color:"#8a8050",fontWeight:"700"}},"CLIENT DOSSIER"));dosL.appendChild(h("div",{style:{fontSize:"9px",color:"#706858"}},"All notes, sessions, history"));
+  dos.appendChild(dosL);dos.appendChild(h("span",{style:{fontSize:"16px",color:"#706858"}},"→"));acts.appendChild(dos);
   app.appendChild(acts);
 
   // Homework
@@ -342,8 +348,40 @@ function renderDetail(app){
 
 // ── SESSION EDIT ──
 function renderSessionEdit(app){
-  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="detail";render()}),"SESSION LOG",btnEl("Save",true,()=>{const cl=getCl();const i=cl.sess.findIndex(x=>x.id===ED.id);if(i>=0)cl.sess[i]=ED;else cl.sess.push(ED);updCl(cl);ED=null;VW="detail";render()})));
+  const cl=getCl();
+  const isNew=!cl.sess.find(x=>x.id===ED.id);
+  const sessNum=isNew?(cl.sess.length+1):(cl.sess.sort((a,b)=>a.dt.localeCompare(b.dt)).findIndex(x=>x.id===ED.id)+1);
+  const totalSess=isNew?cl.sess.length+1:cl.sess.length;
+
+  // Profile-specific homework suggestions
+  const HW_SUGGEST={
+    "Reactive":["Count to three before correcting","Loosen the grip — check every 30 seconds","One correction per rep, no stacking","Internal reading before session: score 1–5","3-4-5 breathing before leash goes on"],
+    "Rigid":["Clarity is kindness — correction landed, don't take it back","Watch for shutdown vs. calm — name the difference","Score timing on each correction: early/on time/late","Read dog's face after every correction","Pause 3 seconds between reps"],
+    "Avoidant":["Don't undo the correction — let it land","One clean correction is kinder than three soft ones","Hold the boundary for the full rep","Score your correction confidence 1–5 after each set","Walk the route you've been avoiding — structured"],
+    "Passive":["Eyes on your dog the entire rep","Tell me what your dog just did — build observation","One thing to watch this rep (ears, weight, breathing)","Initiate one interaction per hour — don't wait for the dog","Score your engagement 1–5 after each session"],
+    "Imp. Reactive":["Internal reading before AND after each rep","Catch the spike at State 2 — name it out loud","Breathing reset between exercises","Track recovery time: how fast do YOU come down?"],
+    "Imp. Rigid":["Read the dog's internal state before correcting","Score timing accuracy across a full session","Notice when compliance is actually shutdown"],
+    "Imp. Avoidant":["Hold one uncomfortable boundary per session","Track which corrections you want to soften — and don't","Score correction confidence trend across sessions"],
+    "Imp. Passive":["Choose training location deliberately — name why","Track check-ins per 10 minutes","Score your intentionality before and after"],
+    "Attuned":["Maintain the standard — no drift","Teach one element to someone else this week","Run self-diagnostic: which channel slipped?"]
+  };
+
+  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="detail";render()}),"SESSION LOG",btnEl("Save",true,()=>{
+    // Save session
+    const i=cl.sess.findIndex(x=>x.id===ED.id);if(i>=0)cl.sess[i]=ED;else cl.sess.push(ED);
+    // Save any assigned homework
+    if(ED._hw&&ED._hw.length>0){if(!cl.hw)cl.hw=[];ED._hw.forEach(t=>{cl.hw.push({text:t,date:ED.dt})});}
+    updCl(cl);ED=null;VW="detail";render();
+  })));
+
   const w=h("div",{style:{padding:"0 16px"}});
+
+  // Session number header
+  const numHdr=h("div",{style:{textAlign:"center",marginBottom:"14px",padding:"8px 0"}});
+  numHdr.appendChild(h("div",{style:{fontSize:"22px",fontWeight:"700",color:"#8a8050"}},"SESSION #"+sessNum));
+  numHdr.appendChild(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"2px"}},`of ${totalSess} total`));
+  w.appendChild(numHdr);
+
   w.appendChild(field("Date",ED.dt,v=>{ED.dt=v;},{type:"date",style:{marginBottom:"10px"}}));
   const pDiv=h("div",{style:{marginBottom:"10px"}});pDiv.appendChild(h("label",{className:"lbl"},"Handler Profile"));pDiv.appendChild(badges(PR,ED.prof,v=>{ED.prof=v;render()}));w.appendChild(pDiv);
   const chDiv=h("div",{style:{marginBottom:"10px"}});chDiv.appendChild(h("label",{className:"lbl"},"Dominant Channel"));chDiv.appendChild(badges(CH,ED.ch,v=>{ED.ch=v;render()}));w.appendChild(chDiv);
@@ -354,6 +392,60 @@ function renderSessionEdit(app){
   qDiv.appendChild(qBadges);w.appendChild(qDiv);
   const jDiv=h("div",{style:{marginBottom:"10px"}});jDiv.appendChild(h("label",{className:"lbl"},"Journey Stage"));jDiv.appendChild(badges(JS,ED.stage,v=>{ED.stage=v;render()}));w.appendChild(jDiv);
   w.appendChild(h("label",{className:"lbl"},"Notes"));w.appendChild(tarea(ED.notes,v=>{ED.notes=v},"Anything worth remembering"));
+
+  // ── Homework Assignment ──
+  if(!ED._hw)ED._hw=[];
+  const activeProf=ED.prof||cl.prof||"";
+  const hwKids=[];
+  // Show profile-specific suggestions if profile selected
+  if(activeProf&&HW_SUGGEST[activeProf]){
+    const sugDiv=h("div",{style:{marginBottom:"8px"}});
+    sugDiv.appendChild(h("div",{style:{fontSize:"9px",color:"#5a8a50",marginBottom:"6px"}},activeProf.toUpperCase()+" — TAP TO ASSIGN"));
+    HW_SUGGEST[activeProf].forEach(sug=>{
+      const isAdded=ED._hw.includes(sug);
+      const b=h("button",{style:{display:"block",width:"100%",textAlign:"left",padding:"8px 10px",marginBottom:"4px",borderRadius:"4px",border:`1px solid ${isAdded?"#5a8a50":"#2e2b24"}`,background:isAdded?"#5a8a5015":"#141210",color:isAdded?"#5a8a50":"#706858",fontSize:"10px",fontFamily:"inherit",cursor:"pointer",lineHeight:"1.4"},onClick:()=>{
+        if(isAdded)ED._hw=ED._hw.filter(x=>x!==sug);else ED._hw.push(sug);render();
+      }});
+      b.textContent=(isAdded?"✓ ":"  ")+sug;sugDiv.appendChild(b);
+    });
+    hwKids.push(sugDiv);
+  }else{
+    hwKids.push(h("div",{style:{fontSize:"10px",color:"#4a4438",marginBottom:"6px"}},"Select a profile above to see homework suggestions."));
+  }
+  // Custom homework input
+  const hwInp=h("div",{style:{display:"flex",gap:"4px",marginTop:"4px"}});
+  const hwI=h("input",{className:"inp",style:{flex:"1",padding:"6px 8px",fontSize:"11px"},placeholder:"Custom homework…"});
+  const hwAddCustom=()=>{if(hwI.value.trim()){ED._hw.push(hwI.value.trim());hwI.value="";render()}};
+  hwI.addEventListener("keydown",e=>{if(e.key==="Enter")hwAddCustom()});
+  hwInp.appendChild(hwI);hwInp.appendChild(h("button",{className:"btn",onClick:hwAddCustom},"+"));hwKids.push(hwInp);
+  // Show assigned list
+  if(ED._hw.length>0){
+    const assigned=h("div",{style:{marginTop:"8px"}});
+    assigned.appendChild(h("div",{style:{fontSize:"9px",color:"#8a8050",marginBottom:"4px"}},"ASSIGNED THIS SESSION · "+ED._hw.length));
+    ED._hw.forEach((hw,i)=>{
+      const r=h("div",{className:"row"});r.appendChild(h("span",{style:{fontSize:"10px",color:"#5a8a50",flex:"1"}},"✓ "+hw));
+      r.appendChild(h("button",{className:"x-btn",onClick:()=>{ED._hw.splice(i,1);render()}},"×"));assigned.appendChild(r);
+    });
+    hwKids.push(assigned);
+  }
+  w.appendChild(sec("ASSIGN HOMEWORK","#5a8a50",hwKids));
+
+  // ── Previous Sessions ──
+  const prev=[...(cl.sess||[])].filter(x=>x.id!==ED.id).sort((a,b)=>b.dt.localeCompare(a.dt)).slice(0,5);
+  if(prev.length>0){
+    const prevKids=prev.map(s=>{
+      const r=h("div",{style:{display:"flex",gap:"6px",alignItems:"center",padding:"5px 0",borderBottom:"1px solid #141210"}});
+      const num=cl.sess.sort((a,b)=>a.dt.localeCompare(b.dt)).findIndex(x=>x.id===s.id)+1;
+      r.appendChild(h("span",{style:{fontSize:"11px",fontWeight:"700",color:"#8a8050",width:"24px"}},"#"+num));
+      r.appendChild(h("div",{className:"dot",style:{background:s.q===1?"#a04040":s.q===3?"#5a8a50":"#a08840"}}));
+      const info=h("div",{style:{flex:"1",minWidth:"0"}});
+      info.appendChild(h("div",{style:{fontSize:"10px",color:"#c8c0b0",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},s.focus||"No focus noted"));
+      info.appendChild(h("div",{style:{fontSize:"8px",color:"#4a4438"}},s.dt+(s.ch?" · "+s.ch:"")+(s.stage?" · "+s.stage:"")));
+      r.appendChild(info);return r;
+    });
+    w.appendChild(sec("PREVIOUS SESSIONS","#706858",prevKids));
+  }
+
   app.appendChild(w);
 }
 
@@ -442,6 +534,102 @@ function renderEval(app){
   app.appendChild(w);
 }
 
+// ── DOSSIER ──
+function renderDossier(app){
+  const cl=getCl();
+  app.appendChild(topBar(backBtn("← Back",()=>{VW="detail";render()}),"CLIENT DOSSIER",h("div")));
+
+  const w=h("div",{style:{padding:"0 16px"}});
+
+  // Client header
+  const hd=h("div",{style:{textAlign:"center",padding:"6px 0 16px",borderBottom:"1px solid #2e2b24",marginBottom:"16px"}});
+  hd.appendChild(h("div",{style:{fontSize:"16px",fontWeight:"700"}},cl.name||"Unnamed"));
+  const meta=[];if(cl.dog)meta.push(cl.dog);if(cl.breed)meta.push(cl.breed);if(cl.age)meta.push(cl.age);
+  if(meta.length)hd.appendChild(h("div",{style:{fontSize:"10px",color:"#706858",marginTop:"2px"}},meta.join(" · ")));
+  if(cl.prof)hd.appendChild(h("div",{style:{fontSize:"10px",color:"#8a8050",marginTop:"4px"}},cl.prof));
+  if(cl.ctx)hd.appendChild(h("div",{style:{fontSize:"9px",color:"#5b9bd5",marginTop:"2px"}},cl.ctx));
+  // Signature summary
+  if(cl.sig.d||cl.sig.b||cl.sig.g){
+    const sigLine=[];
+    if(cl.sig.d)sigLine.push("Dom: "+cl.sig.d);if(cl.sig.b)sigLine.push("Blind: "+cl.sig.b);if(cl.sig.g)sigLine.push("Ghost: "+cl.sig.g);
+    hd.appendChild(h("div",{style:{fontSize:"9px",color:"#706858",marginTop:"4px"}},sigLine.join(" · ")));
+  }
+  // Latest compass
+  if(cl.comp.length>0){const lc=cl.comp[cl.comp.length-1];const t=cTotal(lc);
+    hd.appendChild(h("div",{style:{fontSize:"9px",color:sc(t,25),marginTop:"4px"}},"Compass: "+t+"/25 ("+lc.cp+" · "+lc.dt+")"));
+  }
+  w.appendChild(hd);
+
+  // ── Client Notes ──
+  if(cl.notes){
+    w.appendChild(sec("CLIENT NOTES","#8a8050",[h("div",{style:{fontSize:"11px",color:"#c8c0b0",whiteSpace:"pre-wrap",lineHeight:"1.6"}},cl.notes)]));
+  }
+
+  // ── Homework ──
+  if(cl.hw&&cl.hw.length>0){
+    const hwKids=(cl.hw||[]).map(hw=>{
+      const r=h("div",{style:{padding:"4px 0",borderBottom:"1px solid #141210",display:"flex",justifyContent:"space-between"}});
+      r.appendChild(h("span",{style:{fontSize:"10px",color:"#5a8a50"}},hw.text));
+      r.appendChild(h("span",{style:{fontSize:"8px",color:"#4a4438"}},hw.date));return r;
+    });
+    w.appendChild(sec("HOMEWORK · "+cl.hw.length,"#5a8a50",hwKids));
+  }
+
+  // ── Recurring Issues ──
+  if(cl.issues&&cl.issues.length>0){
+    const riKids=(cl.issues||[]).map(ri=>{
+      const r=h("div",{style:{padding:"4px 0",borderBottom:"1px solid #141210",display:"flex",justifyContent:"space-between"}});
+      r.appendChild(h("span",{style:{fontSize:"10px",color:"#a08840"}},ri.text));
+      r.appendChild(h("span",{style:{fontSize:"8px",color:"#4a4438"}},ri.date));return r;
+    });
+    w.appendChild(sec("RECURRING ISSUES · "+cl.issues.length,"#a08840",riKids));
+  }
+
+  // ── Compass History ──
+  if(cl.comp.length>0){
+    const compKids=cl.comp.map(ch=>{
+      const t=cTotal(ch);
+      const r=h("div",{style:{padding:"6px 0",borderBottom:"1px solid #141210"}});
+      const top=h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}});
+      top.appendChild(h("span",{style:{fontSize:"16px",fontWeight:"700",color:sc(t,25)}},String(t)));
+      top.appendChild(h("span",{style:{fontSize:"10px",color:"#706858"}},ch.cp+" · "+ch.dt));r.appendChild(top);
+      const cats=h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"2px"}});
+      cats.textContent="ER "+ch.ER+" · T "+ch.T+" · CC "+ch.CC+" · CO "+ch.CO+" · IN "+ch.IN;
+      r.appendChild(cats);return r;
+    });
+    w.appendChild(sec("COMPASS HISTORY · "+cl.comp.length,"#8a8050",compKids));
+  }
+
+  // ── All Sessions (full detail) ──
+  const allSess=[...(cl.sess||[])].sort((a,b)=>b.dt.localeCompare(a.dt));
+  if(allSess.length>0){
+    const sessKids=allSess.map((s,idx)=>{
+      const num=cl.sess.sort((a,b)=>a.dt.localeCompare(b.dt)).findIndex(x=>x.id===s.id)+1;
+      const card=h("div",{style:{background:"#141210",borderRadius:"6px",padding:"10px 12px",marginBottom:"8px",borderLeft:"3px solid "+(s.q===1?"#a04040":s.q===3?"#5a8a50":"#a08840")}});
+      // Header row
+      const hdr=h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}});
+      hdr.appendChild(h("span",{style:{fontSize:"12px",fontWeight:"700",color:"#8a8050"}},"SESSION #"+num));
+      const metaR=h("span",{style:{fontSize:"9px",color:"#4a4438"}});
+      const qLabel=s.q===1?"Rough":s.q===3?"Locked In":"Okay";
+      metaR.textContent=s.dt+" · "+qLabel;
+      hdr.appendChild(metaR);card.appendChild(hdr);
+      // Focus
+      if(s.focus)card.appendChild(h("div",{style:{fontSize:"11px",color:"#c8c0b0",marginBottom:"4px"}},s.focus));
+      // Tags
+      const tags=[];if(s.prof)tags.push(s.prof);if(s.ch)tags.push(s.ch);if(s.stage)tags.push(s.stage);
+      if(tags.length)card.appendChild(h("div",{style:{fontSize:"9px",color:"#706858",marginBottom:"4px"}},tags.join(" · ")));
+      // Notes
+      if(s.notes)card.appendChild(h("div",{style:{fontSize:"10px",color:"#706858",whiteSpace:"pre-wrap",lineHeight:"1.5",borderTop:"1px solid #2e2b24",paddingTop:"6px",marginTop:"4px"}},s.notes));
+      return card;
+    });
+    w.appendChild(sec("ALL SESSIONS · "+allSess.length,"#706858",sessKids));
+  }else{
+    w.appendChild(sec("SESSIONS","#706858",[h("div",{style:{fontSize:"10px",color:"#4a4438"}},"No sessions logged yet.")]));
+  }
+
+  app.appendChild(w);
+}
+
 // ── STATES ──
 function renderStates(app){
   const hdr=h("div",{className:"hdr"});hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
@@ -464,37 +652,48 @@ function renderStates(app){
 function renderReference(app){
   const hdr=h("div",{className:"hdr"});hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
   hdr.appendChild(h("div",{className:"ttl"},"REFERENCE"));app.appendChild(hdr);
+  const wrap=h("div",{style:{padding:"8px 16px"}});
+  const rc=(title,color,children)=>{const c=h("div",{style:{background:"#1a1814",border:"1px solid #2e2b24",borderLeft:"3px solid "+color,borderRadius:"8px",padding:"12px 14px",marginBottom:"8px"}});const t=h("div",{style:{fontSize:"10px",letterSpacing:"3px",textTransform:"uppercase",color,marginBottom:"8px",fontWeight:"700"}},title);c.appendChild(t);if(Array.isArray(children))children.forEach(x=>{if(x)c.appendChild(x)});else if(children)c.appendChild(children);return c};
 
-  app.appendChild(sec("COMPASS","#8a8050",[
-    h("div",{style:{fontSize:"10px",color:"#706858"}},CK.map((k,i)=>k+" — "+CL[i]).join(" · ")),
-    h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Each 1–5. Total /25. Tracked Intake → Day 25 → Day 60 → Day 84.")
+  // Compass
+  wrap.appendChild(rc("COMPASS","#8a8050",[
+    h("div",{style:{fontSize:"11px",color:"#c8c0b0",lineHeight:"1.5"}},"ER — Emotional Regulation\nT — Timing & Pacing\nCC — Correction Confidence\nCO — Consistency\nIN — Intentionality"),
+    h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"6px"}},"Each 1–5. Total /25. Tracked Intake → Day 25 → Day 60 → Day 84.")
   ]));
 
-  const profKids=[];
+  // Profiles
+  const profCard=rc("PROFILES","#5a8a50",[]);
   [["Reactive","Dom: Verbal/Spatial · Blind: Internal · Ghost: Environmental","6–10"],["Rigid","Dom: Spatial · Blind: Timing · Ghost: Internal (attunement)","14–19"],["Avoidant","Dom: Verbal · Blind: Internal · Ghost: Spatial","8–13"],["Passive","Dom: Verbal · Blind: Spatial · Ghost: Environmental","7–11"]].forEach(([p,sig,r])=>{
-    const d=h("div",{style:{background:"#141210",borderRadius:"4px",padding:"6px 8px",marginBottom:"4px"}});
-    d.appendChild(h("div",{style:{fontSize:"11px",fontWeight:"600"}},`${p} (${r}/25)`));
-    d.appendChild(h("div",{style:{fontSize:"9px",color:"#706858",marginTop:"2px"}},sig));profKids.push(d);
+    const d=h("div",{style:{background:"#141210",borderRadius:"6px",padding:"8px 10px",marginBottom:"6px"}});
+    d.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"600",color:"#c8c0b0"}},p+" ("+r+"/25)"));
+    d.appendChild(h("div",{style:{fontSize:"9px",color:"#706858",marginTop:"2px"}},sig));profCard.appendChild(d);
   });
-  profKids.push(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Entry → Improved → Attuned"));
-  app.appendChild(sec("PROFILES","#5a8a50",profKids));
+  profCard.appendChild(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Entry → Improved → Attuned"));
+  wrap.appendChild(profCard);
 
-  app.appendChild(sec("CHANNELS","#8a8050",[
-    h("div",{style:{fontSize:"10px",color:"#706858"}},"Spatial · Verbal · Environmental · Internal"),
-    h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Pressure is constant. You are adding to the load or stabilizing it. No neutral.")
+  // Channels
+  wrap.appendChild(rc("FOUR PRESSURE CHANNELS™","#8a8050",[
+    h("div",{style:{fontSize:"12px",color:"#c8c0b0",fontWeight:"600"}},"Spatial · Verbal · Environmental · Internal"),
+    h("div",{style:{fontSize:"10px",color:"#706858",marginTop:"6px",lineHeight:"1.5"}},"Pressure is not correction. Pressure is not force. Pressure is constant. You are adding to the load or stabilizing it. There is no neutral.")
   ]));
 
-  app.appendChild(sec("DIAGNOSTICS","#a08840",[
-    h("div",{style:{fontSize:"10px",color:"#706858",lineHeight:"1.6"}},"Blind = friction when named. Ghost = blankness when named.\nDon't introduce the ghost by correcting it. Vocabulary before reps.\nThe diagnostic belongs to the trainer. The direction belongs to both.")
+  // Diagnostics
+  wrap.appendChild(rc("DIAGNOSTICS","#a08840",[
+    h("div",{style:{fontSize:"11px",color:"#c8c0b0",lineHeight:"1.6"}},"Blind = friction when named.\nGhost = blankness when named.\nThe reaction is the diagnostic."),
+    h("div",{style:{fontSize:"10px",color:"#706858",marginTop:"8px",lineHeight:"1.5"}},"Do not introduce the ghost channel by correcting it. Introduce it. They need vocabulary before reps."),
+    h("div",{style:{fontSize:"10px",color:"#706858",marginTop:"6px",lineHeight:"1.5"}},"The client never sees the full diagnostic. The diagnostic belongs to the trainer. The direction belongs to both of them.")
   ]));
 
-  const patKids=[];
-  [["Recovery ↑ + Check-ins ↑","Stay the course"],["Recovery ↓ + High State ↑","Pull back. Reset."],["Compass ↓ + Profile shifting","Handler regression"],["Flat 3+ sessions","Plateau. Normal. Hold."],["Recovery ↑ + Check-ins ↓","Compliance without connection"]].forEach(([p,m])=>{
-    const d=h("div",{style:{marginBottom:"4px"}});
-    d.appendChild(h("span",{style:{fontSize:"9px",fontWeight:"700",color:"#8a8050"}},p));
-    d.appendChild(h("span",{style:{fontSize:"9px",color:"#706858"}}," → "+m));patKids.push(d);
+  // Arc Patterns
+  const patCard=rc("ARC PATTERNS","#8a8050",[]);
+  [["Recovery ↑ + Check-ins ↑","Stay the course. Depth is building."],["Recovery ↓ + High State ↑","Environment ahead of foundation. Pull back. Run the Reset."],["Compass ↓ + Profile shifting","Handler regression. Check Emotional Spillover. Breathing Reset."],["Flat 3+ sessions","Plateau. Week 5–8 territory. Normal. You're building depth. Hold."],["Recovery ↑ but Check-ins ↓","Compliance without connection. Add enrichment. Relationship work."],["Check-ins ↑ but Recovery ↓","Attention without commitment. Deepen commitment. More proofing."]].forEach(([p,m])=>{
+    const d=h("div",{style:{marginBottom:"6px"}});
+    d.appendChild(h("div",{style:{fontSize:"10px",fontWeight:"700",color:"#8a8050"}},p));
+    d.appendChild(h("div",{style:{fontSize:"9px",color:"#706858",marginTop:"1px"}},m));patCard.appendChild(d);
   });
-  app.appendChild(sec("ARC PATTERNS","#8a8050",patKids));
+  wrap.appendChild(patCard);
+
+  app.appendChild(wrap);
 }
 
 // ═══════ BOOT ═══════
