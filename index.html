@@ -1,474 +1,504 @@
-import { useState, useEffect, useCallback } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Arc Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0e0c;--cd:#1a1814;--cb:#2e2b24;--ac:#8a8050;--ad:#5a5535;--ab:#b0a860;--tx:#c8c0b0;--td:#706858;--tm:#4a4438;--bl:#5b9bd5;--gn:#5a8a50;--rd:#a04040;--am:#a08840;--sf:#141210}
+body{background:var(--bg);color:var(--tx);font-family:'JetBrains Mono',monospace;max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:70px;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--cb)}
+.hdr{padding:24px 16px 8px;text-align:center}
+.hdr .sub{font-size:9px;letter-spacing:4px;color:var(--td)}
+.hdr .ttl{font-size:17px;font-weight:700;letter-spacing:3px;color:var(--ac);margin-top:4px}
+.hdr .sync{font-size:9px;color:var(--gn);margin-top:4px}
+.sec{border-left:3px solid var(--ac);padding-left:14px;margin:0 16px 20px}
+.sec-t{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--ac);margin-bottom:8px}
+.card{background:var(--cd);border:1px solid var(--cb);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-left:1px solid var(--cb)}
+.card:active{border-color:var(--ac)}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--sf);border:1px solid var(--cb);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ac);font-weight:700;flex-shrink:0}
+.badge{display:inline-block;padding:5px 10px;border-radius:4px;border:1px solid var(--cb);color:var(--td);font-size:11px;cursor:pointer;white-space:nowrap;transition:all .12s}
+.badge.on{border-color:var(--ac);background:rgba(138,128,80,.12);color:var(--ac)}
+.btn{padding:6px 12px;border-radius:4px;border:1px solid var(--cb);background:transparent;color:var(--td);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.btn-f{border:none;background:var(--ac);color:var(--bg)}
+.btn-bl{border:none;background:var(--bl);color:var(--bg)}
+.inp{background:var(--sf);border:1px solid var(--cb);border-radius:4px;padding:8px 10px;color:var(--tx);font-size:13px;outline:none;width:100%;box-sizing:border-box}
+.lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--td);display:block;margin-bottom:4px}
+.ta{background:var(--sf);border:1px solid var(--cb);border-radius:4px;padding:8px;color:var(--tx);font-size:12px;outline:none;width:100%;box-sizing:border-box;resize:vertical;min-height:60px}
+.row{display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--sf)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.x-btn{background:none;border:none;color:var(--tm);font-size:13px;cursor:pointer}
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--cb);display:flex;justify-content:center;z-index:100}
+.nav-inner{display:flex;max-width:520px;width:100%;justify-content:space-around;padding:8px 0 12px}
+.nav-btn{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;color:var(--td);font-family:inherit}
+.nav-btn.on{color:var(--ac)}
+.nav-btn span:first-child{font-size:16px}
+.nav-btn span:last-child{font-size:8px;letter-spacing:2px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.badges{display:flex;gap:4px;flex-wrap:wrap}
+.score-row{display:flex;align-items:center;gap:8px}
+.score-row .sl{width:28px;font-size:10px;color:var(--td);text-align:right;flex-shrink:0}
+.score-row .dots{flex:1;display:flex;gap:3px}
+.score-row .dots button{flex:1;height:26px;border-radius:3px;border:none;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer}
+.score-row .sv{width:18px;font-size:13px;font-weight:700}
+.action-card{background:var(--cd);border:1px solid var(--cb);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="nav"><div class="nav-inner" id="nav"></div></div>
 
-const CH = ["Spatial", "Verbal", "Environmental", "Internal"];
-const CC = [
-  { k: "ER", l: "Emotional Regulation" }, { k: "T", l: "Timing & Pacing" },
-  { k: "CC", l: "Correction Confidence" }, { k: "CO", l: "Consistency" }, { k: "IN", l: "Intentionality" },
+<script>
+// ═══════ DATA ═══════
+const CH=["Spatial","Verbal","Environmental","Internal"],CK=["ER","T","CC","CO","IN"],
+CL=["Emotional Regulation","Timing & Pacing","Correction Confidence","Consistency","Intentionality"],
+PR=["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"],
+CPT=["Intake","Day 25","Day 60","Day 84"],JS=["Immersion","Recall","Undercurrent","Other"],
+QL=[{v:1,l:"Rough",c:"#a04040"},{v:2,l:"Okay",c:"#a08840"},{v:3,l:"Locked In",c:"#5a8a50"}];
+
+const STATES=[
+{n:1,nm:"Compliant Calm",sh:"The goal.",c:"#5a8a50",mk:"Body: Soft · Eyes: Relaxed · Breathing: Even · Weight: Centered",desc:"Loose muscles, soft eyes, regulated breathing, relaxed posture. Present, settled, at ease. Not scanning, not bracing, not waiting. Calm that isn't forced. Stillness that isn't frozen."},
+{n:2,nm:"Alert Neutral",sh:"Awareness without commitment.",c:"#7a9a50",mk:"Ears: Rotating · Eyes: Tracking · Body: Oriented but still · Connection: Intact",desc:"Notices something — a sound, a movement, another dog. Ears rotate, eyes shift, body may orient slightly. But they haven't moved. Haven't committed. Still with you. Healthy state."},
+{n:3,nm:"Pre-Decision Tension",sh:"Where the real work happens.",c:"#a08840",mk:"Weight: Forward · Ears: Locked · Breathing: Changed · Eye contact: Breaking",desc:"No longer just noticing — weighing a decision. Weight shifts forward. Breathing changes. Ears lock. Body stiffens. Eye contact breaks. Between two pulls — your influence and the environment's. Catch it here and they come back."},
+{n:4,nm:"Committed Action",sh:"The decision has been made.",c:"#a06030",mk:"Body: Committed · Focus: Environment · Recovery: Slow · Baseline: Elevated",desc:"Lunge. Break. Bark. Ignore. Committed to the environment over you. Not a bad dog — intervention came too late or influence wasn't deep enough. Corrections require more intensity, recovery takes longer."},
+{n:5,nm:"Emotional Override",sh:"Loss of cognitive access.",c:"#a04040",mk:"Eyes: Wide/fixed · Body: Rigid or thrashing · Cognition: Offline · Corrections: Ineffective",desc:"No longer making decisions. Reacting. Adrenaline running. Breathing rapid or held. Eyes wide and fixed. Body rigid or thrashing. Cannot process information. Our job is not to correct. Remove, reduce, wait for downregulation."}
 ];
-const PR = ["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"];
-const CP = ["Intake","Day 25","Day 60","Day 84"];
-const JS = ["Immersion","Recall","Undercurrent","Other"];
-const QL = [{v:1,l:"Rough",c:"#a04040"},{v:2,l:"Okay",c:"#a08840"},{v:3,l:"Locked In",c:"#5a8a50"}];
 
-const P = {
-  bg:"#0f0e0c", cd:"#1a1814", bd:"#2e2b24", ac:"#8a8050",
-  tx:"#c8c0b0", td:"#706858", tm:"#4a4438", bl:"#5b9bd5", gn:"#5a8a50",
-  rd:"#a04040", am:"#a08840", sf:"#141210"
-};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const tdy=()=>new Date().toISOString().split("T")[0];
+const sc=(v,m=5)=>(v/m<=.3?"#a04040":v/m<=.5?"#a08840":v/m<=.7?"#8a8050":"#5a8a50");
+const cTotal=c=>c.ER+c.T+c.CC+c.CO+c.IN;
+const SK="shdt-v5";
 
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-const tdy = () => new Date().toISOString().split("T")[0];
-const sc = (v,m=5) => { const p=v/m; return p<=.3?P.rd:p<=.5?P.am:p<=.7?P.ac:P.gn; };
+const mkClient=()=>({id:uid(),name:"",dog:"",breed:"",age:"",ctx:"",sig:{d:"",b:"",g:""},prof:"",comp:[],sess:[],hw:[],issues:[],notes:""});
+const mkComp=cp=>({id:uid(),cp,dt:tdy(),ER:1,T:1,CC:1,CO:1,IN:1});
+const mkSess=()=>({id:uid(),dt:tdy(),prof:"",ch:"",focus:"",q:2,stage:"",notes:""});
+const mkEval=()=>({id:uid(),dt:tdy(),p1:{feet:"",mouth:"",leash:"",face:"",brk:"",bodyFirst:"",arousal:1,hyp:""},p2:{dir:"",notes:""},sig:{d:"",b:"",g:""},comp:{ER:1,T:1,CC:1,CO:1,IN:1},prof:""});
 
-const mkClient = () => ({id:uid(),name:"",dog:"",breed:"",age:"",context:"",signature:{dominant:"",blind:"",ghost:""},profile:"",compass:[],sessions:[],homework:[],issues:[],notes:""});
-const mkCompass = (cp) => ({id:uid(),checkpoint:cp,date:tdy(),ER:1,T:1,CC:1,CO:1,IN:1});
-const mkSession = () => ({id:uid(),date:tdy(),profile:"",channel:"",focus:"",quality:2,stage:"",notes:""});
-const mkEval = () => ({id:uid(),date:tdy(),p1:{feet:"",mouth:"",leash:"",face:"",brk:"",bbm:"",arousal:1,hyp:""},p2:{dir:"",notes:""},sig:{dominant:"",blind:"",ghost:""},comp:{ER:1,T:1,CC:1,CO:1,IN:1},prof:""});
+// ═══════ STATE ═══════
+let DATA={c:[]},TAB="clients",AID=null,VW="list",ED=null;
 
-const SK = "shdt-arc-v3";
-const ld = async()=>{try{const r=await window.storage.get(SK);return r?JSON.parse(r.value):{clients:[]};}catch{return{clients:[]};}};
-const sv = async(d)=>{try{await window.storage.set(SK,JSON.stringify(d));}catch(e){console.error(e);}};
+async function load(){try{const r=await window.storage.get(SK);if(r)DATA=JSON.parse(r.value)}catch{} render()}
+async function save(){try{await window.storage.set(SK,JSON.stringify(DATA))}catch{}}
+function getCl(){return DATA.c.find(x=>x.id===AID)}
+function updCl(c){const i=DATA.c.findIndex(x=>x.id===c.id);if(i>=0)DATA.c[i]=c;else DATA.c.push(c);save()}
+function delCl(id){DATA.c=DATA.c.filter(x=>x.id!==id);save()}
 
-const ff = "'JetBrains Mono','SF Mono',monospace";
+// ═══════ HELPERS ═══════
+const h=(tag,attrs,ch)=>{const e=document.createElement(tag);if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(e.style,v);else if(k.startsWith("on"))e.addEventListener(k.slice(2).toLowerCase(),v);else if(k==="className")e.className=v;else if(k==="innerHTML")e.innerHTML=v;else e.setAttribute(k,v)});if(ch!==undefined){if(Array.isArray(ch))ch.forEach(c=>{if(c)e.appendChild(typeof c==="string"?document.createTextNode(c):c)});else if(typeof ch==="string")e.textContent=ch;else if(ch)e.appendChild(ch)}return e};
 
-const Bd = ({children,on,onClick,color:c}) => (
-  <button onClick={onClick} style={{padding:"5px 11px",borderRadius:4,border:"1px solid "+(on?(c||P.ac):P.bd),background:on?(c||P.ac)+"20":"transparent",color:on?(c||P.ac):P.td,cursor:"pointer",fontSize:11,fontFamily:ff,whiteSpace:"nowrap"}}>{children}</button>
-);
-
-const Fl = ({label,value,onChange,placeholder,type="text",s}) => (
-  <div style={{display:"flex",flexDirection:"column",gap:3,...s}}>
-    <label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>{label}</label>
-    <input type={type} value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:"8px 10px",color:P.tx,fontSize:13,fontFamily:ff,outline:"none",width:"100%",boxSizing:"border-box"}}/>
-  </div>
-);
-
-const SR = ({label,value,onChange,max=5}) => (
-  <div style={{display:"flex",alignItems:"center",gap:8}}>
-    <span style={{width:28,fontSize:10,color:P.td,textAlign:"right",flexShrink:0,fontFamily:ff}}>{label}</span>
-    <div style={{flex:1,display:"flex",gap:3}}>
-      {Array.from({length:max},(_,i)=>i+1).map(n=>(
-        <button key={n} onClick={()=>onChange(n)} style={{flex:1,height:26,borderRadius:3,border:"none",cursor:"pointer",background:n<=value?sc(value,max):P.sf,color:n<=value?"#000":P.tm,fontSize:11,fontWeight:700,fontFamily:ff}}>{n}</button>
-      ))}
-    </div>
-    <span style={{width:18,fontSize:13,fontWeight:700,color:sc(value,max),fontFamily:ff}}>{value}</span>
-  </div>
-);
-
-const Sec = ({title,accent:a,children}) => (
-  <div style={{borderLeft:"3px solid "+(a||P.ac),paddingLeft:14,marginBottom:20,marginLeft:16,marginRight:16}}>
-    <div style={{fontSize:10,letterSpacing:3,textTransform:"uppercase",color:a||P.ac,marginBottom:8,fontFamily:ff}}>{title}</div>
-    {children}
-  </div>
-);
-
-const Radar = ({sig}) => {
-  const r=36,cx=50,cy=50;
-  const a=[0,1,2,3].map(i=>(i*Math.PI*2)/4-Math.PI/2);
-  const gv=ch=>{if(ch===sig.dominant)return 1;if(ch===sig.blind)return .55;if(ch===sig.ghost)return .2;return .45;};
-  const v=CH.map(gv);
-  const pts=v.map((val,i)=>({x:cx+Math.cos(a[i])*r*val,y:cy+Math.sin(a[i])*r*val}));
-  const gc=ch=>{if(ch===sig.dominant)return P.ac;if(ch===sig.blind)return P.am;if(ch===sig.ghost)return P.rd;return P.tm;};
-  return (
-    <svg width={100} height={100} style={{display:"block",flexShrink:0}}>
-      {[.33,.66,1].map(s=><polygon key={s} points={a.map(ang=>""+(cx+Math.cos(ang)*r*s)+","+(cy+Math.sin(ang)*r*s)).join(" ")} fill="none" stroke={P.bd} strokeWidth={1}/>)}
-      <polygon points={pts.map(p=>""+p.x+","+p.y).join(" ")} fill={P.ac+"18"} stroke={P.ac} strokeWidth={1.5}/>
-      {a.map((ang,i)=><text key={i} x={cx+Math.cos(ang)*(r+10)} y={cy+Math.sin(ang)*(r+10)} textAnchor="middle" dominantBaseline="central" fill={gc(CH[i])} fontSize={9} fontWeight={700} fontFamily={ff}>{"SVEI"[i]}</text>)}
-    </svg>
-  );
-};
-
-const Spark = ({h}) => {
-  if(!h||h.length<2)return null;
-  const tots=h.map(x=>x.ER+x.T+x.CC+x.CO+x.IN);
-  const w=200,ht=50,pd=8;
-  const pts=tots.map((t,i)=>({x:pd+(i/Math.max(tots.length-1,1))*(w-pd*2),y:pd+(1-t/25)*(ht-pd*2)}));
-  return (
-    <svg width={w} height={ht} style={{display:"block",marginTop:6}}>
-      <path d={pts.map((p,i)=>(i===0?"M":"L")+p.x+","+p.y).join(" ")} fill="none" stroke={P.ac} strokeWidth={2}/>
-      {pts.map((p,i)=><g key={i}><circle cx={p.x} cy={p.y} r={3} fill={P.bg} stroke={P.ac} strokeWidth={1.5}/><text x={p.x} y={p.y-7} textAnchor="middle" fill={P.ac} fontSize={8} fontFamily={ff}>{tots[i]}</text></g>)}
-    </svg>
-  );
-};
-
-const Nav = ({active,onNav}) => (
-  <div style={{position:"fixed",bottom:0,left:0,right:0,background:P.sf,borderTop:"1px solid "+P.bd,display:"flex",justifyContent:"center",zIndex:100}}>
-    <div style={{display:"flex",maxWidth:520,width:"100%",justifyContent:"space-around",padding:"8px 0 12px"}}>
-      {[["clients","CLIENTS"],["diagnose","DIAGNOSE"],["states","STATES"],["reference","REFERENCE"]].map(([k,l])=>(
-        <button key={k} onClick={()=>onNav(k)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 8px",color:active===k?P.ac:P.td,fontFamily:ff}}>
-          <span style={{fontSize:8,letterSpacing:2,fontWeight:700}}>{l}</span>
-        </button>
-      ))}
-    </div>
-  </div>
-);
-
-const TopBar = ({left,right,center}) => (
-  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",borderBottom:"1px solid "+P.bd}}>
-    {left}
-    {center && <span style={{fontSize:9,letterSpacing:3,color:P.ac,fontFamily:ff}}>{center}</span>}
-    {right}
-  </div>
-);
-
-const Bk = ({onClick,label}) => <button onClick={onClick} style={{background:"none",border:"none",color:P.td,cursor:"pointer",fontSize:12,fontFamily:ff}}>{label||"← Back"}</button>;
-
-const ta = {background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:10,color:P.tx,fontSize:12,fontFamily:ff,outline:"none",width:"100%",boxSizing:"border-box",resize:"vertical",minHeight:60};
-const bt = (f)=>({padding:"10px 18px",borderRadius:6,border:f?"none":"1px solid "+P.bd,background:f?P.ac:"transparent",color:f?P.bg:P.td,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",fontFamily:ff});
-const bs = (f)=>({padding:"6px 12px",borderRadius:4,border:f?"none":"1px solid "+P.bd,background:f?P.ac:"transparent",color:f?P.bg:P.td,cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",fontFamily:ff});
-
-export default function App() {
-  const [data,setData] = useState({clients:[]});
-  const [ok,setOk] = useState(false);
-  const [tab,setTab] = useState("clients");
-  const [aid,setAid] = useState(null);
-  const [vw,setVw] = useState("list");
-  const [ed,setEd] = useState(null);
-  const [ii,setIi] = useState("");
-  const [hi,setHi] = useState("");
-
-  useEffect(()=>{ld().then(d=>{setData(d);setOk(true);});},[]);
-  const ps = useCallback(async(nd)=>{setData(nd);await sv(nd);},[]);
-  const cl = data.clients.find(c=>c.id===aid);
-  const uc = async(c)=>{
-    const exists = data.clients.find(x=>x.id===c.id);
-    const nd={...data, clients: exists ? data.clients.map(x=>x.id===c.id?c:x) : [...data.clients,c]};
-    await ps(nd);
-  };
-
-  const shell = {background:P.bg,color:P.tx,minHeight:"100vh",fontFamily:ff,maxWidth:520,margin:"0 auto",paddingBottom:80};
-
-  if(!ok) return <div style={{...shell,display:"flex",alignItems:"center",justifyContent:"center",height:"100vh"}}><span style={{color:P.td}}>Loading...</span></div>;
-
-  // ── STATES ──
-  if(tab==="states") return (
-    <div style={shell}>
-      <div style={{padding:"20px 16px",textAlign:"center"}}>
-        <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
-        <div style={{fontSize:15,fontWeight:700,letterSpacing:2,color:P.ac,marginTop:4}}>FIVE-STATE MAP™</div>
-      </div>
-      <div style={{padding:"0 16px"}}>
-        {[[1,"Compliant Calm",P.gn,"Body: Soft · Eyes: Relaxed"],
-          [2,"Alert Neutral","#7a9a50","Ears: Rotating · Still with you"],
-          [3,"Pre-Decision Tension",P.am,"Weight: Forward · Ears: Locked"],
-          [4,"Committed Action","#a06030","Body: Committed · Recovery: Slow"],
-          [5,"Emotional Override",P.rd,"Cognition: Offline"]
-        ].map(([n,nm,c,m])=>(
-          <div key={n} style={{background:P.cd,border:"1px solid "+P.bd,borderLeft:"3px solid "+c,borderRadius:8,padding:"10px 14px",marginBottom:8}}>
-            <span style={{fontSize:18,fontWeight:700,color:c,marginRight:8}}>{n}</span>
-            <span style={{fontSize:12,fontWeight:600,color:P.tx}}>{nm}</span>
-            <div style={{fontSize:9,color:P.td,marginTop:4}}>{m}</div>
-          </div>
-        ))}
-        <div style={{fontSize:9,color:P.tm,textAlign:"center",marginTop:8}}>State 3 is the fulcrum.</div>
-      </div>
-      <Nav active={tab} onNav={setTab}/>
-    </div>
-  );
-
-  // ── REFERENCE ──
-  if(tab==="reference") return (
-    <div style={shell}>
-      <div style={{padding:"20px 16px",textAlign:"center"}}>
-        <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
-        <div style={{fontSize:15,fontWeight:700,letterSpacing:2,color:P.ac,marginTop:4}}>REFERENCE</div>
-      </div>
-      <Sec title="COMPASS"><div style={{fontSize:10,color:P.td}}>ER + T + CC + CO + IN = /25</div></Sec>
-      <Sec title="CHANNELS" accent={P.am}><div style={{fontSize:10,color:P.td}}>Spatial · Verbal · Environmental · Internal</div></Sec>
-      <Sec title="DIAGNOSTICS" accent={P.rd}><div style={{fontSize:10,color:P.td}}>Blind = friction when named. Ghost = blankness when named.</div></Sec>
-      <Sec title="ARC PATTERNS"><div style={{fontSize:9,color:P.td}}>Recovery↑ + Check-ins↑ = Depth. Recovery↓ + High State↑ = Pull back. Flat 3+ = Plateau.</div></Sec>
-      <Nav active={tab} onNav={setTab}/>
-    </div>
-  );
-
-  // ── DIAGNOSE ──
-  if(tab==="diagnose"){
-    if(vw==="eval"&&ed&&cl){
-      const e=ed;
-      const s1=(k,v)=>setEd({...e,p1:{...e.p1,[k]:v}});
-      const s2=(k,v)=>setEd({...e,p2:{...e.p2,[k]:v}});
-      const ss=(k,v)=>setEd({...e,sig:{...e.sig,[k]:v}});
-      const scp=(k,v)=>setEd({...e,comp:{...e.comp,[k]:v}});
-      const tot=e.comp.ER+e.comp.T+e.comp.CC+e.comp.CO+e.comp.IN;
-      return (
-        <div style={shell}>
-          <TopBar left={<Bk onClick={()=>{setEd(null);setVw("list");}}/>} center="EVAL" right={<button onClick={async()=>{
-            const c={...cl};
-            if(e.sig.dominant)c.signature=e.sig;
-            if(e.prof)c.profile=e.prof;
-            c.compass=[...c.compass,{id:uid(),checkpoint:"Intake",date:e.date,...e.comp}];
-            await uc(c);setEd(null);setVw("detail");setTab("clients");
-          }} style={bs(true)}>Save</button>}/>
-          <div style={{padding:"0 16px"}}>
-            <Fl label="Date" value={e.date} onChange={v=>setEd({...e,date:v})} type="date" s={{marginBottom:12}}/>
-            <Sec title="PHASE 1 — DEMONSTRATION" accent={P.bl}>
-              <div style={{fontSize:9,color:P.td,marginBottom:8,fontStyle:"italic"}}>"Show me what a normal moment looks like for you two."</div>
-              {[["feet","SPATIAL — Lead or follow?"],["mouth","VERBAL — Commands before response?"],["leash","LEASH — Dog or handler?"],["face","INTERNAL — Arousal?"],["brk","First thing when dog broke?"]].map(([k,l])=>(
-                <div key={k} style={{marginBottom:6}}>
-                  <label style={{fontSize:9,color:P.td}}>{l}</label>
-                  <textarea value={e.p1[k]||""} onChange={x=>s1(k,x.target.value)} style={ta}/>
-                </div>
-              ))}
-              <div style={{display:"flex",gap:4,marginBottom:6,alignItems:"center"}}>
-                <span style={{fontSize:9,color:P.td}}>Body before mouth?</span>
-                {["Yes","No","Simul."].map(o=><Bd key={o} on={e.p1.bbm===o} onClick={()=>s1("bbm",o)} color={P.bl}>{o}</Bd>)}
-              </div>
-              <SR label="Arousal" value={e.p1.arousal} onChange={v=>s1("arousal",v)}/>
-              <div style={{marginTop:6}}>
-                <label style={{fontSize:9,color:P.td}}>Hypothesis</label>
-                <textarea value={e.p1.hyp||""} onChange={x=>s1("hyp",x.target.value)} style={ta}/>
-              </div>
-            </Sec>
-            <Sec title="PHASE 2 — CONVERSATION" accent={P.bl}>
-              <div style={{display:"flex",gap:4,marginBottom:6}}>
-                {["Stats","Emotional","Problem"].map(d=><Bd key={d} on={e.p2.dir===d} onClick={()=>s2("dir",d)} color={P.bl}>{d}</Bd>)}
-              </div>
-              <textarea value={e.p2.notes||""} onChange={x=>s2("notes",x.target.value)} style={ta}/>
-            </Sec>
-            <Sec title="SIGNATURE" accent={P.ac}>
-              {["dominant","blind","ghost"].map(id=>(
-                <div key={id} style={{marginBottom:6}}>
-                  <div style={{fontSize:9,color:id==="dominant"?P.ac:id==="blind"?P.am:P.rd,marginBottom:3,textTransform:"uppercase",letterSpacing:2}}>{id}</div>
-                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{CH.map(ch=><Bd key={ch} on={e.sig[id]===ch} onClick={()=>ss(id,ch)} color={id==="dominant"?P.ac:id==="blind"?P.am:P.rd}>{ch}</Bd>)}</div>
-                </div>
-              ))}
-            </Sec>
-            <Sec title={"COMPASS — "+tot+"/25"} accent={sc(tot,25)}>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>{CC.map(cat=><SR key={cat.k} label={cat.k} value={e.comp[cat.k]} onChange={v=>scp(cat.k,v)}/>)}</div>
-            </Sec>
-            <Sec title="PROFILE" accent={P.gn}>
-              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{PR.map(p=><Bd key={p} on={e.prof===p} onClick={()=>setEd({...e,prof:p})} color={P.gn}>{p}</Bd>)}</div>
-            </Sec>
-          </div>
-          <Nav active={tab} onNav={setTab}/>
-        </div>
-      );
-    }
-    return (
-      <div style={shell}>
-        <div style={{padding:"20px 16px",textAlign:"center"}}>
-          <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
-          <div style={{fontSize:15,fontWeight:700,letterSpacing:2,color:P.bl,marginTop:4}}>HANDLER INDEX™ EVAL</div>
-          <div style={{fontSize:9,color:P.tm,marginTop:4}}>Select client</div>
-        </div>
-        <div style={{padding:"0 16px"}}>
-          {data.clients.length===0&&<div style={{textAlign:"center",color:P.tm,padding:"30px 0"}}>Add a client first.</div>}
-          {data.clients.map(c=>(
-            <button key={c.id} onClick={()=>{setAid(c.id);setEd(mkEval());setVw("eval");}} style={{background:P.cd,border:"1px solid "+P.bd,borderRadius:8,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",alignItems:"center",gap:12,width:"100%",textAlign:"left"}}>
-              <div style={{width:36,height:36,borderRadius:"50%",background:P.sf,border:"1px solid "+P.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:P.ac,fontWeight:700,flexShrink:0}}>{(c.name||"?")[0]?.toUpperCase()}</div>
-              <div><div style={{fontSize:13,fontWeight:600,color:P.tx}}>{c.name||"Unnamed"}</div><div style={{fontSize:10,color:P.td}}>{c.dog} · {c.profile||"—"}</div></div>
-            </button>
-          ))}
-        </div>
-        <Nav active={tab} onNav={setTab}/>
-      </div>
-    );
-  }
-
-  // ── SESSION EDIT ──
-  if(vw==="sEdit"&&ed&&cl){
-    const s=ed, set=(k,v)=>setEd({...s,[k]:v});
-    return (
-      <div style={shell}>
-        <TopBar left={<Bk onClick={()=>{setEd(null);setVw("detail");}}/>} center="SESSION LOG" right={<button onClick={async()=>{
-          const c={...cl},i=c.sessions.findIndex(x=>x.id===s.id);
-          if(i>=0)c.sessions[i]=s;else c.sessions.push(s);await uc(c);setEd(null);setVw("detail");
-        }} style={bs(true)}>Save</button>}/>
-        <div style={{padding:"0 16px"}}>
-          <Fl label="Date" value={s.date} onChange={v=>set("date",v)} type="date" s={{marginBottom:10}}/>
-          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Profile</label><div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}}>{PR.map(p=><Bd key={p} on={s.profile===p} onClick={()=>set("profile",p)}>{p}</Bd>)}</div></div>
-          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Channel</label><div style={{display:"flex",gap:4,marginTop:4}}>{CH.map(ch=><Bd key={ch} on={s.channel===ch} onClick={()=>set("channel",ch)}>{ch}</Bd>)}</div></div>
-          <Fl label="Focus" value={s.focus} onChange={v=>set("focus",v)} placeholder="One sentence" s={{marginBottom:10}}/>
-          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Quality</label><div style={{display:"flex",gap:4,marginTop:4}}>{QL.map(q=><Bd key={q.v} on={s.quality===q.v} onClick={()=>set("quality",q.v)} color={q.c}>{q.l}</Bd>)}</div></div>
-          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Stage</label><div style={{display:"flex",gap:4,marginTop:4}}>{JS.map(j=><Bd key={j} on={s.stage===j} onClick={()=>set("stage",j)}>{j}</Bd>)}</div></div>
-          <div><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Notes</label><textarea value={s.notes||""} onChange={e=>set("notes",e.target.value)} style={{...ta,marginTop:4}}/></div>
-        </div>
-        <Nav active={tab} onNav={setTab}/>
-      </div>
-    );
-  }
-
-  // ── COMPASS EDIT ──
-  if(vw==="cEdit"&&ed&&cl){
-    const c=ed, set=(k,v)=>setEd({...c,[k]:v}), tot=c.ER+c.T+c.CC+c.CO+c.IN;
-    return (
-      <div style={shell}>
-        <TopBar left={<Bk onClick={()=>{setEd(null);setVw("detail");}}/>} center="COMPASS" right={<button onClick={async()=>{
-          const cl2={...cl},i=cl2.compass.findIndex(x=>x.id===c.id);
-          if(i>=0)cl2.compass[i]=c;else cl2.compass.push(c);await uc(cl2);setEd(null);setVw("detail");
-        }} style={bs(true)}>Save</button>}/>
-        <div style={{padding:"0 16px"}}>
-          <div style={{display:"flex",gap:8,marginBottom:14}}>
-            <Fl label="Date" value={c.date} onChange={v=>set("date",v)} type="date" s={{flex:1}}/>
-            <div style={{flex:1}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Checkpoint</label><div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>{CP.map(cp=><Bd key={cp} on={c.checkpoint===cp} onClick={()=>set("checkpoint",cp)}>{cp}</Bd>)}</div></div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
-            {CC.map(cat=><SR key={cat.k} label={cat.k} value={c[cat.k]} onChange={v=>set(cat.k,v)}/>)}
-          </div>
-          <div style={{textAlign:"center"}}><div style={{fontSize:30,fontWeight:700,color:sc(tot,25)}}>{tot}<span style={{fontSize:14,color:P.tm}}>/25</span></div></div>
-        </div>
-        <Nav active={tab} onNav={setTab}/>
-      </div>
-    );
-  }
-
-  // ── CLIENT EDIT ──
-  if(vw==="clEdit"&&ed){
-    const c=ed, set=(k,v)=>setEd({...c,[k]:v});
-    const ssg=(k,v)=>setEd({...c,signature:{...c.signature,[k]:v}});
-    return (
-      <div style={shell}>
-        <TopBar left={<Bk onClick={()=>{setEd(null);setVw(aid?"detail":"list");}}/>} center={data.clients.find(x=>x.id===c.id)?"EDIT":"NEW CLIENT"} right={<button onClick={async()=>{await uc(c);setAid(c.id);setEd(null);setVw("detail");}} style={bs(true)}>Save</button>}/>
-        <div style={{padding:"0 16px"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-            <Fl label="Handler" value={c.name} onChange={v=>set("name",v)} placeholder="Name"/>
-            <Fl label="Dog" value={c.dog} onChange={v=>set("dog",v)} placeholder="Dog"/>
-            <Fl label="Breed" value={c.breed} onChange={v=>set("breed",v)} placeholder="Breed"/>
-            <Fl label="Age" value={c.age} onChange={v=>set("age",v)} placeholder="Age"/>
-          </div>
-          <Fl label="Context" value={c.context} onChange={v=>set("context",v)} placeholder="Vet Clinic, B&T..." s={{marginBottom:14}}/>
-          <Sec title="SIGNATURE" accent={P.ac}>
-            {["dominant","blind","ghost"].map(id=>(
-              <div key={id} style={{marginBottom:8}}>
-                <div style={{fontSize:9,letterSpacing:2,color:id==="dominant"?P.ac:id==="blind"?P.am:P.rd,marginBottom:4,textTransform:"uppercase"}}>{id}</div>
-                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{CH.map(ch=><Bd key={ch} on={c.signature[id]===ch} onClick={()=>ssg(id,ch)} color={id==="dominant"?P.ac:id==="blind"?P.am:P.rd}>{ch}</Bd>)}</div>
-              </div>
-            ))}
-          </Sec>
-          <Sec title="PROFILE" accent={P.gn}>
-            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{PR.map(p=><Bd key={p} on={c.profile===p} onClick={()=>set("profile",p)} color={P.gn}>{p}</Bd>)}</div>
-          </Sec>
-          <Sec title="NOTES" accent={P.td}>
-            <textarea value={c.notes||""} onChange={e=>set("notes",e.target.value)} style={ta}/>
-          </Sec>
-          {data.clients.find(x=>x.id===c.id)&&<div style={{textAlign:"center",marginTop:12}}>
-            <button onClick={async()=>{if(confirm("Delete?")){await ps({...data,clients:data.clients.filter(x=>x.id!==c.id)});setAid(null);setEd(null);setVw("list");}}} style={{...bs(),color:P.rd}}>Delete</button>
-          </div>}
-        </div>
-        <Nav active={tab} onNav={setTab}/>
-      </div>
-    );
-  }
-
-  // ── CLIENT DETAIL ──
-  if(vw==="detail"&&cl){
-    const lc=cl.compass.length>0?cl.compass[cl.compass.length-1]:null;
-    const tot=lc?lc.ER+lc.T+lc.CC+lc.CO+lc.IN:null;
-    const hs=cl.signature.dominant||cl.signature.blind||cl.signature.ghost;
-    const rs=[...(cl.sessions||[])].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
-    return (
-      <div style={shell}>
-        <TopBar left={<Bk onClick={()=>{setAid(null);setVw("list");}} label="← All"/>} right={<button onClick={()=>{setEd({...cl});setVw("clEdit");}} style={bs()}>Edit</button>}/>
-        <div style={{textAlign:"center",padding:"10px 16px 14px"}}>
-          <div style={{fontSize:18,fontWeight:700,color:P.tx}}>{cl.name||"Unnamed"}</div>
-          <div style={{fontSize:11,color:P.td,marginTop:2}}>{cl.dog}</div>
-          {cl.profile&&<div style={{marginTop:5}}><span style={{fontSize:10,padding:"3px 10px",borderRadius:4,border:"1px solid "+P.bd,color:P.td}}>{cl.profile}</span></div>}
-          {cl.context&&<div style={{fontSize:10,color:P.bl,marginTop:5}}>{cl.context}</div>}
-        </div>
-        <div style={{padding:"0 16px",marginBottom:14}}>
-          <div style={{background:P.cd,border:"1px solid "+P.bd,borderRadius:8,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div><div style={{fontSize:10,letterSpacing:2,color:P.ac,fontWeight:700}}>SESSION LOG</div><div style={{fontSize:9,color:P.td}}>Feeds Arc + Compass</div></div>
-            <button onClick={()=>{setEd(mkSession());setVw("sEdit");}} style={{...bs(true),background:P.ac}}>+ Log</button>
-          </div>
-          <div style={{background:P.cd,border:"1px solid "+P.bl+"44",borderRadius:8,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div><div style={{fontSize:10,letterSpacing:2,color:P.bl,fontWeight:700}}>HANDLER INDEX™ EVAL</div><div style={{fontSize:9,color:P.td}}>Full diagnostic walkthrough</div></div>
-            <button onClick={()=>{setTab("diagnose");setEd(mkEval());setVw("eval");}} style={{...bs(true),background:P.bl}}>+ Eval</button>
-          </div>
-        </div>
-        <Sec title={"HOMEWORK · "+(cl.homework||[]).length} accent={P.gn}>
-          {(cl.homework||[]).length===0&&<div style={{fontSize:10,color:P.tm}}>No homework assigned.</div>}
-          {(cl.homework||[]).map((h,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid "+P.sf}}>
-            <span style={{fontSize:10,color:P.td,flex:1}}>{h.text}</span><span style={{fontSize:8,color:P.tm,marginRight:6}}>{h.date}</span>
-            <button onClick={async()=>{await uc({...cl,homework:cl.homework.filter((_,j)=>j!==i)});}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:13}}>×</button>
-          </div>)}
-          <div style={{display:"flex",gap:4,marginTop:6}}>
-            <input value={hi} onChange={e=>setHi(e.target.value)} placeholder="Assign homework…" style={{background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:"7px 9px",color:P.tx,fontSize:11,fontFamily:ff,outline:"none",flex:1}}
-              onKeyDown={async e=>{if(e.key==="Enter"&&hi.trim()){await uc({...cl,homework:[...(cl.homework||[]),{text:hi.trim(),date:tdy()}]});setHi("");}}}/>
-            <button onClick={async()=>{if(hi.trim()){await uc({...cl,homework:[...(cl.homework||[]),{text:hi.trim(),date:tdy()}]});setHi("");}}} style={bs()}>+</button>
-          </div>
-        </Sec>
-        <Sec title={"RECURRING ISSUES · "+(cl.issues||[]).length} accent={P.am}>
-          {(cl.issues||[]).map((r,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid "+P.sf}}>
-            <span style={{fontSize:10,color:P.td,flex:1}}>{r.text}</span><span style={{fontSize:8,color:P.tm,marginRight:6}}>{r.date}</span>
-            <button onClick={async()=>{await uc({...cl,issues:cl.issues.filter((_,j)=>j!==i)});}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:13}}>×</button>
-          </div>)}
-          <div style={{display:"flex",gap:4,marginTop:6}}>
-            <input value={ii} onChange={e=>setIi(e.target.value)} placeholder="Pattern you keep seeing…" style={{background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:"7px 9px",color:P.tx,fontSize:11,fontFamily:ff,outline:"none",flex:1}}
-              onKeyDown={async e=>{if(e.key==="Enter"&&ii.trim()){await uc({...cl,issues:[...(cl.issues||[]),{text:ii.trim(),date:tdy()}]});setIi("");}}}/>
-            <button onClick={async()=>{if(ii.trim()){await uc({...cl,issues:[...(cl.issues||[]),{text:ii.trim(),date:tdy()}]});setIi("");}}} style={bs()}>+</button>
-          </div>
-        </Sec>
-        {hs&&<Sec title="HANDLER SIGNATURE" accent={P.ac}>
-          <div style={{display:"flex",gap:12,alignItems:"center"}}>
-            <Radar sig={cl.signature}/>
-            <div style={{display:"flex",flexDirection:"column",gap:5}}>
-              {[["dominant",P.ac],["blind",P.am],["ghost",P.rd]].map(([id,color])=>cl.signature[id]?<div key={id} style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:6,height:6,borderRadius:"50%",background:color}}/>
-                <span style={{fontSize:8,color:P.tm,textTransform:"uppercase",width:50}}>{id}</span>
-                <span style={{fontSize:11,color:color,fontWeight:600}}>{cl.signature[id]}</span>
-              </div>:null)}
-            </div>
-          </div>
-        </Sec>}
-        <Sec title="COMPASS" accent={tot?sc(tot,25):P.ac}>
-          {lc?<div>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
-              <div style={{fontSize:26,fontWeight:700,color:sc(tot,25)}}>{tot}<span style={{fontSize:12,color:P.tm}}>/25</span></div>
-              <div style={{fontSize:9,color:P.td}}>{lc.checkpoint} · {lc.date}</div>
-            </div>
-            <div style={{display:"flex",gap:5,marginBottom:6}}>
-              {CC.map(cat=><div key={cat.k} style={{background:P.sf,borderRadius:4,padding:"3px 7px",textAlign:"center"}}>
-                <div style={{fontSize:8,color:P.tm}}>{cat.k}</div>
-                <div style={{fontSize:13,fontWeight:700,color:sc(lc[cat.k],5)}}>{lc[cat.k]}</div>
-              </div>)}
-            </div>
-            <Spark h={cl.compass}/>
-            {cl.compass.map(ch=>{const t=ch.ER+ch.T+ch.CC+ch.CO+ch.IN;return <div key={ch.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderBottom:"1px solid "+P.sf}}>
-              <span style={{fontSize:12,fontWeight:700,color:sc(t,25),width:24}}>{t}</span>
-              <span style={{fontSize:9,color:P.td,flex:1}}>{ch.checkpoint} · {ch.date}</span>
-              <button onClick={()=>{setEd({...ch});setVw("cEdit");}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:9,fontFamily:ff}}>edit</button>
-              <button onClick={async()=>{await uc({...cl,compass:cl.compass.filter(x=>x.id!==ch.id)});}} style={{background:"none",border:"none",color:P.rd+"66",cursor:"pointer",fontSize:12}}>×</button>
-            </div>;})}
-          </div>:<div style={{fontSize:10,color:P.tm}}>No scores yet.</div>}
-          <button onClick={()=>{setEd(mkCompass(CP[Math.min(cl.compass.length,3)]));setVw("cEdit");}} style={{...bs(),marginTop:8,width:"100%"}}>+ Score Compass</button>
-        </Sec>
-        {rs.length>0&&<Sec title="SESSIONS" accent={P.td}>
-          {rs.map(s=><div key={s.id} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"5px 0",borderBottom:"1px solid "+P.sf}}>
-            <div style={{width:7,height:7,borderRadius:"50%",marginTop:4,flexShrink:0,background:s.quality===1?P.rd:s.quality===3?P.gn:P.am}}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:10,color:P.tx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.focus||"No focus"}</div>
-              <div style={{fontSize:8,color:P.tm}}>{s.date}{s.channel?" · "+s.channel:""}</div>
-            </div>
-            <button onClick={()=>{setEd({...s});setVw("sEdit");}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:9,fontFamily:ff}}>edit</button>
-            <button onClick={async()=>{await uc({...cl,sessions:cl.sessions.filter(x=>x.id!==s.id)});}} style={{background:"none",border:"none",color:P.rd+"66",cursor:"pointer",fontSize:12}}>×</button>
-          </div>)}
-        </Sec>}
-        {cl.notes&&<Sec title="NOTES" accent={P.tm}><div style={{fontSize:10,color:P.td,whiteSpace:"pre-wrap"}}>{cl.notes}</div></Sec>}
-        <Nav active={tab} onNav={setTab}/>
-      </div>
-    );
-  }
-
-  // ── CLIENT LIST ──
-  return (
-    <div style={shell}>
-      <div style={{padding:"20px 16px 4px",textAlign:"center"}}>
-        <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
-        <div style={{fontSize:17,fontWeight:700,letterSpacing:3,color:P.ac,marginTop:4}}>ARC TRACKER</div>
-        <div style={{fontSize:9,color:P.gn,marginTop:4}}>✓ CLOUD SYNCED</div>
-      </div>
-      <div style={{padding:"10px 16px"}}>
-        {data.clients.length===0&&<div style={{textAlign:"center",color:P.tm,padding:"30px 0"}}>No clients yet.</div>}
-        {data.clients.map(c=>(
-          <button key={c.id} onClick={()=>{setAid(c.id);setVw("detail");}} style={{background:P.cd,border:"1px solid "+P.bd,borderRadius:8,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",alignItems:"center",gap:12,width:"100%",textAlign:"left"}}>
-            <div style={{width:40,height:40,borderRadius:"50%",background:P.sf,border:"1px solid "+P.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:P.ac,fontWeight:700,flexShrink:0}}>{(c.name||"?")[0]?.toUpperCase()}</div>
-            <div><div style={{fontSize:14,fontWeight:600,color:P.tx}}>{c.name||"Unnamed"}</div><div style={{fontSize:10,color:P.td}}>{c.dog} · {c.profile||"—"}</div></div>
-          </button>
-        ))}
-        <div style={{textAlign:"center",marginTop:14}}>
-          <button onClick={()=>{const c=mkClient();setEd(c);setAid(null);setVw("clEdit");}} style={bt(true)}>+ New Client</button>
-        </div>
-      </div>
-      <Nav active={tab} onNav={setTab}/>
-    </div>
-  );
+function badges(items,active,onSelect,color){
+  const d=h("div",{className:"badges"});
+  items.forEach(it=>{const b=h("button",{className:"badge"+(active===it?" on":""),onClick:()=>onSelect(it)},it);if(active===it&&color){b.style.borderColor=color;b.style.background=color+"20";b.style.color=color}d.appendChild(b)});
+  return d;
 }
+function scoreRow(label,val,onChange,max=5){
+  const r=h("div",{className:"score-row"});
+  r.appendChild(h("span",{className:"sl"},label));
+  const dots=h("div",{className:"dots"});
+  for(let i=1;i<=max;i++){const b=h("button",{onClick:()=>onChange(i)},String(i));b.style.background=i<=val?sc(val,max):"#141210";b.style.color=i<=val?"#000":"#4a4438";dots.appendChild(b)}
+  r.appendChild(dots);
+  const sv=h("span",{className:"sv"},String(val));sv.style.color=sc(val,max);r.appendChild(sv);
+  return r;
+}
+function field(label,val,onChange,opts={}){
+  const d=h("div",{style:{display:"flex",flexDirection:"column",gap:"3px",...(opts.style||{})}});
+  d.appendChild(h("label",{className:"lbl"},label));
+  const inp=h("input",{className:"inp",value:val||"",placeholder:opts.ph||""});
+  if(opts.type)inp.type=opts.type;
+  inp.addEventListener("input",e=>onChange(e.target.value));
+  d.appendChild(inp);return d;
+}
+function tarea(val,onChange,ph){
+  const t=h("textarea",{className:"ta",placeholder:ph||""});t.value=val||"";
+  t.addEventListener("input",e=>onChange(e.target.value));return t;
+}
+function sec(title,color,children){
+  const s=h("div",{className:"sec"});if(color)s.style.borderLeftColor=color;
+  const t=h("div",{className:"sec-t"},title);if(color)t.style.color=color;
+  s.appendChild(t);
+  if(Array.isArray(children))children.forEach(c=>{if(c)s.appendChild(c)});else if(children)s.appendChild(children);
+  return s;
+}
+function topBar(leftEl,center,rightEl){
+  const t=h("div",{className:"top"});t.appendChild(leftEl);
+  if(center){const c=h("span",{style:{fontSize:"9px",letterSpacing:"3px",color:"#8a8050"}},center);t.appendChild(c)}
+  t.appendChild(rightEl);return t;
+}
+function backBtn(label,onClick){return h("button",{style:{background:"none",border:"none",color:"#706858",fontSize:"12px",fontFamily:"inherit"},onClick},label||"← Back")}
+function btnEl(text,fill,onClick){const b=h("button",{className:"btn"+(fill?" btn-f":""),onClick},text);return b}
+
+function radarSVG(sig){
+  const r=34,cx=48,cy=48,ns="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(ns,"svg");svg.setAttribute("width","96");svg.setAttribute("height","96");
+  const angles=[0,1,2,3].map(i=>(i*Math.PI*2)/4-Math.PI/2);
+  const gv=ch=>ch===sig.d?1:ch===sig.b?.55:ch===sig.g?.2:.45;
+  const gc=ch=>ch===sig.d?"#8a8050":ch===sig.b?"#a08840":ch===sig.g?"#a04040":"#4a4438";
+  [.33,.66,1].forEach(s=>{const p=document.createElementNS(ns,"polygon");p.setAttribute("points",angles.map(a=>`${cx+Math.cos(a)*r*s},${cy+Math.sin(a)*r*s}`).join(" "));p.setAttribute("fill","none");p.setAttribute("stroke","#2e2b24");svg.appendChild(p)});
+  angles.forEach(a=>{const l=document.createElementNS(ns,"line");l.setAttribute("x1",cx);l.setAttribute("y1",cy);l.setAttribute("x2",cx+Math.cos(a)*r);l.setAttribute("y2",cy+Math.sin(a)*r);l.setAttribute("stroke","#2e2b24");svg.appendChild(l)});
+  const vals=CH.map(gv),pts=vals.map((v,i)=>({x:cx+Math.cos(angles[i])*r*v,y:cy+Math.sin(angles[i])*r*v}));
+  const poly=document.createElementNS(ns,"polygon");poly.setAttribute("points",pts.map(p=>`${p.x},${p.y}`).join(" "));poly.setAttribute("fill","rgba(138,128,80,.1)");poly.setAttribute("stroke","#8a8050");poly.setAttribute("stroke-width","1.5");svg.appendChild(poly);
+  const labels=["S","V","E","I"];
+  angles.forEach((a,i)=>{const t=document.createElementNS(ns,"text");t.setAttribute("x",cx+Math.cos(a)*(r+10));t.setAttribute("y",cy+Math.sin(a)*(r+10));t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");t.setAttribute("fill",gc(CH[i]));t.setAttribute("font-size","9");t.setAttribute("font-weight","700");t.setAttribute("font-family","'JetBrains Mono',monospace");t.textContent=labels[i];svg.appendChild(t)});
+  return svg;
+}
+function sparkSVG(hist){
+  if(!hist||hist.length<2)return null;
+  const ns="http://www.w3.org/2000/svg",tots=hist.map(cTotal),w=200,ht=50,pd=8;
+  const svg=document.createElementNS(ns,"svg");svg.setAttribute("width",w);svg.setAttribute("height",ht);svg.style.display="block";svg.style.marginTop="6px";
+  const pts=tots.map((t,i)=>({x:pd+(i/(tots.length-1))*(w-pd*2),y:pd+(1-t/25)*(ht-pd*2)}));
+  const path=document.createElementNS(ns,"path");path.setAttribute("d",pts.map((p,i)=>`${i?"L":"M"}${p.x},${p.y}`).join(" "));path.setAttribute("fill","none");path.setAttribute("stroke","#8a8050");path.setAttribute("stroke-width","2");svg.appendChild(path);
+  pts.forEach((p,i)=>{const c=document.createElementNS(ns,"circle");c.setAttribute("cx",p.x);c.setAttribute("cy",p.y);c.setAttribute("r","3");c.setAttribute("fill","#0f0e0c");c.setAttribute("stroke","#8a8050");c.setAttribute("stroke-width","1.5");svg.appendChild(c);
+  const t=document.createElementNS(ns,"text");t.setAttribute("x",p.x);t.setAttribute("y",p.y-7);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#8a8050");t.setAttribute("font-size","8");t.setAttribute("font-family","'JetBrains Mono',monospace");t.textContent=tots[i];svg.appendChild(t)});
+  return svg;
+}
+
+// ═══════ RENDER ═══════
+function render(){
+  const app=document.getElementById("app");app.innerHTML="";
+  renderNav();
+  if(TAB==="states")return renderStates(app);
+  if(TAB==="reference")return renderReference(app);
+  if(TAB==="diagnose")return renderDiagnose(app);
+  // clients tab
+  if(VW==="clientEdit"&&ED)return renderClientEdit(app);
+  if(VW==="sessionEdit"&&ED&&getCl())return renderSessionEdit(app);
+  if(VW==="compassEdit"&&ED&&getCl())return renderCompassEdit(app);
+  if(VW==="detail"&&getCl())return renderDetail(app);
+  renderList(app);
+}
+
+function renderNav(){
+  const nav=document.getElementById("nav");nav.innerHTML="";
+  [["clients","◉","CLIENTS"],["diagnose","⊘","DIAGNOSE"],["states","◆","STATES"],["reference","≡","REFERENCE"]].forEach(([k,ic,lb])=>{
+    const b=h("button",{className:"nav-btn"+(TAB===k?" on":""),onClick:()=>{TAB=k;if(k!=="clients"){VW="list";ED=null}render()}});
+    b.appendChild(h("span",{},ic));b.appendChild(h("span",{},lb));nav.appendChild(b);
+  });
+}
+
+// ── LIST ──
+function renderList(app){
+  const hdr=h("div",{className:"hdr"});
+  hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
+  hdr.appendChild(h("div",{className:"ttl"},"ARC TRACKER"));
+  hdr.appendChild(h("div",{className:"sync"},"✓ CLOUD SYNCED"));
+  app.appendChild(hdr);
+  const wrap=h("div",{style:{padding:"10px 16px"}});
+  if(DATA.c.length===0)wrap.appendChild(h("div",{style:{textAlign:"center",color:"#4a4438",padding:"30px 0",fontSize:"12px"}},"No clients yet."));
+  DATA.c.forEach(c=>{
+    const card=h("button",{className:"card",onClick:()=>{AID=c.id;VW="detail";render()}});
+    const av=h("div",{className:"avatar"},(c.name||"?")[0]?.toUpperCase());
+    card.appendChild(av);
+    const info=h("div");info.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"600",color:"#c8c0b0"}},c.name||"Unnamed"));
+    info.appendChild(h("div",{style:{fontSize:"10px",color:"#706858"}},`${c.dog} · ${c.prof||"No profile"}`));
+    card.appendChild(info);wrap.appendChild(card);
+  });
+  const center=h("div",{style:{textAlign:"center",marginTop:"14px"}});
+  center.appendChild(h("button",{className:"btn btn-f",style:{padding:"10px 18px"},onClick:()=>{ED=mkClient();AID=null;VW="clientEdit";render()}},"+ New Client"));
+  wrap.appendChild(center);app.appendChild(wrap);
+}
+
+// ── CLIENT EDIT ──
+function renderClientEdit(app){
+  const isNew=!DATA.c.find(x=>x.id===ED.id);
+  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW=AID?"detail":"list";render()}),isNew?"NEW CLIENT":"EDIT CLIENT",btnEl("Save",true,()=>{updCl(ED);AID=ED.id;ED=null;VW="detail";render()})));
+  const wrap=h("div",{style:{padding:"0 16px"}});
+  const grid=h("div",{className:"grid2",style:{marginBottom:"12px"}});
+  grid.appendChild(field("Handler",ED.name,v=>{ED.name=v},{ph:"Name"}));
+  grid.appendChild(field("Dog",ED.dog,v=>{ED.dog=v},{ph:"Dog name"}));
+  grid.appendChild(field("Breed",ED.breed,v=>{ED.breed=v},{ph:"Breed"}));
+  grid.appendChild(field("Age",ED.age,v=>{ED.age=v},{ph:"Age"}));
+  wrap.appendChild(grid);
+  wrap.appendChild(field("Context",ED.ctx,v=>{ED.ctx=v},{ph:"Vet Clinic, Board & Train, Private",style:{marginBottom:"14px"}}));
+  // Signature
+  const sigKids=[];
+  [["d","DOMINANT","#8a8050"],["b","BLIND","#a08840"],["g","GHOST","#a04040"]].forEach(([k,label,color])=>{
+    const d=h("div",{style:{marginBottom:"8px"}});
+    d.appendChild(h("div",{style:{fontSize:"9px",letterSpacing:"2px",color,marginBottom:"4px",textTransform:"uppercase"}},label));
+    d.appendChild(badges(CH,ED.sig[k],v=>{ED.sig[k]=v;render()},color));sigKids.push(d);
+  });
+  wrap.appendChild(sec("HANDLER SIGNATURE","#8a8050",sigKids));
+  wrap.appendChild(sec("PROFILE","#5a8a50",[badges(PR,ED.prof,v=>{ED.prof=v;render()},"#5a8a50")]));
+  wrap.appendChild(sec("NOTES","#706858",[tarea(ED.notes,v=>{ED.notes=v},"Anything worth remembering...")]));
+  if(!isNew){const del=h("div",{style:{textAlign:"center",marginTop:"12px"}});del.appendChild(h("button",{style:{padding:"6px 12px",borderRadius:"4px",border:"1px solid #a0404033",background:"transparent",color:"#a04040",fontSize:"10px",fontWeight:"700",letterSpacing:"1.5px",fontFamily:"inherit",cursor:"pointer"},onClick:()=>{if(confirm("Delete?")){delCl(ED.id);AID=null;ED=null;VW="list";render()}}},"Delete Client"));wrap.appendChild(del)}
+  app.appendChild(wrap);
+}
+
+// ── DETAIL ──
+function renderDetail(app){
+  const cl=getCl();
+  app.appendChild(topBar(backBtn("← All",()=>{AID=null;VW="list";render()}),"",btnEl("Edit",false,()=>{ED={...cl,sig:{...cl.sig}};VW="clientEdit";render()})));
+  // Header
+  const hd=h("div",{style:{textAlign:"center",padding:"10px 16px 14px"}});
+  hd.appendChild(h("div",{style:{fontSize:"18px",fontWeight:"700"}},cl.name||"Unnamed"));
+  hd.appendChild(h("div",{style:{fontSize:"11px",color:"#706858",marginTop:"2px"}},cl.dog));
+  if(cl.prof){const pb=h("div",{style:{marginTop:"6px"}});pb.appendChild(h("span",{style:{fontSize:"10px",padding:"3px 10px",borderRadius:"4px",border:"1px solid #2e2b24",color:"#706858"}},cl.prof));hd.appendChild(pb)}
+  if(cl.ctx)hd.appendChild(h("div",{style:{fontSize:"10px",color:"#5b9bd5",marginTop:"5px"}},cl.ctx));
+  app.appendChild(hd);
+
+  // Action cards
+  const acts=h("div",{style:{padding:"0 16px",marginBottom:"14px"}});
+  const sl=h("div",{className:"action-card"});
+  const slL=h("div");slL.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"2px",color:"#8a8050",fontWeight:"700"}},"SESSION LOG"));slL.appendChild(h("div",{style:{fontSize:"9px",color:"#706858"}},"Feeds Arc + Compass"));
+  sl.appendChild(slL);sl.appendChild(h("button",{className:"btn btn-f",onClick:()=>{ED=mkSess();VW="sessionEdit";render()}},"+ Log"));acts.appendChild(sl);
+
+  const ev=h("div",{className:"action-card",style:{borderColor:"#5b9bd544"}});
+  const evL=h("div");evL.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"2px",color:"#5b9bd5",fontWeight:"700"}},"HANDLER INDEX™ EVAL"));evL.appendChild(h("div",{style:{fontSize:"9px",color:"#706858"}},"Full diagnostic walkthrough"));
+  ev.appendChild(evL);ev.appendChild(h("button",{className:"btn btn-bl",onClick:()=>{TAB="diagnose";ED=mkEval();VW="eval";render()}},"+ Eval"));acts.appendChild(ev);
+  app.appendChild(acts);
+
+  // Homework
+  const hwKids=[];
+  if(!cl.hw||cl.hw.length===0)hwKids.push(h("div",{style:{fontSize:"10px",color:"#4a4438"}},"No homework assigned."));
+  (cl.hw||[]).forEach((hw,i)=>{
+    const r=h("div",{className:"row"});r.appendChild(h("span",{style:{fontSize:"10px",color:"#706858",flex:"1"}},hw.text));
+    r.appendChild(h("span",{style:{fontSize:"8px",color:"#4a4438",marginRight:"6px"}},hw.date));
+    r.appendChild(h("button",{className:"x-btn",onClick:()=>{cl.hw.splice(i,1);updCl(cl);render()}},"×"));hwKids.push(r);
+  });
+  const hwInp=h("div",{style:{display:"flex",gap:"4px",marginTop:"6px"}});
+  const hwI=h("input",{className:"inp",style:{flex:"1",padding:"6px 8px",fontSize:"11px"},placeholder:"Assign homework…"});
+  const hwAdd=()=>{if(hwI.value.trim()){if(!cl.hw)cl.hw=[];cl.hw.push({text:hwI.value.trim(),date:tdy()});updCl(cl);render()}};
+  hwI.addEventListener("keydown",e=>{if(e.key==="Enter")hwAdd()});
+  hwInp.appendChild(hwI);hwInp.appendChild(h("button",{className:"btn",onClick:hwAdd},"+"));hwKids.push(hwInp);
+  app.appendChild(sec("HOMEWORK · "+(cl.hw||[]).length,"#5a8a50",hwKids));
+
+  // Recurring Issues
+  const riKids=[];
+  (cl.issues||[]).forEach((ri,i)=>{
+    const r=h("div",{className:"row"});r.appendChild(h("span",{style:{fontSize:"10px",color:"#706858",flex:"1"}},ri.text));
+    r.appendChild(h("span",{style:{fontSize:"8px",color:"#4a4438",marginRight:"6px"}},ri.date));
+    r.appendChild(h("button",{className:"x-btn",onClick:()=>{cl.issues.splice(i,1);updCl(cl);render()}},"×"));riKids.push(r);
+  });
+  const riInp=h("div",{style:{display:"flex",gap:"4px",marginTop:"6px"}});
+  const riI=h("input",{className:"inp",style:{flex:"1",padding:"6px 8px",fontSize:"11px"},placeholder:"Pattern you keep seeing…"});
+  const riAdd=()=>{if(riI.value.trim()){if(!cl.issues)cl.issues=[];cl.issues.push({text:riI.value.trim(),date:tdy()});updCl(cl);render()}};
+  riI.addEventListener("keydown",e=>{if(e.key==="Enter")riAdd()});
+  riInp.appendChild(riI);riInp.appendChild(h("button",{className:"btn",onClick:riAdd},"+"));riKids.push(riInp);
+  app.appendChild(sec("RECURRING ISSUES · "+(cl.issues||[]).length,"#a08840",riKids));
+
+  // Signature
+  if(cl.sig.d||cl.sig.b||cl.sig.g){
+    const sigW=h("div",{style:{display:"flex",gap:"12px",alignItems:"center"}});
+    sigW.appendChild(radarSVG(cl.sig));
+    const sigInfo=h("div",{style:{display:"flex",flexDirection:"column",gap:"5px"}});
+    [["d","DOMINANT","#8a8050"],["b","BLIND","#a08840"],["g","GHOST","#a04040"]].forEach(([k,lb,c])=>{
+      if(!cl.sig[k])return;
+      const r=h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}});
+      r.appendChild(h("div",{className:"dot",style:{background:c}}));
+      r.appendChild(h("span",{style:{fontSize:"8px",letterSpacing:"1.5px",color:"#4a4438",textTransform:"uppercase",width:"50px"}},lb));
+      r.appendChild(h("span",{style:{fontSize:"11px",color:c,fontWeight:"600"}},cl.sig[k]));sigInfo.appendChild(r);
+    });
+    sigW.appendChild(sigInfo);
+    app.appendChild(sec("HANDLER SIGNATURE","#8a8050",[sigW]));
+  }
+
+  // Compass
+  const lc=cl.comp.length>0?cl.comp[cl.comp.length-1]:null;
+  const tot=lc?cTotal(lc):null;
+  const compKids=[];
+  if(lc){
+    const hdr=h("div",{style:{display:"flex",alignItems:"center",gap:"12px",marginBottom:"6px"}});
+    const tv=h("div",{style:{fontSize:"26px",fontWeight:"700",color:sc(tot,25)}});tv.innerHTML=`${tot}<span style="font-size:11px;color:#4a4438">/25</span>`;
+    hdr.appendChild(tv);hdr.appendChild(h("div",{style:{fontSize:"9px",color:"#706858"}},`${lc.cp} · ${lc.dt}`));compKids.push(hdr);
+    const cats=h("div",{style:{display:"flex",gap:"5px",flexWrap:"wrap",marginBottom:"6px"}});
+    CK.forEach(k=>{const d=h("div",{style:{background:"#141210",borderRadius:"4px",padding:"3px 7px",textAlign:"center"}});d.appendChild(h("div",{style:{fontSize:"7px",color:"#4a4438"}},k));d.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"700",color:sc(lc[k],5)}},String(lc[k])));cats.appendChild(d)});
+    compKids.push(cats);
+    const sp=sparkSVG(cl.comp);if(sp)compKids.push(sp);
+    cl.comp.forEach(ch=>{
+      const t=cTotal(ch);const r=h("div",{className:"row"});
+      r.appendChild(h("span",{style:{fontSize:"12px",fontWeight:"700",color:sc(t,25),width:"24px"}},String(t)));
+      r.appendChild(h("span",{style:{fontSize:"9px",color:"#706858",flex:"1"}},`${ch.cp} · ${ch.dt}`));
+      r.appendChild(h("button",{style:{background:"none",border:"none",color:"#4a4438",fontSize:"9px",fontFamily:"inherit",cursor:"pointer"},onClick:()=>{ED={...ch};VW="compassEdit";render()}},"edit"));
+      r.appendChild(h("button",{className:"x-btn",style:{color:"#a0404066"},onClick:()=>{cl.comp=cl.comp.filter(x=>x.id!==ch.id);updCl(cl);render()}},"×"));
+      compKids.push(r);
+    });
+  }else{compKids.push(h("div",{style:{fontSize:"10px",color:"#4a4438"}},"No compass scores yet."))}
+  compKids.push(h("button",{className:"btn",style:{marginTop:"8px",width:"100%"},onClick:()=>{ED=mkComp(CPT[Math.min(cl.comp.length,3)]);VW="compassEdit";render()}},"+ Score Compass"));
+  app.appendChild(sec("COMPASS",tot?sc(tot,25):"#8a8050",compKids));
+
+  // Recent Sessions
+  const rs=[...(cl.sess||[])].sort((a,b)=>b.dt.localeCompare(a.dt)).slice(0,5);
+  if(rs.length>0){
+    const sKids=rs.map(s=>{
+      const r=h("div",{style:{display:"flex",gap:"6px",alignItems:"flex-start",padding:"5px 0",borderBottom:"1px solid #141210"}});
+      r.appendChild(h("div",{className:"dot",style:{marginTop:"4px",background:s.q===1?"#a04040":s.q===3?"#5a8a50":"#a08840"}}));
+      const info=h("div",{style:{flex:"1",minWidth:"0"}});
+      info.appendChild(h("div",{style:{fontSize:"10px",color:"#c8c0b0",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},s.focus||"No focus noted"));
+      info.appendChild(h("div",{style:{fontSize:"8px",color:"#4a4438"}},`${s.dt}${s.ch?" · "+s.ch:""}${s.stage?" · "+s.stage:""}`));
+      r.appendChild(info);
+      r.appendChild(h("button",{style:{background:"none",border:"none",color:"#4a4438",fontSize:"9px",fontFamily:"inherit",cursor:"pointer"},onClick:()=>{ED={...s};VW="sessionEdit";render()}},"edit"));
+      r.appendChild(h("button",{className:"x-btn",style:{color:"#a0404066"},onClick:()=>{cl.sess=cl.sess.filter(x=>x.id!==s.id);updCl(cl);render()}},"×"));
+      return r;
+    });
+    app.appendChild(sec("RECENT SESSIONS","#706858",sKids));
+  }
+  if(cl.notes)app.appendChild(sec("NOTES","#4a4438",[h("div",{style:{fontSize:"10px",color:"#706858",whiteSpace:"pre-wrap",lineHeight:"1.5"}},cl.notes)]));
+}
+
+// ── SESSION EDIT ──
+function renderSessionEdit(app){
+  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="detail";render()}),"SESSION LOG",btnEl("Save",true,()=>{const cl=getCl();const i=cl.sess.findIndex(x=>x.id===ED.id);if(i>=0)cl.sess[i]=ED;else cl.sess.push(ED);updCl(cl);ED=null;VW="detail";render()})));
+  const w=h("div",{style:{padding:"0 16px"}});
+  w.appendChild(field("Date",ED.dt,v=>{ED.dt=v;},{type:"date",style:{marginBottom:"10px"}}));
+  const pDiv=h("div",{style:{marginBottom:"10px"}});pDiv.appendChild(h("label",{className:"lbl"},"Handler Profile"));pDiv.appendChild(badges(PR,ED.prof,v=>{ED.prof=v;render()}));w.appendChild(pDiv);
+  const chDiv=h("div",{style:{marginBottom:"10px"}});chDiv.appendChild(h("label",{className:"lbl"},"Dominant Channel"));chDiv.appendChild(badges(CH,ED.ch,v=>{ED.ch=v;render()}));w.appendChild(chDiv);
+  w.appendChild(field("Session Focus",ED.focus,v=>{ED.focus=v},{ph:"One sentence — what did you work on?",style:{marginBottom:"10px"}}));
+  const qDiv=h("div",{style:{marginBottom:"10px"}});qDiv.appendChild(h("label",{className:"lbl"},"Quality"));
+  const qBadges=h("div",{className:"badges"});
+  QL.forEach(q=>{const b=h("button",{className:"badge"+(ED.q===q.v?" on":""),onClick:()=>{ED.q=q.v;render()}},q.l);if(ED.q===q.v){b.style.borderColor=q.c;b.style.background=q.c+"20";b.style.color=q.c}qBadges.appendChild(b)});
+  qDiv.appendChild(qBadges);w.appendChild(qDiv);
+  const jDiv=h("div",{style:{marginBottom:"10px"}});jDiv.appendChild(h("label",{className:"lbl"},"Journey Stage"));jDiv.appendChild(badges(JS,ED.stage,v=>{ED.stage=v;render()}));w.appendChild(jDiv);
+  w.appendChild(h("label",{className:"lbl"},"Notes"));w.appendChild(tarea(ED.notes,v=>{ED.notes=v},"Anything worth remembering"));
+  app.appendChild(w);
+}
+
+// ── COMPASS EDIT ──
+function renderCompassEdit(app){
+  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="detail";render()}),"COMPASS",btnEl("Save",true,()=>{const cl=getCl();const i=cl.comp.findIndex(x=>x.id===ED.id);if(i>=0)cl.comp[i]=ED;else cl.comp.push(ED);updCl(cl);ED=null;VW="detail";render()})));
+  const w=h("div",{style:{padding:"0 16px"}});
+  const row=h("div",{style:{display:"flex",gap:"8px",marginBottom:"14px"}});
+  row.appendChild(field("Date",ED.dt,v=>{ED.dt=v},{type:"date",style:{flex:"1"}}));
+  const cpDiv=h("div",{style:{flex:"1"}});cpDiv.appendChild(h("label",{className:"lbl"},"Checkpoint"));cpDiv.appendChild(badges(CPT,ED.cp,v=>{ED.cp=v;render()}));
+  row.appendChild(cpDiv);w.appendChild(row);
+  const scores=h("div",{style:{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"14px"}});
+  CK.forEach(k=>{scores.appendChild(scoreRow(k,ED[k],v=>{ED[k]=v;render()}))});w.appendChild(scores);
+  const tot=cTotal(ED);
+  const tv=h("div",{style:{textAlign:"center"}});tv.innerHTML=`<span style="font-size:30px;font-weight:700;color:${sc(tot,25)}">${tot}</span><span style="font-size:13px;color:#4a4438">/25</span>`;
+  w.appendChild(tv);app.appendChild(w);
+}
+
+// ── DIAGNOSE ──
+function renderDiagnose(app){
+  if(VW==="eval"&&ED&&getCl())return renderEval(app);
+  const hdr=h("div",{className:"hdr"});
+  hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
+  const t=h("div",{className:"ttl"});t.style.color="#5b9bd5";t.textContent="HANDLER INDEX™ EVAL";hdr.appendChild(t);
+  hdr.appendChild(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Select client for diagnostic walkthrough"));
+  app.appendChild(hdr);
+  const wrap=h("div",{style:{padding:"8px 16px"}});
+  if(DATA.c.length===0)wrap.appendChild(h("div",{style:{textAlign:"center",color:"#4a4438",padding:"30px 0",fontSize:"12px"}},"Add a client first."));
+  DATA.c.forEach(c=>{
+    const card=h("button",{className:"card",onClick:()=>{AID=c.id;ED=mkEval();VW="eval";render()}});
+    const av=h("div",{className:"avatar",style:{width:"36px",height:"36px",fontSize:"13px"}},(c.name||"?")[0]?.toUpperCase());
+    card.appendChild(av);const info=h("div");info.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"600"}},c.name||"Unnamed"));
+    info.appendChild(h("div",{style:{fontSize:"10px",color:"#706858"}},`${c.dog} · ${c.prof||"No profile"}`));card.appendChild(info);wrap.appendChild(card);
+  });
+  app.appendChild(wrap);
+}
+
+function renderEval(app){
+  const cl=getCl();
+  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="list";render()}),"HANDLER INDEX™ EVAL",btnEl("Save",true,()=>{
+    if(ED.sig.d)cl.sig=ED.sig;if(ED.prof)cl.prof=ED.prof;
+    cl.comp.push({id:uid(),cp:"Intake",dt:ED.dt,...ED.comp});
+    updCl(cl);ED=null;TAB="clients";VW="detail";render();
+  })));
+  const w=h("div",{style:{padding:"0 16px"}});
+  w.appendChild(field("Date",ED.dt,v=>{ED.dt=v},{type:"date",style:{marginBottom:"14px"}}));
+
+  // Phase 1
+  const p1=[];
+  p1.push(h("div",{style:{fontSize:"9px",color:"#706858",marginBottom:"10px",fontStyle:"italic"}},'"Show me what a normal moment looks like for you two."'));
+  [["SPATIAL — Feet: lead or follow?","feet"],["VERBAL — Commands before response?","mouth"],["LEASH — Tight from dog or handler?","leash"],["DOG — Where looking? Baseline arousal?","face"],["First thing when dog broke?","brk"]].forEach(([lb,k])=>{
+    const d=h("div",{style:{marginBottom:"8px"}});d.appendChild(h("label",{style:{fontSize:"9px",letterSpacing:"1px",color:"#706858"}},lb));
+    d.appendChild(tarea(ED.p1[k],v=>{ED.p1[k]=v}));p1.push(d);
+  });
+  const bfDiv=h("div",{style:{display:"flex",gap:"4px",alignItems:"center",flexWrap:"wrap",marginBottom:"8px"}});
+  bfDiv.appendChild(h("span",{style:{fontSize:"9px",color:"#706858"}},"Body before mouth?"));
+  ["Yes","No","Simul."].forEach(o=>{const b=h("button",{className:"badge"+(ED.p1.bodyFirst===o?" on":""),onClick:()=>{ED.p1.bodyFirst=o;render()}},o);if(ED.p1.bodyFirst===o){b.style.borderColor="#5b9bd5";b.style.background="#5b9bd520";b.style.color="#5b9bd5"}bfDiv.appendChild(b)});
+  p1.push(bfDiv);
+  p1.push(scoreRow("Arous.",ED.p1.arousal,v=>{ED.p1.arousal=v;render()}));
+  const hypD=h("div",{style:{marginTop:"8px"}});hypD.appendChild(h("label",{style:{fontSize:"9px",letterSpacing:"1px",color:"#706858"}},"Signature hypothesis"));hypD.appendChild(tarea(ED.p1.hyp,v=>{ED.p1.hyp=v},"What are you seeing?"));p1.push(hypD);
+  w.appendChild(sec("PHASE 1 — DEMONSTRATION","#5b9bd5",p1));
+
+  // Phase 2
+  const p2=[];
+  p2.push(h("div",{style:{fontSize:"9px",color:"#706858",marginBottom:"8px",fontStyle:"italic"}},'"Tell me about your dog."'));
+  p2.push(badges(["Stats","Emotional","Problem"],ED.p2.dir,v=>{ED.p2.dir=v;render()},"#5b9bd5"));
+  const p2n=h("div",{style:{marginTop:"8px"}});p2n.appendChild(tarea(ED.p2.notes,v=>{ED.p2.notes=v},"Notes"));p2.push(p2n);
+  w.appendChild(sec("PHASE 2 — CONVERSATION","#5b9bd5",p2));
+
+  // Signature Result
+  const sigKids=[];
+  [["d","DOMINANT","#8a8050"],["b","BLIND","#a08840"],["g","GHOST","#a04040"]].forEach(([k,lb,c])=>{
+    const d=h("div",{style:{marginBottom:"8px"}});d.appendChild(h("div",{style:{fontSize:"9px",letterSpacing:"2px",color:c,marginBottom:"4px",textTransform:"uppercase"}},lb));
+    d.appendChild(badges(CH,ED.sig[k],v=>{ED.sig[k]=v;render()},c));sigKids.push(d);
+  });
+  w.appendChild(sec("SIGNATURE RESULT","#8a8050",sigKids));
+
+  // Compass Projection
+  const tot=cTotal(ED.comp);
+  const compKids=[];const scores=h("div",{style:{display:"flex",flexDirection:"column",gap:"8px"}});
+  CK.forEach(k=>{scores.appendChild(scoreRow(k,ED.comp[k],v=>{ED.comp[k]=v;render()}))});compKids.push(scores);
+  w.appendChild(sec(`COMPASS — ${tot}/25`,sc(tot,25),compKids));
+
+  // Profile
+  w.appendChild(sec("PROFILE","#5a8a50",[badges(PR,ED.prof,v=>{ED.prof=v;render()},"#5a8a50")]));
+  app.appendChild(w);
+}
+
+// ── STATES ──
+function renderStates(app){
+  const hdr=h("div",{className:"hdr"});hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
+  const t=h("div",{className:"ttl"});t.textContent="FIVE-STATE MAP™";hdr.appendChild(t);app.appendChild(hdr);
+  const wrap=h("div",{style:{padding:"8px 16px"}});
+  STATES.forEach(s=>{
+    const card=h("div",{style:{background:"#1a1814",border:"1px solid #2e2b24",borderLeft:`3px solid ${s.c}`,borderRadius:"8px",padding:"10px 14px",marginBottom:"8px"}});
+    const top=h("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}});
+    top.appendChild(h("span",{style:{fontSize:"18px",fontWeight:"700",color:s.c}},String(s.n)));
+    const info=h("div");info.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"600"}},s.nm));info.appendChild(h("div",{style:{fontSize:"9px",color:s.c}},s.sh));
+    top.appendChild(info);card.appendChild(top);
+    card.appendChild(h("div",{style:{fontSize:"10px",color:"#706858",lineHeight:"1.5",marginBottom:"4px"}},s.desc));
+    card.appendChild(h("div",{style:{fontSize:"8px",color:"#4a4438"}},s.mk));wrap.appendChild(card);
+  });
+  wrap.appendChild(h("div",{style:{fontSize:"9px",color:"#4a4438",textAlign:"center",marginTop:"8px"}},"State 3 is the fulcrum. Everything before it is reading. Everything after it is recovery."));
+  app.appendChild(wrap);
+}
+
+// ── REFERENCE ──
+function renderReference(app){
+  const hdr=h("div",{className:"hdr"});hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
+  hdr.appendChild(h("div",{className:"ttl"},"REFERENCE"));app.appendChild(hdr);
+
+  app.appendChild(sec("COMPASS","#8a8050",[
+    h("div",{style:{fontSize:"10px",color:"#706858"}},CK.map((k,i)=>k+" — "+CL[i]).join(" · ")),
+    h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Each 1–5. Total /25. Tracked Intake → Day 25 → Day 60 → Day 84.")
+  ]));
+
+  const profKids=[];
+  [["Reactive","Dom: Verbal/Spatial · Blind: Internal · Ghost: Environmental","6–10"],["Rigid","Dom: Spatial · Blind: Timing · Ghost: Internal (attunement)","14–19"],["Avoidant","Dom: Verbal · Blind: Internal · Ghost: Spatial","8–13"],["Passive","Dom: Verbal · Blind: Spatial · Ghost: Environmental","7–11"]].forEach(([p,sig,r])=>{
+    const d=h("div",{style:{background:"#141210",borderRadius:"4px",padding:"6px 8px",marginBottom:"4px"}});
+    d.appendChild(h("div",{style:{fontSize:"11px",fontWeight:"600"}},`${p} (${r}/25)`));
+    d.appendChild(h("div",{style:{fontSize:"9px",color:"#706858",marginTop:"2px"}},sig));profKids.push(d);
+  });
+  profKids.push(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Entry → Improved → Attuned"));
+  app.appendChild(sec("PROFILES","#5a8a50",profKids));
+
+  app.appendChild(sec("CHANNELS","#8a8050",[
+    h("div",{style:{fontSize:"10px",color:"#706858"}},"Spatial · Verbal · Environmental · Internal"),
+    h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Pressure is constant. You are adding to the load or stabilizing it. No neutral.")
+  ]));
+
+  app.appendChild(sec("DIAGNOSTICS","#a08840",[
+    h("div",{style:{fontSize:"10px",color:"#706858",lineHeight:"1.6"}},"Blind = friction when named. Ghost = blankness when named.\nDon't introduce the ghost by correcting it. Vocabulary before reps.\nThe diagnostic belongs to the trainer. The direction belongs to both.")
+  ]));
+
+  const patKids=[];
+  [["Recovery ↑ + Check-ins ↑","Stay the course"],["Recovery ↓ + High State ↑","Pull back. Reset."],["Compass ↓ + Profile shifting","Handler regression"],["Flat 3+ sessions","Plateau. Normal. Hold."],["Recovery ↑ + Check-ins ↓","Compliance without connection"]].forEach(([p,m])=>{
+    const d=h("div",{style:{marginBottom:"4px"}});
+    d.appendChild(h("span",{style:{fontSize:"9px",fontWeight:"700",color:"#8a8050"}},p));
+    d.appendChild(h("span",{style:{fontSize:"9px",color:"#706858"}}," → "+m));patKids.push(d);
+  });
+  app.appendChild(sec("ARC PATTERNS","#8a8050",patKids));
+}
+
+// ═══════ BOOT ═══════
+load();
+</script>
+</body>
+</html>
