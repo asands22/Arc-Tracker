@@ -1,318 +1,750 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Arc Tracker">
-<meta name="theme-color" content="#1A1814">
-<title>Arc Tracker</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:#1A1814;zoom:1.4;color:#E8E2D6;font-family:'JetBrains Mono','SF Mono','Fira Code',monospace;overflow:hidden;height:100dvh;position:fixed;width:100%}
-#root{height:100dvh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
-input,textarea,button{font-family:inherit}
-input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.7)}
-::-webkit-scrollbar{display:none}
-</style>
-</head>
-<body>
-<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100dvh;color:#5C574E">Syncing...</div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script>
-firebase.initializeApp({
-  apiKey:"AIzaSyBwST_VyMcqtwuQthmsC4jkehyfK5Kb0h8",
-  authDomain:"arc-tracker-1.firebaseapp.com",
-  projectId:"arc-tracker-1",
-  storageBucket:"arc-tracker-1.firebasestorage.app",
-  messagingSenderId:"341572759647",
-  appId:"1:341572759647:web:999c48581659ae2a8debea"
-});
-var db=firebase.firestore();
-</script>
-<script type="text/babel">
-const{useState,useEffect,useRef}=React;
+import { useState, useEffect, useCallback, useRef } from "react";
 
-// DATA
-const CH=["Spatial","Verbal","Environmental","Internal"];
-const COMP=[
-{k:"ER",l:"Emotional Regulation",lo:"Frustration leaking into corrections",hi:"Neutral body, neutral voice regardless"},
-{k:"T",l:"Timing & Pacing",lo:"Corrections consistently late or early",hi:"Interrupting pre-decision tension"},
-{k:"CC",l:"Correction Confidence",lo:"Hesitating, apologizing after correction",hi:"Clean, proportionate, no apology"},
-{k:"CO",l:"Consistency",lo:"Rules shift with handler's emotional state",hi:"Same expectation, same boundary, every time"},
-{k:"IN",l:"Intentionality",lo:"Going through motions. No goal.",hi:"Every action has purpose."}];
-const ALLP=["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"];
-const ST=[
-{n:1,nm:"Compliant Calm",c:"#5A8C5E",d:"Loose muscles, soft eyes, regulated breathing.",s:"Body: Soft \u00B7 Eyes: Relaxed \u00B7 Breathing: Even"},
-{n:2,nm:"Alert Neutral",c:"#7EA356",d:"Notices something. Ears rotate, eyes shift. Still with you.",s:"Ears: Rotating \u00B7 Eyes: Tracking \u00B7 Connection: Intact"},
-{n:3,nm:"Pre-Decision Tension",c:"#6F745C",d:"Weighing a decision. Weight shifts forward. The real work.",s:"Weight: Forward \u00B7 Ears: Locked \u00B7 Eye contact: Breaking"},
-{n:4,nm:"Committed Action",c:"#B8704A",d:"Decision made. Lunge, break, bark, ignore.",s:"Body: Committed \u00B7 Focus: Environment \u00B7 Recovery: Slow"},
-{n:5,nm:"Emotional Override",c:"#A34040",d:"No longer making decisions. Reacting.",s:"Eyes: Wide/fixed \u00B7 Cognition: Offline \u00B7 Corrections: Ineffective"}];
-const PAT=[
-{p:"Recovery \u2191 + Check-ins \u2191",m:"Depth is building.",a:"Stay the course."},
-{p:"Recovery \u2193 + High State \u2191",m:"Environment ahead of foundation.",a:"Pull back. Run the Reset."},
-{p:"Compass \u2193 + Profile shifting",m:"Handler regression.",a:"Check Emotional Spillover."},
-{p:"Everything flat 3+",m:"Plateau.",a:"Normal. Building depth. Hold."},
-{p:"Recovery \u2191 Check-ins \u2193",m:"Compliance without connection.",a:"Add enrichment."},
-{p:"Check-ins \u2191 Recovery \u2193",m:"Attention without commitment.",a:"Deepen commitment."}];
-const RS=[
-{n:1,t:"STOP",cd:"R1",d:"Run the full Reset diagnostic. Score every category.",q:"Which scores dropped?"},
-{n:2,t:"CHECK YOURSELF",cd:"Y1",d:"Has the old pattern crept back in?",q:"Has your energy shifted in the last two weeks?"},
-{n:3,t:"DIAGNOSE",cd:"Y3",d:"Emotional Spillover Audit on last three sessions.",q:"Dog testing boundary, or handler stopped holding one?"},
-{n:4,t:"RESET ANCHORS",cd:"\u2014",d:"Tighten every anchor for 72 hours. No shortcuts.",q:"72 hours. Not punishment. Recalibration."},
-{n:5,t:"SCORE AGAIN",cd:"R1",d:"Same diagnostic 72 hours later.",q:"Improved \u2192 answered. If not \u2192 tune-up."}];
-const DQ={
-Spatial:{a:"Show me what you do when your dog pulls.",l:"Move first or talk first? Feet lead or follow?"},
-Verbal:{a:"When your dog doesn\u2019t listen, what do you do?",l:"Commands before consequence. Tone escalate?"},
-Environmental:{a:"Walk me through how you set up for training.",l:"Environment mentioned? Constructed or defaulted?"},
-Internal:{a:"Before you walk out, what are you thinking?",l:"Logistics only = Ghost. Own state = active."}};
-const TP=[
-{tm:"0:00\u20130:10",nm:"The Read",ac:"Observe. Don\u2019t correct. Score dog. Read handler. Check profile."},
-{tm:"0:10\u20130:20",nm:"The Compass",ac:"They score. You score dog. Compare. Name the gap."},
-{tm:"0:20\u20130:50",nm:"The Work",ac:"Demonstrate. Hand off. Score. Correct one thing. Rep."},
-{tm:"0:50\u20130:55",nm:"The Assignment",ac:"Pull 2\u20133 cards. Write specifics. Profile note."},
-{tm:"0:55\u20131:00",nm:"The Close",ac:"Rescore. Compare. Name one win. Next checkpoint."}];
-const PW={
-Reactive:{w:"Fast corrections, tight grip, stacking",c:"Count to three. Loosen the grip. One correction per rep."},
-Rigid:{w:"Overcorrection, missing shutdown, no praise",c:"Watch the ears, not the sit. Pause before you correct."},
-Avoidant:{w:"Soft corrections, hesitation, apology behavior",c:"Clarity is kindness. The correction landed \u2014 don\u2019t take it back."},
-Passive:{w:"Dead grip, no eye contact, missing state changes",c:"Tell me what your dog just did. Eyes on your dog."}};
-const BL=[
-{l:"Foundation Hold",r:"1\u20134",d:"Establishing baselines."},
-{l:"Controlled Expansion",r:"5\u20138",d:"Recovery trending up."},
-{l:"The Plateau",r:"9\u201312",d:"Depth building quietly."},
-{l:"Autonomy",r:"13\u201316",d:"Diagnosing before correcting."}];
-
-// PALETTE
-const EX=[
-{id:"heel",nm:"Heel Protocol",cat:"progressive",domCh:"Internal (dog)",secCh:"Spatial (dog)",removed:"Verbal \u2014 the leash talks, not you",teach:"This position isn\u2019t just physical \u2014 it\u2019s mental. Feet behind your heel, passive state of mind. The heel is where you negotiate with yourself about whether the standard matters.",steps:[{n:"Step 0: The Stand",d:"Stand still. Pop only if they leave leash end. Light encouragement on return. Shrink distance after 1-2 pops. Watch for rallying. 5-10 min to a sit or down."},{n:"Step 1: 180\u00B0 Turn & Snap",d:"Dog walks ahead \u2014 let them. Stack hands on handle at belt, turn 180\u00B0 right, walk away, light pop at leash end. Up to 3 pops per round. 3 rounds then praise. 3 reps \u00D7 2-3 sets daily."},{n:"Step 2: 180\u00B0 Walk-Through",d:"Dog past toes but not 3ft. Right arm straight, turn 180\u00B0 right, walk into leash. Knee against it. Natural, not aggressive."},{n:"Step 3: 90\u00B0 Right Turn",d:"Dog drifting left or lagging. Swing right foot, sharp 90\u00B0 right, knee against leash. Brings them closer and picks up pace."},{n:"Step 4: 90\u00B0 Left Turn",d:"Only works if steps 1-3 solid. Two-handed grip, hands on left side. Right foot out, sharp 90\u00B0 left pivot, nudge with leg. If no return, leash them back and motivate. Eye contact, sit, praise."}],mech:"Two-handed grip, 180\u00B0 turns, 90\u00B0 turns, knee against leash",fail:"Compromises standard when dog \'has been good.\' Left hand grabs leash to prevent mistake.",grows:"Dog\u2019s internal regulation. Handler\u2019s CO and CC."},
-{id:"kennel",nm:"Kennel Boundary",cat:"single",domCh:"Internal (handler) / Spatial (dog)",secCh:"\u2014",removed:"Verbal \u2014 silence is the tool",teach:"Not confinement. A diagnostic instrument. Simplest threshold, purest measure of impulse control. Like a reassurance squeeze on the shoulder.",steps:[{n:"Position & Block",d:"Leash on, door open, you blocking exit. Push past = pop + \'In.\' Interruption, not force."},{n:"Shrink Distance",d:"Pull slack in after 1-2 pops. Count to 3 aloud, gently increase tension. Must be calming, never stressful."},{n:"Introduce Ambiguity",d:"Slow outward tugs. Cognitive puzzles. Step back one shoe length at a time. Only when calm holds."},{n:"Read Internalization",d:"Chin flip up, weight back, pulling deeper, offering sits/downs. Down at threshold \u2260 calm stand at back."}],mech:"Stand still, block exit, pop + \'In,\' shrink distance, ambiguity tugs",fail:"Rushes it. Fills silence with commands. Moves on before dog has settled \u2014 not just paused.",grows:"Handler\u2019s Internal regulation. Dog\u2019s impulse control at simplest threshold."},
-{id:"door",nm:"Doorway Boundary",cat:"single",domCh:"Environmental (dog)",secCh:"Internal (dog)",removed:"Verbal \u2014 only word is \'Out\' to release",teach:"Same principle as kennel, higher stakes. Can save your dog\u2019s life. Toll booth \u2014 slows them physically and mentally. Threshold control predicts public control.",steps:[{n:"Setup",d:"Stand next to closed door, dog on leash. Open slowly."},{n:"Correct",d:"Dog pushes through: release, 180\u00B0, light pop, motivate back."},{n:"Pause",d:"They stop and wait. Hold one beat. Don\u2019t release early."},{n:"Release",d:"Calmly say \'Out.\' Every threshold is an opportunity."}],mech:"Open slowly, release-turn-snap if forge, wait one beat, release \'Out\'",fail:"Releases too early. Or hesitates on correction \u2014 classic Avoidant.",grows:"Dog separates opportunity from permission. Handler\u2019s T and CC."},
-{id:"spot",nm:"Spot Command",cat:"integration",domCh:"Internal + Environmental (dog)",secCh:"\u2014",removed:"Spatial \u2014 dog chooses stillness, you\u2019re not holding them",teach:"Training dissolves into daily life. No formal session. Dog practices regulation while you live around them. Without pressure spikes, no depth.",steps:[{n:"Place & Down",d:"Dog on designated spot. Command the down-stay."},{n:"Live Your Life",d:"Cook, clean, watch TV. Stay holds while life happens."},{n:"Pressure Spikes",d:"Random distractions \u2014 louder voice, movement, doorbell."},{n:"Enforce",d:"Break = redirect back. Standard dies quietly when you don\u2019t notice."}],mech:"Place command, down-stay, random pressure spikes",fail:"Forgets to enforce. Dog breaks, handler in kitchen, doesn\u2019t notice. Standard dies quietly.",grows:"Dog\u2019s self-regulation. Handler\u2019s IN \u2014 designing vs existing."},
-{id:"walkprep",nm:"Walk Preparation",cat:"integration",domCh:"Environmental (both)",secCh:"Internal (both)",removed:"None \u2014 all channels converge",teach:"Training first, then walk. Warm up before workout. Throw random distractions throughout the day to check reactivity to knee-jerk level.",steps:[{n:"Pre-Walk Drills",d:"Few minutes of leash mechanics. Release-turn-snap. Turn and kick. Quick pop."},{n:"Hand Position",d:"Through your core, not shoulders. Two-handed standard."},{n:"State Check",d:"What\u2019s your internal state? What will your dog receive before you speak?"},{n:"Transition",d:"Step outside only after prep. The walk is earned."}],mech:"Leash drills before stepping outside",fail:"Skips it. \'Just a quick walk.\' That compromise sets up the whole walk to fail.",grows:"Handler\u2019s IN. Dog\u2019s indoor-to-outdoor transition."}
+// ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const CHANNELS = ["Spatial", "Verbal", "Environmental", "Internal"];
+const COMPASS_CATS = [
+  { key: "ER", label: "Emotional Regulation" },
+  { key: "T", label: "Timing & Pacing" },
+  { key: "CC", label: "Correction Confidence" },
+  { key: "CO", label: "Consistency" },
+  { key: "IN", label: "Intentionality" },
 ];
-const $={bg:"#1A1814",cd:"#242019",bd:"#3A352C",g:"#6F745C",gd:"#6F745C44",gb:"#6F745C12",tx:"#E8E2D6",dm:"#8A8476",dr:"#5C574E",gn:"#5A8C5E",or:"#B8704A",rd:"#A34040",bl:"#5E84A3"};
+const PROFILES = [
+  "Reactive", "Rigid", "Avoidant", "Passive",
+  "Imp. Reactive", "Imp. Rigid", "Imp. Avoidant", "Imp. Passive",
+  "Attuned",
+];
+const CHECKPOINTS = ["Intake", "Day 25", "Day 60", "Day 84"];
+const JOURNEY_STAGES = ["Immersion", "Recall", "Undercurrent", "Other"];
+const QUALITIES = [
+  { v: 1, l: "Rough", c: "#a04040" },
+  { v: 2, l: "Okay", c: "#a08840" },
+  { v: 3, l: "Locked In", c: "#5a8a50" },
+];
+const TRENDS = ["↑", "→", "↓"];
 
-// STORAGE — Firebase + localStorage cache
-const LS={
-gi(){try{return JSON.parse(localStorage.getItem("shdt-idx")||"[]")}catch{return[]}},
-si(v){localStorage.setItem("shdt-idx",JSON.stringify(v))},
-gc(id){try{return JSON.parse(localStorage.getItem("shdt-c-"+id))}catch{return null}},
-sc(c){localStorage.setItem("shdt-c-"+c.id,JSON.stringify(c));db.collection("clients").doc(c.id).set(JSON.parse(JSON.stringify(c))).catch(e=>console.error("Cloud save:",e))},
-dc(id){localStorage.removeItem("shdt-c-"+id);db.collection("clients").doc(id).delete().catch(e=>console.error("Cloud delete:",e))}
+const FIVE_STATES = [
+  { n: 1, name: "Compliant Calm", short: "The goal.", desc: "Loose muscles, soft eyes, regulated breathing, relaxed posture. Present, settled, at ease within the structure. Not scanning, not bracing, not waiting. Calm that isn't forced. Stillness that isn't frozen.", markers: "Body: Soft · Eyes: Relaxed · Breathing: Even · Weight: Centered", color: "#5a8a50" },
+  { n: 2, name: "Alert Neutral", short: "Awareness without commitment.", desc: "Notices something — a sound, a movement, another dog in the distance. Ears rotate, eyes shift, body may orient slightly. But they haven't moved. They haven't committed. Still with you. Healthy state.", markers: "Ears: Rotating · Eyes: Tracking · Body: Oriented but still · Connection: Intact", color: "#7a9a50" },
+  { n: 3, name: "Pre-Decision Tension", short: "This is where the real work happens.", desc: "No longer just noticing — weighing a decision. Weight shifts forward. Breathing changes. Ears lock. Body stiffens. Eye contact breaks or becomes intermittent. Between two pulls — your influence and the environment's. Catch it here and they come back.", markers: "Weight: Forward · Ears: Locked · Breathing: Changed · Eye contact: Breaking", color: "#a08840" },
+  { n: 4, name: "Committed Action", short: "The decision has been made.", desc: "Lunge. Break. Bark. Ignore. Committed to the environment over you. Not a bad dog — intervention came too late or influence wasn't deep enough yet. Corrections require more intensity, recovery takes longer, elevated baseline.", markers: "Body: Committed · Focus: Environment · Recovery: Slow · Baseline: Elevated", color: "#a06030" },
+  { n: 5, name: "Emotional Override", short: "Loss of cognitive access.", desc: "No longer making decisions. Reacting. Adrenaline running. Breathing rapid or held. Eyes wide and fixed. Body rigid or thrashing. Corrections largely ineffective. Cannot process information. Operating on instinct and emotion.", markers: "Eyes: Wide/fixed · Body: Rigid or thrashing · Cognition: Offline · Corrections: Ineffective", color: "#a04040" },
+];
+
+// ═══════════════════════════════════════════
+// COLOR PALETTE — olive military
+// ═══════════════════════════════════════════
+const C = {
+  bg: "#0f0e0c", card: "#1a1814", cardBorder: "#2e2b24",
+  accent: "#8a8050", accentDim: "#5a5535", accentBright: "#b0a860",
+  text: "#c8c0b0", textDim: "#706858", textMuted: "#4a4438",
+  blue: "#5b9bd5", green: "#5a8a50", red: "#a04040", amber: "#a08840",
+  surface: "#141210",
 };
-async function syncFromCloud(){
-try{const snap=await db.collection("clients").get();if(snap.empty)return LS.gi();
-const idx=[];snap.forEach(doc=>{const c=doc.data();localStorage.setItem("shdt-c-"+c.id,JSON.stringify(c));idx.push({id:c.id,nm:c.nm,dg:c.dg,pr:c.pr})});
-localStorage.setItem("shdt-idx",JSON.stringify(idx));return idx;
-}catch(e){console.error("Sync failed:",e);return LS.gi()}
+
+// ═══════════════════════════════════════════
+// DATA FACTORIES
+// ═══════════════════════════════════════════
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const today = () => new Date().toISOString().split("T")[0];
+
+const emptyClient = () => ({
+  id: uid(), name: "", dog: "", breed: "", age: "", context: "",
+  signature: { dominant: "", blind: "", ghost: "" },
+  profile: "", compassHistory: [], sessions: [], arcSessions: [],
+  homework: [], recurringIssues: [], notes: "", created: today(),
+});
+const emptyCompass = (cp) => ({ id: uid(), checkpoint: cp, date: today(), ER: 1, T: 1, CC: 1, CO: 1, IN: 1 });
+const emptySession = () => ({
+  id: uid(), date: today(), profile: "", dominantChannel: "", focus: "",
+  quality: 2, journeyStage: "", notes: "",
+});
+const emptyArcSession = (num) => ({
+  id: uid(), num, date: today(), recovery: 0, checkIns: 0, compass: 5,
+  highState: 1, profile: "", trend: "→", notes: "",
+});
+const emptyEval = () => ({
+  id: uid(), date: today(),
+  phase1: { spatialFeet: "", verbalMouth: "", spatialInternal: "", internalDogFace: "", firstBreak: "", bodyBeforeMouth: "", dogArousal: 1, hypothesis: "" },
+  phase2: { direction: "", notes: "" },
+  signatureResult: { dominant: "", blind: "", ghost: "" },
+  compassProjection: { ER: 1, T: 1, CC: 1, CO: 1, IN: 1 },
+  profileResult: "",
+});
+
+// ═══════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════
+const STORE_KEY = "shdt-arc-v2";
+const load = async () => { try { const r = await window.storage.get(STORE_KEY); return r ? JSON.parse(r.value) : { clients: [] }; } catch { return { clients: [] }; } };
+const save = async (d) => { try { await window.storage.set(STORE_KEY, JSON.stringify(d)); } catch (e) { console.error(e); } };
+
+// ═══════════════════════════════════════════
+// MICRO COMPONENTS
+// ═══════════════════════════════════════════
+const sty = {
+  shell: { background: C.bg, color: C.text, minHeight: "100vh", fontFamily: "'JetBrains Mono', 'SF Mono', monospace", maxWidth: 520, margin: "0 auto", paddingBottom: 80, position: "relative" },
+  topBar: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${C.cardBorder}` },
+  section: (accent) => ({ borderLeft: `3px solid ${accent || C.accent}`, paddingLeft: 14, marginBottom: 22, marginLeft: 16, marginRight: 16 }),
+  sectionTitle: (accent) => ({ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: accent || C.accent, marginBottom: 8, fontFamily: "inherit" }),
+  card: { background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: "14px 16px", marginBottom: 8, cursor: "pointer", display: "block", width: "100%", textAlign: "left", transition: "border-color .15s" },
+  btn: (fill) => ({ padding: "10px 18px", borderRadius: 6, border: fill ? "none" : `1px solid ${C.cardBorder}`, background: fill ? C.accent : "transparent", color: fill ? C.bg : C.textDim, cursor: "pointer", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", fontFamily: "inherit" }),
+  btnSm: (fill) => ({ padding: "6px 12px", borderRadius: 4, border: fill ? "none" : `1px solid ${C.cardBorder}`, background: fill ? C.accent : "transparent", color: fill ? C.bg : C.textDim, cursor: "pointer", fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "inherit" }),
+  input: { background: C.surface, border: `1px solid ${C.cardBorder}`, borderRadius: 4, padding: "8px 10px", color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" },
+  label: { fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: C.textDim, fontFamily: "inherit", marginBottom: 4, display: "block" },
+  textarea: { background: C.surface, border: `1px solid ${C.cardBorder}`, borderRadius: 4, padding: 10, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box", resize: "vertical", minHeight: 70 },
+};
+
+const Badge = ({ children, active, onClick, color }) => (
+  <button onClick={onClick} style={{ padding: "5px 12px", borderRadius: 4, border: `1px solid ${active ? (color || C.accent) : C.cardBorder}`, background: active ? (color || C.accent) + "20" : "transparent", color: active ? (color || C.accent) : C.textDim, cursor: "pointer", fontSize: 11, fontFamily: "inherit", transition: "all .12s", whiteSpace: "nowrap" }}>{children}</button>
+);
+
+const Field = ({ label, value, onChange, placeholder, type = "text", style: s }) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: 3, ...s }}>
+    <label style={sty.label}>{label}</label>
+    <input type={type} value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={sty.input} />
+  </div>
+);
+
+const ScoreRow = ({ label, value, onChange, max = 5 }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <span style={{ width: 28, fontSize: 10, color: C.textDim, textAlign: "right", flexShrink: 0 }}>{label}</span>
+    <div style={{ flex: 1, display: "flex", gap: 3 }}>
+      {Array.from({ length: max }, (_, i) => i + 1).map(n => (
+        <button key={n} onClick={() => onChange(n)} style={{ flex: 1, height: 26, borderRadius: 3, border: "none", cursor: "pointer", background: n <= value ? sc(value, max) : C.surface, color: n <= value ? "#000" : C.textMuted, fontSize: 11, fontWeight: 700, fontFamily: "inherit", transition: "all .1s" }}>{n}</button>
+      ))}
+    </div>
+    <span style={{ width: 18, fontSize: 13, fontWeight: 700, color: sc(value, max), fontFamily: "inherit" }}>{value}</span>
+  </div>
+);
+
+function sc(v, max = 5) {
+  const p = v / max;
+  if (p <= 0.3) return C.red;
+  if (p <= 0.5) return C.amber;
+  if (p <= 0.7) return C.accent;
+  return C.green;
 }
 
-// HELPERS
-const mk=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const td=()=>new Date().toISOString().split("T")[0];
-const sc=(v,m)=>{const p=v/m;return p<=.25?$.rd:p<=.5?$.or:p<=.7?$.g:p<=.85?"#9CA35A":$.gn};
-const fc=()=>({id:mk(),nm:"",dg:"",br:"",ag:"",sg:{dominant:"",blind:"",ghost:""},dsg:{dominant:"",blind:"",ghost:""},pr:"",ch:[],arc:Array.from({length:16},(_,i)=>({s:i+1,dt:"",rec:null,chk:null,comp:null,hs:null,pf:"",tr:"",nt:""})),tu:[],rs:[],evals:[],ref:"",refSub:"",refDetail:"",hw:[],issues:[],nt:""});
-const freshEval=()=>({id:mk(),date:td(),step:0,channelObs:{Spatial:"",Verbal:"",Environmental:"",Internal:""},sigDom:"",sigDomDemoEv:"",sigDomConvEv:"",sigBlind:"",sigBlindDemoEv:"",sigBlindConvEv:"",sigGhost:"",sigGhostDemoEv:"",sigGhostConvEv:"",ghostConfirm:"",ER:3,T:3,CC:3,CO:3,IN:3,profile:"",addressFirst:"",doNotDisturb:"",closeWhat:"",closeBuild:"",closeHow:"",response:"",priorities:["","",""]});
+const CompassSpark = ({ history }) => {
+  if (!history || history.length < 2) return null;
+  const totals = history.map(h => h.ER + h.T + h.CC + h.CO + h.IN);
+  const w = 220, h = 55, pad = 8;
+  const pts = totals.map((t, i) => ({ x: pad + (i / Math.max(totals.length - 1, 1)) * (w - pad * 2), y: pad + (1 - t / 25) * (h - pad * 2) }));
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+  return (
+    <svg width={w} height={h} style={{ display: "block", marginTop: 8 }}>
+      <path d={line} fill="none" stroke={C.accent} strokeWidth={2} />
+      {pts.map((p, i) => (
+        <g key={i}><circle cx={p.x} cy={p.y} r={3} fill={C.bg} stroke={C.accent} strokeWidth={1.5} />
+        <text x={p.x} y={p.y - 7} textAnchor="middle" fill={C.accent} fontSize={8} fontFamily="inherit">{totals[i]}</text></g>
+      ))}
+    </svg>
+  );
+};
 
-// COMPONENTS
-const Bt=({children,accent:a,danger:d,full:f,onClick:o,style:s})=><button onClick={o} style={{padding:"10px 16px",borderRadius:4,border:a||d?"none":"1px solid "+$.bd,background:a?$.g:d?$.rd+"22":"transparent",color:a?$.bg:d?$.rd:$.dm,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",fontFamily:"inherit",width:f?"100%":"auto",...s}}>{children}</button>;
-const Cp=({children,active:a,color:c,onClick:o})=><button onClick={o} style={{padding:"5px 11px",borderRadius:3,border:"1px solid "+(a?(c||$.g):$.bd),background:a?(c||$.g)+"15":"transparent",color:a?(c||$.g):$.dm,cursor:"pointer",fontSize:11,fontFamily:"inherit",whiteSpace:"nowrap"}}>{children}</button>;
-const In=({label:l,value:v,onChange:o,placeholder:p,type:t="text",style:s})=><div style={{display:"flex",flexDirection:"column",gap:3,...s}}>{l&&<label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:$.dm}}>{l}</label>}<input type={t} value={v||""} onChange={e=>o(e.target.value)} placeholder={p} style={{background:$.cd,border:"1px solid "+$.bd,borderRadius:4,padding:"7px 9px",color:$.tx,fontSize:13,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"}}/></div>;
-const Ta=({label:l,value:v,onChange:o,placeholder:p,rows:r=3})=><div style={{display:"flex",flexDirection:"column",gap:3}}>{l&&<label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:$.dm}}>{l}</label>}<textarea value={v||""} onChange={e=>o(e.target.value)} placeholder={p} rows={r} style={{background:$.cd,border:"1px solid "+$.bd,borderRadius:4,padding:"7px 9px",color:$.tx,fontSize:12,fontFamily:"inherit",outline:"none",resize:"vertical",width:"100%",boxSizing:"border-box"}}/></div>;
-const Lb=({children,color:c,style:s})=><span style={{fontSize:9,letterSpacing:2.5,textTransform:"uppercase",color:c||$.dm,...s}}>{children}</span>;
-const Se=({title:t,accent:a,children:ch})=><div style={{borderLeft:"3px solid "+(a||$.g),paddingLeft:14,marginBottom:20}}><Lb color={a||$.g}>{t}</Lb><div style={{marginTop:8}}>{ch}</div></div>;
-const SB=({label:l,value:v,onChange:o,max:m=5})=><div style={{marginBottom:10,display:"flex",alignItems:"center",gap:8}}><span style={{width:24,fontSize:10,color:$.dm,textAlign:"right"}}>{l}</span><div style={{flex:1,display:"flex",gap:3}}>{Array.from({length:m},(_,i)=>i+1).map(n=><button key={n} onClick={()=>o(n)} style={{flex:1,height:28,borderRadius:3,border:"none",cursor:"pointer",background:n<=v?sc(v,m):"#1E1B16",color:n<=v?$.bg:$.dr,fontSize:11,fontWeight:700,fontFamily:"inherit"}}>{n}</button>)}</div><span style={{width:18,fontSize:14,fontWeight:700,color:sc(v,m)}}>{v}</span></div>;
-const Bk=({onClick:o,label:l})=><button onClick={o} style={{background:"none",border:"none",color:$.dm,cursor:"pointer",fontSize:12,fontFamily:"inherit",padding:"12px 0"}}>{"\u2190"} {l||"Back"}</button>;
-const PfSel=({value:v,onChange:o})=><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{["P","Re","Ri","A"].map(p=><Cp key={p} active={v===p} onClick={()=>o(p)}>{p==="P"?"Passive":p==="Re"?"Reactive":p==="Ri"?"Rigid":"Avoidant"}</Cp>)}</div>;
-const Radar=({sg,size:sz=90})=>{const r=sz*.36,cx=sz/2,cy=sz/2,a=[0,1,2,3].map(i=>(i*Math.PI*2)/4-Math.PI/2),lb=["S","V","E","I"];const gv=ch=>ch===sg.dominant?1:ch===sg.blind?.55:ch===sg.ghost?.2:.5;const v=CH.map(gv),pts=v.map((val,i)=>({x:cx+Math.cos(a[i])*r*val,y:cy+Math.sin(a[i])*r*val}));const gc=ch=>ch===sg.dominant?$.g:ch===sg.blind?$.or:ch===sg.ghost?$.rd:$.dr;return <svg width={sz} height={sz}>{[.25,.5,.75,1].map(s=><polygon key={s} points={a.map(an=>(cx+Math.cos(an)*r*s)+","+(cy+Math.sin(an)*r*s)).join(" ")} fill="none" stroke={$.bd}/>)}{a.map((an,i)=><line key={i} x1={cx} y1={cy} x2={cx+Math.cos(an)*r} y2={cy+Math.sin(an)*r} stroke={$.bd}/>)}<polygon points={pts.map(p=>p.x+","+p.y).join(" ")} fill={$.gb} stroke={$.g} strokeWidth={1.5}/>{a.map((an,i)=><text key={i} x={cx+Math.cos(an)*(r+10)} y={cy+Math.sin(an)*(r+10)} textAnchor="middle" dominantBaseline="central" fill={gc(CH[i])} fontSize={9} fontWeight={700}>{lb[i]}</text>)}</svg>};
-const Spk=({data:d,w=220,h=50,c=$.g})=>{if(!d||d.length<2)return null;const pad=10,mx=Math.max(...d),mn=Math.min(...d),rng=mx-mn||1;const pts=d.map((v,i)=>({x:pad+(i/(d.length-1))*(w-pad*2),y:pad+(1-(v-mn)/rng)*(h-pad*2)}));return <svg width={w} height={h}><path d={pts.map((p,i)=>(i===0?"M":"L")+p.x+","+p.y).join(" ")} fill="none" stroke={c} strokeWidth={1.5}/>{pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r={3} fill={$.bg} stroke={c} strokeWidth={1.5}/>)}<text x={pts[pts.length-1].x+6} y={pts[pts.length-1].y+3} fill={c} fontSize={9}>{d[d.length-1]}</text></svg>};
+const ChannelRadar = ({ signature }) => {
+  const r = 36, cx = 50, cy = 50;
+  const angles = [0, 1, 2, 3].map(i => (i * Math.PI * 2) / 4 - Math.PI / 2);
+  const labels = ["S", "V", "E", "I"];
+  const getVal = (ch) => { if (ch === signature.dominant) return 1; if (ch === signature.blind) return 0.55; if (ch === signature.ghost) return 0.2; return 0.45; };
+  const vals = CHANNELS.map(getVal);
+  const pts = vals.map((v, i) => ({ x: cx + Math.cos(angles[i]) * r * v, y: cy + Math.sin(angles[i]) * r * v }));
+  const poly = pts.map(p => `${p.x},${p.y}`).join(" ");
+  const gc = (ch) => { if (ch === signature.dominant) return C.accent; if (ch === signature.blind) return C.amber; if (ch === signature.ghost) return C.red; return C.textMuted; };
+  return (
+    <svg width={100} height={100} style={{ display: "block", flexShrink: 0 }}>
+      {[0.33, 0.66, 1].map(s => <polygon key={s} points={angles.map(a => `${cx + Math.cos(a) * r * s},${cy + Math.sin(a) * r * s}`).join(" ")} fill="none" stroke={C.cardBorder} strokeWidth={1} />)}
+      {angles.map((a, i) => <line key={i} x1={cx} y1={cy} x2={cx + Math.cos(a) * r} y2={cy + Math.sin(a) * r} stroke={C.cardBorder} strokeWidth={1} />)}
+      <polygon points={poly} fill={C.accent + "18"} stroke={C.accent} strokeWidth={1.5} />
+      {angles.map((a, i) => <text key={i} x={cx + Math.cos(a) * (r + 10)} y={cy + Math.sin(a) * (r + 10)} textAnchor="middle" dominantBaseline="central" fill={gc(CHANNELS[i])} fontSize={9} fontWeight={700} fontFamily="inherit">{labels[i]}</text>)}
+    </svg>
+  );
+};
 
-// APP
-function App(){
-const[idx,sIdx]=useState([]);const[cl,sCl]=useState(null);const[tab,sTab]=useState("clients");const[ed,sEd]=useState(null);const[arcI,sAI]=useState(null);const[tu,sTu]=useState(null);const[rst,sRst]=useState(null);const[sLog,sSL]=useState(null);const[dS,sDS]=useState(0);const[dD,sDD]=useState({dominant:"",blind:"",ghost:"",notes:{}});const[ev,sEv]=useState(null);const[rdy,sRdy]=useState(false);const[hwExp,sHwExp]=useState(null);const[synced,sSynced]=useState(false);const sr=useRef(null);
+// ═══════════════════════════════════════════
+// BOTTOM NAV
+// ═══════════════════════════════════════════
+const NAV_ITEMS = [
+  { key: "clients", icon: "◉", label: "CLIENTS" },
+  { key: "diagnose", icon: "⊘", label: "DIAGNOSE" },
+  { key: "states", icon: "◆", label: "STATES" },
+  { key: "reference", icon: "≡", label: "REFERENCE" },
+];
 
-// Cloud sync on mount
-useEffect(()=>{syncFromCloud().then(i=>{sIdx(i);sRdy(true);sSynced(true)}).catch(()=>{sIdx(LS.gi());sRdy(true)})},[]);
+const BottomNav = ({ active, onNav }) => (
+  <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.cardBorder}`, display: "flex", justifyContent: "center", zIndex: 100 }}>
+    <div style={{ display: "flex", maxWidth: 520, width: "100%", justifyContent: "space-around", padding: "8px 0 12px" }}>
+      {NAV_ITEMS.map(n => (
+        <button key={n.key} onClick={() => onNav(n.key)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 8px", color: active === n.key ? C.accent : C.textDim, fontFamily: "inherit" }}>
+          <span style={{ fontSize: 16 }}>{n.icon}</span>
+          <span style={{ fontSize: 8, letterSpacing: 2, fontWeight: 700 }}>{n.label}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+);
 
-const openCl=id=>{const c=LS.gc(id);if(c){c.evals=c.evals||[];sCl(c);sTab("detail")}};
-const saveCl=c=>{LS.sc(c);sCl(c);let ni=idx.filter(x=>x.id!==c.id);ni.push({id:c.id,nm:c.nm,dg:c.dg,pr:c.pr});sIdx(ni);LS.si(ni)};
-const delCl=id=>{LS.dc(id);const ni=idx.filter(x=>x.id!==id);sIdx(ni);LS.si(ni);sCl(null);sTab("clients")};
-useEffect(()=>{sr.current&&sr.current.scrollTo(0,0)},[tab]);
-useEffect(()=>{if(ev&&sr.current)sr.current.scrollTo(0,0)},[ev&&ev.step]);
+// ═══════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════
+export default function ArcTracker() {
+  const [data, setData] = useState({ clients: [] });
+  const [loaded, setLoaded] = useState(false);
+  const [tab, setTab] = useState("clients");
+  const [activeId, setActiveId] = useState(null);
+  const [view, setView] = useState("list");
+  const [editData, setEditData] = useState(null);
+  const [issueInput, setIssueInput] = useState("");
+  const [hwInput, setHwInput] = useState("");
 
-if(!rdy)return <div style={{background:$.bg,color:$.dm,height:"100dvh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8}}><div style={{fontSize:12}}>Syncing with cloud...</div><div style={{fontSize:9,color:$.dr}}>{synced?"\u2713 Connected":"Connecting..."}</div></div>;
+  useEffect(() => { load().then(d => { setData(d); setLoaded(true); }); }, []);
+  const persist = useCallback(async (nd) => { setData(nd); await save(nd); }, []);
 
-const sh={display:"flex",flexDirection:"column",height:"100dvh"};
-const ct={flex:1,overflowY:"auto",padding:"0 14px 90px",WebkitOverflowScrolling:"touch"};
+  const client = data.clients.find(c => c.id === activeId);
+  const updateClient = async (c) => {
+    const nd = { ...data, clients: data.clients.map(x => x.id === c.id ? c : x) };
+    if (!data.clients.find(x => x.id === c.id)) nd.clients.push(c);
+    await persist(nd);
+  };
 
-const Nav=()=><div style={{position:"fixed",bottom:0,left:0,right:0,background:"#151210",borderTop:"1px solid "+$.bd,display:"flex",justifyContent:"center",zIndex:100}}><div style={{display:"flex",maxWidth:480,width:"100%"}}>{[{id:"clients",ic:"\u25C9",l:"Clients"},{id:"diagnose",ic:"\u2298",l:"Diagnose"},{id:"fiveState",ic:"\u25C6",l:"States"},{id:"ref",ic:"\u2261",l:"Reference"}].map(t=><button key={t.id} onClick={()=>sTab(t.id)} style={{flex:1,background:"none",border:"none",padding:"10px 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:16,color:tab===t.id?$.g:$.dr}}>{t.ic}</span><span style={{fontSize:8,letterSpacing:1.5,color:tab===t.id?$.g:$.dr,textTransform:"uppercase"}}>{t.l}</span></button>)}</div></div>;
-const Hdr=()=><div style={{padding:"18px 14px 12px",textAlign:"center",borderBottom:"1px solid "+$.bd}}><div style={{fontSize:8,letterSpacing:4,color:$.dr}}>STEADY HAND RaD\u2122</div><div style={{fontSize:16,fontWeight:700,letterSpacing:2,color:$.g}}>ARC TRACKER</div>{synced&&<div style={{fontSize:7,color:$.gn,marginTop:2}}>{"\u2713"} CLOUD SYNCED</div>}</div>;
+  if (!loaded) return <div style={{ ...sty.shell, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: C.textDim, fontSize: 12 }}>Loading...</span></div>;
 
-// CLIENTS
-if(tab==="clients")return <div style={sh}><Hdr/><div ref={sr} style={ct}>{idx.length===0&&<div style={{textAlign:"center",color:$.dr,padding:"40px 0",fontSize:12}}>No clients yet.</div>}{idx.map(c=><button key={c.id} onClick={()=>openCl(c.id)} style={{display:"flex",alignItems:"center",gap:12,width:"100%",padding:"12px 10px",background:$.cd,border:"1px solid "+$.bd,borderRadius:6,marginTop:8,cursor:"pointer",textAlign:"left"}}><div style={{width:36,height:36,borderRadius:"50%",background:$.bg,border:"1px solid "+$.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:$.g,fontWeight:700,flexShrink:0}}>{(c.nm||"?")[0].toUpperCase()}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,color:$.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.nm||"Unnamed"}</div><div style={{fontSize:10,color:$.dm}}>{c.dg||"\u2014"} \u00B7 {c.pr||"No profile"}</div></div></button>)}<div style={{marginTop:16,textAlign:"center"}}><Bt accent onClick={()=>{sEd(fc());sTab("edit")}}>+ New Client</Bt></div></div><Nav/></div>;
+  // ─── TAB: STATES ───
+  if (tab === "states") return (
+    <div style={sty.shell}>
+      <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
+        <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
+        <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 2, color: C.accent, marginTop: 4 }}>FIVE-STATE AWARENESS MAP™</div>
+        <div style={{ fontSize: 9, color: C.textMuted, marginTop: 6 }}>State 3 is the fulcrum. Everything before it is reading. Everything after it is recovery.</div>
+      </div>
+      <div style={{ padding: "12px 16px" }}>
+        {FIVE_STATES.map(s => (
+          <div key={s.n} style={{ ...sty.card, borderLeft: `3px solid ${s.color}`, marginLeft: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <span style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.n}</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{s.name}</div>
+                <div style={{ fontSize: 10, color: s.color, fontStyle: "italic" }}>{s.short}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: C.textDim, lineHeight: 1.5, marginBottom: 6 }}>{s.desc}</div>
+            <div style={{ fontSize: 9, color: C.textMuted, letterSpacing: 0.5 }}>{s.markers}</div>
+          </div>
+        ))}
+      </div>
+      <BottomNav active={tab} onNav={setTab} />
+    </div>
+  );
 
-// EDIT
-if(tab==="edit"&&ed){const set=(k,v)=>sEd({...ed,[k]:v}),setSg=(k,v)=>sEd({...ed,sg:{...ed.sg,[k]:v}});return <div style={sh}><div ref={sr} style={ct}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0"}}><Bk onClick={()=>{sEd(null);sTab(cl?"detail":"clients")}}/><Bt accent onClick={()=>{saveCl(ed);sEd(null);sTab("detail")}}>Save</Bt></div><Se title="Client Info"><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><In label="Handler" value={ed.nm} onChange={v=>set("nm",v)} placeholder="Name"/><In label="Dog" value={ed.dg} onChange={v=>set("dg",v)} placeholder="Dog name"/><In label="Breed" value={ed.br} onChange={v=>set("br",v)} placeholder="Breed"/><In label="Age" value={ed.ag} onChange={v=>set("ag",v)} placeholder="Age"/></div></Se><Se title="Handler Signature\u2122">{["dominant","blind","ghost"].map(r=><div key={r} style={{marginBottom:12}}><Lb color={r==="dominant"?$.g:r==="blind"?$.or:$.rd}>{r}</Lb><div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:4}}>{CH.map(ch=><Cp key={ch} active={ed.sg[r]===ch} color={r==="dominant"?$.g:r==="blind"?$.or:$.rd} onClick={()=>setSg(r,ch)}>{ch}</Cp>)}</div></div>)}</Se><Se title="Dog Signature" accent={$.bl}>{["dominant","blind","ghost"].map(r=><div key={r} style={{marginBottom:12}}><Lb color={r==="dominant"?$.bl:r==="blind"?$.or:$.rd}>{r}</Lb><div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:4}}>{CH.map(ch=><Cp key={ch} active={(ed.dsg||{})[r]===ch} color={r==="dominant"?$.bl:r==="blind"?$.or:$.rd} onClick={()=>sEd({...ed,dsg:{...(ed.dsg||{dominant:"",blind:"",ghost:""}),[r]:ch}})}>{ch}</Cp>)}</div></div>)}</Se><Se title="Handler Profile" accent={$.gn}><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{ALLP.map(p=><Cp key={p} active={ed.pr===p} color={$.gn} onClick={()=>set("pr",p)}>{p}</Cp>)}</div></Se><Se title="Referral Source" accent={$.bl}>
-<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{["Vet Clinic","Client Referral","Social Media","Word of Mouth","Repeat Client","Other"].map(r=><Cp key={r} active={ed.ref===r} color={$.bl} onClick={()=>{set("ref",r);set("refSub","");set("refDetail","")}}>{r}</Cp>)}</div>
-{ed.ref==="Social Media"&&<div style={{marginBottom:8}}><Lb>Platform</Lb><div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:4}}>{["Instagram","Facebook","TikTok","YouTube","Other"].map(p=><Cp key={p} active={ed.refSub===p} color={$.bl} onClick={()=>set("refSub",p)}>{p}</Cp>)}</div></div>}
-{ed.ref&&ed.ref!=="Social Media"&&ed.ref!=="Repeat Client"&&<In label={ed.ref==="Vet Clinic"?"Which clinic?":ed.ref==="Client Referral"?"Which client?":ed.ref==="Word of Mouth"?"Who?":"Specify"} value={ed.refDetail} onChange={v=>set("refDetail",v)} placeholder={ed.ref==="Vet Clinic"?"Clinic name":ed.ref==="Client Referral"?"Client name":ed.ref==="Word of Mouth"?"Name":"Details"} style={{marginTop:4}}/>}
-{ed.ref==="Social Media"&&ed.refSub==="Other"&&<In label="Which platform?" value={ed.refDetail} onChange={v=>set("refDetail",v)} placeholder="Platform name" style={{marginTop:4}}/>}
-</Se><Se title="Notes" accent={$.dm}><Ta value={ed.nt} onChange={v=>set("nt",v)} placeholder="Anything worth remembering\u2026"/></Se>{idx.find(x=>x.id===ed.id)&&<div style={{textAlign:"center",marginTop:12}}><Bt danger onClick={()=>{if(confirm("Delete?"))delCl(ed.id)}}>Delete</Bt></div>}</div><Nav/></div>}
+  // ─── TAB: REFERENCE ───
+  if (tab === "reference") return (
+    <div style={sty.shell}>
+      <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
+        <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
+        <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 2, color: C.accent, marginTop: 4 }}>REFERENCE</div>
+      </div>
+      <div style={{ padding: "0 16px" }}>
+        <div style={sty.section(C.accent)}>
+          <div style={sty.sectionTitle(C.accent)}>THE HANDLER INDEX™</div>
+          <div style={{ fontSize: 11, color: C.textDim, lineHeight: 1.6 }}>
+            The Signature is the map. The Compass is the proof of movement. The Profile is the name for where you stand.
+          </div>
+        </div>
+        <div style={sty.section(C.accent)}>
+          <div style={sty.sectionTitle(C.accent)}>COMPASS CATEGORIES</div>
+          {COMPASS_CATS.map(cat => (
+            <div key={cat.key} style={{ marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>{cat.key}</span>
+              <span style={{ fontSize: 11, color: C.textDim }}> — {cat.label}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>Each scored 1–5. Totaling /25. Tracked at Intake, Day 25, Day 60, Day 84.</div>
+        </div>
+        <div style={sty.section(C.accent)}>
+          <div style={sty.sectionTitle(C.accent)}>HANDLER PROFILES</div>
+          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 8 }}>Entry → Improved → Attuned</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {[
+              { p: "Reactive", sig: "Dom: Verbal/Spatial · Blind: Internal · Ghost: Environmental", range: "6–10" },
+              { p: "Rigid", sig: "Dom: Spatial · Blind: Timing · Ghost: Internal (attunement)", range: "14–19" },
+              { p: "Avoidant", sig: "Dom: Verbal · Blind: Internal · Ghost: Spatial", range: "8–13" },
+              { p: "Passive", sig: "Dom: Verbal · Blind: Spatial · Ghost: Environmental", range: "7–11" },
+            ].map(r => (
+              <div key={r.p} style={{ background: C.surface, borderRadius: 4, padding: "8px 10px" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{r.p} <span style={{ fontSize: 10, color: C.textMuted }}>({r.range}/25)</span></div>
+                <div style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>{r.sig}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={sty.section(C.accent)}>
+          <div style={sty.sectionTitle(C.accent)}>FOUR PRESSURE CHANNELS™</div>
+          <div style={{ fontSize: 11, color: C.textDim, lineHeight: 1.6 }}>
+            Spatial · Verbal · Environmental · Internal
+          </div>
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 4, lineHeight: 1.5 }}>
+            Pressure is not correction. Pressure is not force. Pressure is constant. You are adding to the pressure load or stabilizing it. There is no neutral.
+          </div>
+        </div>
+        <div style={sty.section(C.accent)}>
+          <div style={sty.sectionTitle(C.accent)}>90-DAY ARC PATTERN GUIDE</div>
+          {[
+            { p: "Recovery ↑ + Check-ins ↑", m: "Depth building. Influence is real. Stay the course." },
+            { p: "Recovery ↓ + High State ↑", m: "Environment ahead of foundation. Pull back. Run the Reset." },
+            { p: "Compass ↓ + Profile shifting", m: "Handler regression. Check Emotional Spillover. Breathing Reset." },
+            { p: "Everything flat 3+ sessions", m: "Plateau. Normal. You're building depth. Hold." },
+            { p: "Recovery ↑ but Check-ins ↓", m: "Compliance without connection. Add enrichment. Relationship work." },
+          ].map((r, i) => (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.accent }}>{r.p}</div>
+              <div style={{ fontSize: 10, color: C.textDim }}>{r.m}</div>
+            </div>
+          ))}
+        </div>
+        <div style={sty.section(C.accent)}>
+          <div style={sty.sectionTitle(C.accent)}>DIAGNOSTIC RULES</div>
+          <div style={{ fontSize: 10, color: C.textDim, lineHeight: 1.6 }}>
+            Blind = friction when named. Ghost = blankness when named. The reaction is the diagnostic.
+            {"\n\n"}Do not introduce the ghost channel by correcting it. Introduce it. They need vocabulary before reps.
+            {"\n\n"}The client never sees the full diagnostic. The diagnostic belongs to the trainer. The direction belongs to both of them.
+          </div>
+        </div>
+      </div>
+      <BottomNav active={tab} onNav={setTab} />
+    </div>
+  );
 
-// DETAIL
-if(tab==="detail"&&cl){const lc=cl.ch&&cl.ch[cl.ch.length-1];const total=lc?lc.ER+lc.T+lc.CC+lc.CO+lc.IN:null;const hasSig=cl.sg.dominant||cl.sg.blind||cl.sg.ghost;const logged=cl.arc?cl.arc.filter(s=>s.dt).length:0;const cT=(cl.ch||[]).map(c=>c.ER+c.T+c.CC+c.CO+c.IN);const bp=["Reactive","Rigid","Avoidant","Passive"].find(p=>cl.pr&&cl.pr.includes(p))||"";const nextS=(cl.arc||[]).findIndex(s=>!s.dt);
-return <div style={sh}><div ref={sr} style={ct}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><Bk onClick={()=>{sCl(null);sTab("clients")}} label="All"/><Bt onClick={()=>{sEd({...cl});sTab("edit")}}>Edit</Bt></div>
-<div style={{textAlign:"center",marginBottom:20}}><div style={{fontSize:18,fontWeight:700,color:$.tx}}>{cl.nm||"Unnamed"}</div><div style={{fontSize:11,color:$.dm,marginTop:3}}>{cl.dg}{cl.br?" \u00B7 "+cl.br:""}{cl.ag?" \u00B7 "+cl.ag:""}</div>{cl.pr&&<div style={{marginTop:6}}><span style={{fontSize:10,padding:"3px 10px",borderRadius:20,background:$.gb,color:$.g,border:"1px solid "+$.gd}}>{cl.pr}</span></div>}</div>
-{cl.ref&&<div style={{fontSize:10,color:$.bl,marginTop:6,textAlign:"center"}}>{cl.ref}{cl.refSub?" · "+cl.refSub:""}{cl.refDetail?" · "+cl.refDetail:""}</div>}
-<div style={{background:$.g+"0D",border:"1px solid "+$.gd,borderRadius:6,padding:12,marginBottom:12}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><Lb color={$.g}>Session Log</Lb><div style={{fontSize:10,color:$.dm,marginTop:2}}>Feeds Arc + Compass</div></div><Bt accent onClick={()=>{const i=nextS>=0?nextS:15;const b=BL[Math.floor(i/4)];sSL({ai:i,sn:i+1,block:b?b.l:"Autonomy",blockD:b?b.d:"",date:td(),rec:null,chk:null,hs:null,pf:"",tr:"",ER:3,T:3,CC:3,CO:3,IN:3,focus:"",notes:""});sTab("sLog")}}>+ Log</Bt></div></div>
-<div style={{background:$.bl+"0D",border:"1px solid "+$.bl+"44",borderRadius:6,padding:12,marginBottom:20}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><Lb color={$.bl}>Handler Index\u2122 Eval</Lb><div style={{fontSize:10,color:$.dm,marginTop:2}}>Full diagnostic walkthrough</div></div><Bt accent onClick={()=>{sEv(freshEval());sTab("eval")}} style={{background:$.bl}}>+ Eval</Bt></div></div>
-{/* Homework */}
-<Se title={"Homework \u00B7 "+((cl.hw||[]).filter(h=>h.status!=="done").length)} accent={$.g}>
-{(cl.hw||[]).length>0?(cl.hw||[]).filter(h=>h.status!=="done").map(h=>{const ex=EX.find(e=>e.id===h.exId);const isX=hwExp===h.id;return <div key={h.id} style={{marginBottom:4,background:isX?$.cd:"transparent",borderRadius:4,border:isX?"1px solid "+$.bd:"none",padding:isX?8:0}}>
-<div style={{display:"flex",gap:8,padding:isX?"0":"5px 0",alignItems:"center",cursor:"pointer"}} onClick={()=>sHwExp(isX?null:h.id)}>
-<span style={{fontSize:11,color:$.tx,flex:1,fontWeight:isX?700:400}}>{ex?ex.nm:h.exId}</span>
-<div style={{display:"flex",gap:3}}>
-{["assigned","active","\u2713","!","\u00D7"].map((lbl,li)=>{const sts=["assigned","in-progress","consistent","struggling","remove"];const st=sts[li];return <button key={st} onClick={ev=>{ev.stopPropagation();const c={...cl};if(st==="remove"){c.hw=c.hw.filter(x=>x.id!==h.id);sHwExp(null)}else{c.hw=c.hw.map(x=>x.id===h.id?{...x,status:st}:x)}saveCl(c)}} style={{fontSize:7,padding:"2px 5px",borderRadius:2,border:"none",cursor:"pointer",background:h.status===st?(st==="struggling"||st==="remove"?$.rd:st==="consistent"?$.gn:$.g)+"33":$.bg,color:h.status===st?(st==="struggling"||st==="remove"?$.rd:st==="consistent"?$.gn:$.g):$.dr}}>{lbl}</button>})}
-</div></div>
-{isX&&ex&&<div style={{marginTop:8}}>
-<div style={{fontSize:10,color:$.dm,marginBottom:8}}>{ex.teach}</div>
-{ex.steps.map((step,si)=><div key={si} style={{marginBottom:4,padding:"4px 6px",background:$.bg,borderRadius:3}}><div style={{fontSize:9,fontWeight:700,color:$.g}}>{step.n}</div><div style={{fontSize:9,color:$.dm,marginTop:2}}>{step.d}</div></div>)}
-<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8,marginBottom:4,fontSize:8}}>
-<span style={{color:$.g}}>Dom: {ex.domCh}</span>
-{ex.secCh&&ex.secCh!=="\u2014"&&<span style={{color:$.bl}}>Sec: {ex.secCh}</span>}
-<span style={{color:$.rd}}>Removes: {ex.removed}</span>
-</div>
-<div style={{fontSize:9,color:$.or,marginBottom:2}}>Failure: {ex.fail}</div>
-<div style={{fontSize:9,color:$.gn}}>Grows: {ex.grows}</div>
-<div style={{fontSize:8,color:$.dr,marginTop:4}}>Assigned: {h.date}</div>
-</div>}
-</div>}):<div style={{fontSize:11,color:$.dr}}>No homework assigned.</div>}
-<Bt full onClick={()=>sTab("hwAssign")} style={{marginTop:8}}>+ Assign Homework</Bt>
-</Se>
-{/* Recurring Issues */}
-<Se title={"Recurring Issues \u00B7 "+((cl.issues||[]).length)} accent={$.or}>
-{(cl.issues||[]).length>0?(cl.issues||[]).map((iss,i)=><div key={i} style={{display:"flex",gap:8,padding:"4px 0",alignItems:"flex-start"}}><span style={{fontSize:11,color:$.dm,flex:1}}>{iss.text}</span><span style={{fontSize:9,color:$.dr}}>{iss.date}</span><button onClick={()=>{const c={...cl};c.issues=c.issues.filter((_,j)=>j!==i);saveCl(c)}} style={{background:"none",border:"none",color:$.dr,cursor:"pointer",fontSize:14,padding:"0 4px"}}>×</button></div>):<div style={{fontSize:11,color:$.dr}}>None logged.</div>}
-<div style={{display:"flex",gap:6,marginTop:8}}><In value={cl._newIssue||""} onChange={v=>{const c={...cl};c._newIssue=v;sCl(c)}} placeholder="Pattern you keep seeing\u2026" style={{flex:1}}/><Bt accent onClick={()=>{if(cl._newIssue){const c={...cl};c.issues=[...(c.issues||[]),{text:cl._newIssue,date:td()}];delete c._newIssue;saveCl(c)}}}>+</Bt></div>
-</Se>
-{hasSig&&<Se title="Handler Signature"><div style={{display:"flex",gap:12,alignItems:"center"}}><Radar sg={cl.sg}/><div style={{display:"flex",flexDirection:"column",gap:6}}>{[["dominant",$.g],["blind",$.or],["ghost",$.rd]].map(([r,c])=>cl.sg[r]?<div key={r} style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:6,height:6,borderRadius:"50%",background:c}}/><span style={{fontSize:9,color:$.dm,textTransform:"uppercase",width:55}}>{r}</span><span style={{fontSize:12,color:c,fontWeight:600}}>{cl.sg[r]}</span></div>:null)}</div></div></Se>}
-{cl.dsg&&(cl.dsg.dominant||cl.dsg.blind||cl.dsg.ghost)&&<Se title="Dog Signature" accent={$.bl}><div style={{display:"flex",gap:12,alignItems:"center"}}><Radar sg={cl.dsg}/><div style={{display:"flex",flexDirection:"column",gap:6}}>{[["dominant",$.bl],["blind",$.or],["ghost",$.rd]].map(([r,c])=>(cl.dsg||{})[r]?<div key={r} style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:6,height:6,borderRadius:"50%",background:c}}/><span style={{fontSize:9,color:$.dm,textTransform:"uppercase",width:55}}>{r}</span><span style={{fontSize:12,color:c,fontWeight:600}}>{cl.dsg[r]}</span></div>:null)}</div></div></Se>}
-<Se title="Compass" accent={total?sc(total,25):$.g}>{lc?<div><div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:8}}><span style={{fontSize:28,fontWeight:700,color:sc(total,25)}}>{total}</span><span style={{fontSize:12,color:$.dr}}>/25</span><span style={{fontSize:10,color:$.dm,marginLeft:"auto"}}>{lc.date}</span></div><div style={{display:"flex",gap:6,marginBottom:8}}>{COMP.map(cat=><div key={cat.k} style={{flex:1,background:$.bg,borderRadius:3,padding:"4px 0",textAlign:"center"}}><div style={{fontSize:8,color:$.dm}}>{cat.k}</div><div style={{fontSize:14,fontWeight:700,color:sc(lc[cat.k],5)}}>{lc[cat.k]}</div></div>)}</div>{cT.length>1&&<Spk data={cT}/>}</div>:<div style={{fontSize:11,color:$.dr}}>No compass scores yet.</div>}</Se>
-<Se title={"90-Day Arc \u00B7 "+logged+"/16"} accent={$.bl}>{logged>0?cl.arc.filter(s=>s.dt).slice(-4).reverse().map(s=><button key={s.s} onClick={()=>{sAI(s.s-1);sTab("arcEdit")}} style={{display:"flex",alignItems:"center",gap:6,width:"100%",padding:"6px 0",background:"none",border:"none",borderBottom:"1px solid "+$.bg,cursor:"pointer",textAlign:"left"}}><span style={{width:22,fontSize:11,fontWeight:700,color:$.bl}}>#{s.s}</span><span style={{flex:1,fontSize:10,color:$.dm}}>{s.dt}</span>{s.rec!==null&&<span style={{fontSize:9,padding:"2px 4px",borderRadius:2,background:sc(s.rec,3)+"18",color:sc(s.rec,3)}}>R{s.rec}</span>}{s.comp!==null&&<span style={{fontSize:9,padding:"2px 4px",borderRadius:2,background:sc(s.comp,25)+"18",color:sc(s.comp,25)}}>C{s.comp}</span>}{s.tr&&<span style={{fontSize:12}}>{s.tr}</span>}</button>):<div style={{fontSize:11,color:$.dr}}>No sessions yet.</div>}<Bt full onClick={()=>sTab("arc")} style={{marginTop:10}}>View Full Arc</Bt></Se>
-<Se title={"Tune-Ups \u00B7 "+(cl.tu?cl.tu.length:0)} accent={$.or}><Bt full onClick={()=>{sTu({id:mk(),date:td(),cb:null,ca:null,issues:["","",""],win:"",ph:TP.map(p=>({...p,done:false,notes:""}))});sTab("tuNew")}}>+ Tune-Up</Bt></Se>
-<Se title={"Resets \u00B7 "+(cl.rs?cl.rs.length:0)} accent={$.rd}><Bt full onClick={()=>{sRst({id:mk(),date:td(),steps:RS.map(s=>({...s,done:false,ans:""})),ok:false,notes:""});sTab("resetRun")}}>+ Reset Protocol</Bt></Se>
-{(cl.evals||[]).length>0&&<Se title={"Evals \u00B7 "+cl.evals.length} accent={$.bl}>{cl.evals.slice(-3).reverse().map(e=>{const t=e.ER+e.T+e.CC+e.CO+e.IN;return <div key={e.id} style={{display:"flex",gap:8,padding:"5px 0"}}><span style={{fontSize:11,color:$.dm,flex:1}}>{e.date}</span><span style={{fontSize:10,color:sc(t,25)}}>{t}/25</span><span style={{fontSize:10,color:$.dm}}>{e.profile||"\u2014"}</span></div>})}</Se>}
-{bp&&PW[bp]&&<Se title={bp+" \u2014 Watch For"} accent={$.or}><div style={{fontSize:11,color:$.dm,marginBottom:4}}>{PW[bp].w}</div><div style={{fontSize:11,color:$.or,fontStyle:"italic"}}>"{PW[bp].c}"</div></Se>}
-</div><Nav/></div>}
+  // ─── TAB: DIAGNOSE (Eval flow) ───
+  if (tab === "diagnose") {
+    if (view === "eval" && editData) {
+      const ev = editData;
+      const set1 = (k, v) => setEditData({ ...ev, phase1: { ...ev.phase1, [k]: v } });
+      const set2 = (k, v) => setEditData({ ...ev, phase2: { ...ev.phase2, [k]: v } });
+      const setSig = (k, v) => setEditData({ ...ev, signatureResult: { ...ev.signatureResult, [k]: v } });
+      const setComp = (k, v) => setEditData({ ...ev, compassProjection: { ...ev.compassProjection, [k]: v } });
+      const total = ev.compassProjection.ER + ev.compassProjection.T + ev.compassProjection.CC + ev.compassProjection.CO + ev.compassProjection.IN;
 
-// EVAL WALKTHROUGH
-if(tab==="eval"&&ev&&cl){const e=ev,set=(k,v)=>sEv({...e,[k]:v}),step=e.step,total=e.ER+e.T+e.CC+e.CO+e.IN;
-const STEPS=["Channel Observation","Signature Capture","Compass Scoring","Profile Confirmation","Client Close","Session Priorities"];
-const saveEval=()=>{const c={...cl};c.evals=[...(c.evals||[]),e];c.sg={dominant:e.sigDom,blind:e.sigBlind,ghost:e.sigGhost};c.pr=e.profile;c.ch=[...(c.ch||[]),{id:mk(),date:e.date,ER:e.ER,T:e.T,CC:e.CC,CO:e.CO,IN:e.IN}];saveCl(c);sEv(null);sTab("detail")};
-return <div style={sh}><div ref={sr} style={ct}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><Bk onClick={()=>{if(confirm("Exit eval? Unsaved data will be lost.")){sEv(null);sTab("detail")}}} label="Cancel"/>{step===5&&<Bt accent onClick={saveEval}>Save Eval</Bt>}</div>
-<div style={{textAlign:"center",marginBottom:12}}><Lb color={$.bl}>HANDLER INDEX\u2122 EVALUATION</Lb><div style={{fontSize:11,color:$.tx,marginTop:4}}>{cl.nm} \u00B7 {cl.dg}</div><In label="Date" value={e.date} onChange={v=>set("date",v)} type="date" style={{marginTop:8}}/></div>
-<div style={{display:"flex",gap:2,marginBottom:20}}>{STEPS.map((s,i)=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?$.bl:$.bd}}/>)}</div>
-<div style={{fontSize:11,fontWeight:700,color:$.bl,marginBottom:4}}>Step {step+1} of 6</div>
-<div style={{fontSize:13,fontWeight:700,color:$.tx,marginBottom:16}}>{STEPS[step]}</div>
+      return (
+        <div style={sty.shell}>
+          <div style={sty.topBar}>
+            <button onClick={() => { setEditData(null); setView("list"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
+            <span style={{ fontSize: 9, letterSpacing: 3, color: C.blue }}>HANDLER INDEX™ EVAL</span>
+            <button onClick={async () => {
+              if (client) {
+                const c = { ...client };
+                c.signature = ev.signatureResult.dominant ? ev.signatureResult : c.signature;
+                if (ev.profileResult) c.profile = ev.profileResult;
+                c.compassHistory = [...c.compassHistory, { id: uid(), checkpoint: "Intake", date: ev.date, ...ev.compassProjection }];
+                await updateClient(c);
+              }
+              setEditData(null); setView("detail");
+            }} style={sty.btnSm(true)}>Save</button>
+          </div>
+          <div style={{ padding: "0 16px" }}>
+            <Field label="Date" value={ev.date} onChange={v => setEditData({ ...ev, date: v })} type="date" style={{ marginBottom: 16 }} />
 
-{step===0&&<div><div style={{fontSize:10,color:$.dm,marginBottom:12,fontStyle:"italic"}}>Watch the handler and dog. For each channel, note what you observe. Don't correct yet.</div>{CH.map(ch=><div key={ch} style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:700,color:$.g,marginBottom:2}}>{ch}</div><div style={{fontSize:9,color:$.dm,marginBottom:4}}>"{DQ[ch].a}"</div><div style={{fontSize:9,color:$.dr,marginBottom:6}}>{DQ[ch].l}</div><Ta value={e.channelObs[ch]} onChange={v=>set("channelObs",{...e.channelObs,[ch]:v})} placeholder={"What did you observe in "+ch+"?"} rows={2}/></div>)}</div>}
+            <div style={sty.section(C.blue)}>
+              <div style={sty.sectionTitle(C.blue)}>PHASE 1 — THE DEMONSTRATION</div>
+              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 12, fontStyle: "italic" }}>"Show me what a normal moment looks like for you two." Two minutes. No coaching. No correction.</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div><label style={sty.label}>SPATIAL — "Feet first — do they lead or follow?"</label><textarea value={ev.phase1.spatialFeet} onChange={e => set1("spatialFeet", e.target.value)} style={sty.textarea} /></div>
+                <div><label style={sty.label}>VERBAL — "Mouth second — how many commands before response?"</label><textarea value={ev.phase1.verbalMouth} onChange={e => set1("verbalMouth", e.target.value)} style={sty.textarea} /></div>
+                <div><label style={sty.label}>SPATIAL + INTERNAL — "Leash — tight because dog pulled or handler didn't move?"</label><textarea value={ev.phase1.spatialInternal} onChange={e => set1("spatialInternal", e.target.value)} style={sty.textarea} /></div>
+                <div><label style={sty.label}>INTERNAL — "Dog's face — where is the dog looking? Arousal at baseline?"</label><textarea value={ev.phase1.internalDogFace} onChange={e => set1("internalDogFace", e.target.value)} style={sty.textarea} /></div>
+                <div><label style={sty.label}>What did they do FIRST when the dog broke?</label><textarea value={ev.phase1.firstBreak} onChange={e => set1("firstBreak", e.target.value)} style={sty.textarea} /></div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <label style={{ ...sty.label, flex: 1 }}>Body move before mouth?</label>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {["Yes", "No", "Simultaneous"].map(o => <Badge key={o} active={ev.phase1.bodyBeforeMouth === o} onClick={() => set1("bodyBeforeMouth", o)} color={C.blue}>{o}</Badge>)}
+                  </div>
+                </div>
+                <ScoreRow label="Arousal" value={ev.phase1.dogArousal} onChange={v => set1("dogArousal", v)} />
+                <div><label style={sty.label}>Immediate Signature Hypothesis</label><textarea value={ev.phase1.hypothesis} onChange={e => set1("hypothesis", e.target.value)} style={sty.textarea} placeholder="What are you seeing?" /></div>
+              </div>
+            </div>
 
-{step===1&&<div><div style={{fontSize:10,color:$.dm,marginBottom:12,fontStyle:"italic"}}>Always in this order: Dominant \u2192 Blind \u2192 Ghost. The reaction when you name it is the diagnostic.</div>
-{[["Dominant","sigDom","sigDomDemoEv","sigDomConvEv",$.g,"Watch what fires FIRST. They defend it. They lead with it."],["Blind","sigBlind","sigBlindDemoEv","sigBlindConvEv",$.or,"Listen for surprise. Friction when named \u2014 not blank, reactive."],["Ghost","sigGhost","sigGhostDemoEv","sigGhostConvEv",$.rd,"Ask for one deliberate example. Can\u2019t produce any = Ghost. Blankness."]].map(([label,chKey,demoKey,convKey,color,desc])=>
-<div key={label} style={{marginBottom:16,padding:10,background:$.cd,borderRadius:4,borderLeft:"3px solid "+color}}>
-<div style={{fontSize:12,fontWeight:700,color:color}}>{label}</div>
-<div style={{fontSize:9,color:$.dm,marginTop:2,marginBottom:8}}>{desc}</div>
-<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{CH.map(ch=><Cp key={ch} active={e[chKey]===ch} color={color} onClick={()=>set(chKey,ch)}>{ch}</Cp>)}</div>
-<In label="Evidence (demo)" value={e[demoKey]} onChange={v=>set(demoKey,v)} placeholder="What you saw" style={{marginBottom:6}}/>
-<In label="Evidence (conversation)" value={e[convKey]} onChange={v=>set(convKey,v)} placeholder="What they said"/>
-</div>)}
-<Se title="Ghost Confirmation" accent={$.rd}><div style={{fontSize:10,color:$.g,fontStyle:"italic",marginBottom:6}}>"Tell me about a time you used [channel] deliberately to help your dog succeed."</div><Ta value={e.ghostConfirm} onChange={v=>set("ghostConfirm",v)} placeholder="Their response \u2014 or lack of one" rows={2}/></Se>
-{(e.sigDom||e.sigBlind||e.sigGhost)&&<div style={{display:"flex",gap:10,alignItems:"center",padding:10,background:$.bg,borderRadius:4}}><Radar sg={{dominant:e.sigDom,blind:e.sigBlind,ghost:e.sigGhost}} size={80}/><div>{e.sigDom&&<div style={{fontSize:11,color:$.g}}>Dom: {e.sigDom}</div>}{e.sigBlind&&<div style={{fontSize:11,color:$.or}}>Blind: {e.sigBlind}</div>}{e.sigGhost&&<div style={{fontSize:11,color:$.rd}}>Ghost: {e.sigGhost}</div>}</div></div>}
-</div>}
+            <div style={sty.section(C.blue)}>
+              <div style={sty.sectionTitle(C.blue)}>PHASE 2 — THE CONVERSATION</div>
+              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 12, fontStyle: "italic" }}>"Tell me about your dog."</div>
+              <div><label style={sty.label}>Direction they went</label>
+                <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                  {["Stats", "Emotional", "Problem"].map(d => <Badge key={d} active={ev.phase2.direction === d} onClick={() => set2("direction", d)} color={C.blue}>{d}</Badge>)}
+                </div>
+              </div>
+              <div><label style={sty.label}>Notes</label><textarea value={ev.phase2.notes} onChange={e => set2("notes", e.target.value)} style={sty.textarea} /></div>
+            </div>
 
-{step===2&&<div><div style={{fontSize:10,color:$.dm,marginBottom:12,fontStyle:"italic"}}>Score based on what you observed, not what they told you.</div>{COMP.map(cat=><div key={cat.k} style={{marginBottom:4}}><div style={{fontSize:9,color:$.dm,marginBottom:2}}>{cat.l}</div><SB label={cat.k} value={e[cat.k]} onChange={v=>set(cat.k,v)}/><div style={{fontSize:8,color:$.dr,marginBottom:8,marginLeft:32}}>1: {cat.lo} \u00B7 5: {cat.hi}</div></div>)}<div style={{textAlign:"center",padding:"12px 0"}}><span style={{fontSize:32,fontWeight:700,color:sc(total,25)}}>{total}</span><span style={{fontSize:14,color:$.dr}}>/25</span></div></div>}
+            <div style={sty.section(C.accent)}>
+              <div style={sty.sectionTitle(C.accent)}>SIGNATURE RESULT</div>
+              {["dominant", "blind", "ghost"].map(id => (
+                <div key={id} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, letterSpacing: 2, color: id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red, marginBottom: 4, textTransform: "uppercase" }}>{id}</div>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {CHANNELS.map(ch => <Badge key={ch} active={ev.signatureResult[id] === ch} onClick={() => setSig(id, ch)} color={id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red}>{ch}</Badge>)}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-{step===3&&<div><div style={{fontSize:10,color:$.dm,marginBottom:12,fontStyle:"italic"}}>Confirm the handler profile. Name what gets addressed first and what should NOT be disrupted.</div><Se title="Profile"><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{["Passive","Reactive","Rigid","Avoidant"].map(p=><Cp key={p} active={e.profile===p} color={$.gn} onClick={()=>set("profile",p)}>{p}</Cp>)}</div>{e.profile&&PW[e.profile]&&<div style={{marginTop:10,padding:8,background:$.bg,borderRadius:4}}><div style={{fontSize:9,color:$.dm}}>Watch: {PW[e.profile].w}</div><div style={{fontSize:9,color:$.or,marginTop:2,fontStyle:"italic"}}>"{PW[e.profile].c}"</div></div>}</Se><Se title="What gets addressed first?" accent={$.g}><Ta value={e.addressFirst} onChange={v=>set("addressFirst",v)} placeholder="The 1\u20132 things to work on immediately" rows={2}/></Se><Se title="What should NOT be disrupted?" accent={$.rd}><Ta value={e.doNotDisturb} onChange={v=>set("doNotDisturb",v)} placeholder="What\u2019s working \u2014 don\u2019t touch it" rows={2}/></Se></div>}
+            <div style={sty.section(C.green)}>
+              <div style={sty.sectionTitle(C.green)}>COMPASS PROJECTION — {total}/25</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {COMPASS_CATS.map(cat => <ScoreRow key={cat.key} label={cat.key} value={ev.compassProjection[cat.key]} onChange={v => setComp(cat.key, v)} />)}
+              </div>
+            </div>
 
-{step===4&&<div><div style={{fontSize:10,color:$.dm,marginBottom:12,fontStyle:"italic"}}>Three beats: What I see. What we build. How we\u2019ll know.</div><Se title="Here is what I see" accent={$.g}><Ta value={e.closeWhat} onChange={v=>set("closeWhat",v)} placeholder="Your diagnostic read" rows={3}/></Se><Se title="Here is what we\u2019re going to build" accent={$.bl}><Ta value={e.closeBuild} onChange={v=>set("closeBuild",v)} placeholder="The plan" rows={3}/></Se><Se title="Here is how we\u2019ll know" accent={$.gn}><Ta value={e.closeHow} onChange={v=>set("closeHow",v)} placeholder="What changes look like" rows={3}/></Se><Se title="Client response" accent={$.dm}><Ta value={e.response} onChange={v=>set("response",v)} placeholder="Their reaction" rows={2}/></Se></div>}
+            <div style={sty.section(C.green)}>
+              <div style={sty.sectionTitle(C.green)}>PROFILE</div>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {PROFILES.map(p => <Badge key={p} active={ev.profileResult === p} onClick={() => setEditData({ ...ev, profileResult: p })} color={C.green}>{p}</Badge>)}
+              </div>
+            </div>
+          </div>
+          <BottomNav active={tab} onNav={setTab} />
+        </div>
+      );
+    }
 
-{step===5&&<div><div style={{fontSize:10,color:$.dm,marginBottom:12,fontStyle:"italic"}}>Top 3 priorities for the first session.</div>{[0,1,2].map(i=><In key={i} label={"Priority "+(i+1)} value={e.priorities[i]} onChange={v=>{const p=[...e.priorities];p[i]=v;set("priorities",p)}} placeholder={i===0?"Most critical":i===1?"Second":"Third"} style={{marginBottom:8}}/>)}<div style={{marginTop:16,padding:12,background:$.cd,borderRadius:6,border:"1px solid "+$.bl+"44"}}><div style={{fontSize:11,fontWeight:700,color:$.bl,marginBottom:8}}>Eval Summary</div><div style={{display:"flex",gap:10,alignItems:"center",marginBottom:8}}>{(e.sigDom||e.sigBlind||e.sigGhost)&&<Radar sg={{dominant:e.sigDom,blind:e.sigBlind,ghost:e.sigGhost}} size={70}/>}<div>{e.sigDom&&<div style={{fontSize:10,color:$.g}}>Dom: {e.sigDom}</div>}{e.sigBlind&&<div style={{fontSize:10,color:$.or}}>Blind: {e.sigBlind}</div>}{e.sigGhost&&<div style={{fontSize:10,color:$.rd}}>Ghost: {e.sigGhost}</div>}<div style={{fontSize:10,color:$.dm,marginTop:4}}>Compass: <span style={{color:sc(total,25),fontWeight:700}}>{total}/25</span></div><div style={{fontSize:10,color:$.dm}}>Profile: <span style={{color:$.gn,fontWeight:600}}>{e.profile||"\u2014"}</span></div></div></div><div style={{fontSize:9,color:$.dm,fontStyle:"italic"}}>The Signature is the map. The Compass is the proof of movement.</div></div></div>}
+    // Diagnose landing — select client to eval
+    return (
+      <div style={sty.shell}>
+        <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
+          <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
+          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 2, color: C.blue, marginTop: 4 }}>HANDLER INDEX™ EVAL</div>
+          <div style={{ fontSize: 9, color: C.textMuted, marginTop: 6 }}>Full diagnostic walkthrough</div>
+        </div>
+        <div style={{ padding: "12px 16px" }}>
+          {data.clients.length === 0 && <div style={{ textAlign: "center", color: C.textMuted, padding: "30px 0", fontSize: 12 }}>Add a client first.</div>}
+          {data.clients.map(c => (
+            <button key={c.id} onClick={() => { setActiveId(c.id); setEditData(emptyEval()); setView("eval"); }}
+              style={{ ...sty.card, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.surface, border: `1px solid ${C.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: C.accent, fontWeight: 700, flexShrink: 0 }}>{(c.name || "?")[0]?.toUpperCase()}</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{c.name || "Unnamed"}</div>
+                <div style={{ fontSize: 10, color: C.textDim }}>{c.dog} · {c.profile || "No profile"}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <BottomNav active={tab} onNav={setTab} />
+      </div>
+    );
+  }
 
-<div style={{display:"flex",gap:8,marginTop:20}}>{step>0&&<Bt full onClick={()=>set("step",step-1)}>{"\u2190"} Previous</Bt>}{step<5&&<Bt accent full onClick={()=>set("step",step+1)}>Next {"\u2192"}</Bt>}{step===5&&<Bt accent full onClick={saveEval}>Save to Client</Bt>}</div>
-</div><Nav/></div>}
+  // ═══════════════════════════════════════════
+  // TAB: CLIENTS
+  // ═══════════════════════════════════════════
 
-// SESSION LOG
-if(tab==="hwAssign"&&cl){const blindCh=cl.sg.blind||"";const ghostCh=cl.sg.ghost||"";
-return <div style={sh}><div ref={sr} style={ct}>
-<Bk onClick={()=>sTab("detail")} label={cl.nm}/>
-<Lb color={$.g} style={{display:"block",marginBottom:12}}>ASSIGN HOMEWORK</Lb>
-<div style={{fontSize:9,color:$.dm,marginBottom:16}}>Protocols matching blind/ghost channel surface first.</div>
-{EX.map(ex=>{const match=ex.domCh.toLowerCase().includes((blindCh||"xxx").toLowerCase())||ex.domCh.toLowerCase().includes((ghostCh||"xxx").toLowerCase());
-return <div key={ex.id} style={{marginBottom:12,padding:10,background:$.cd,borderRadius:4,border:match?"1px solid "+$.g+"44":"1px solid "+$.bd}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-<div style={{fontSize:12,fontWeight:700,color:match?$.g:$.tx}}>{ex.nm}</div>
-<span style={{fontSize:8,padding:"2px 6px",borderRadius:2,background:ex.cat==="single"?$.bl+"18":ex.cat==="progressive"?$.or+"18":$.gn+"18",color:ex.cat==="single"?$.bl:ex.cat==="progressive"?$.or:$.gn}}>{ex.cat}</span>
-</div>
-<div style={{fontSize:9,color:$.dm,marginBottom:4}}>{ex.teach}</div>
-<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
-<span style={{fontSize:8,color:$.g}}>Dom: {ex.domCh}</span>
-{ex.secCh!=="\u2014"&&<span style={{fontSize:8,color:$.bl}}>Sec: {ex.secCh}</span>}
-<span style={{fontSize:8,color:$.rd}}>Removes: {ex.removed}</span>
-</div>
-<div style={{fontSize:9,color:$.dm,marginBottom:2}}>Failure point: {ex.fail}</div>
-<div style={{fontSize:9,color:$.gn,marginBottom:6}}>Grows: {ex.grows}</div>
-{(cl.hw||[]).some(h=>h.exId===ex.id&&h.status!=="done")?<div style={{fontSize:9,color:$.gn,textAlign:"center",padding:8}}>Already assigned</div>:<Bt accent full onClick={()=>{const c={...cl};c.hw=[...(c.hw||[]),{id:mk(),exId:ex.id,date:td(),status:"assigned",notes:""}];saveCl(c);sTab("detail")}}>Assign to {cl.nm}</Bt>}
-</div>})}
-</div><Nav/></div>}
-if(tab==="sLog"&&sLog&&cl){const s=sLog,set=(k,v)=>sSL({...s,[k]:v}),cTotal=s.ER+s.T+s.CC+s.CO+s.IN;
-return <div style={sh}><div ref={sr} style={ct}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><Bk onClick={()=>{sSL(null);sTab("detail")}}/><Bt accent onClick={()=>{const c={...cl};c.arc=[...c.arc];if(s.ai>=0&&s.ai<16)c.arc[s.ai]={s:s.sn,dt:s.date,rec:s.rec,chk:s.chk,comp:cTotal,hs:s.hs,pf:s.pf,tr:s.tr,nt:s.focus||""};c.ch=[...(c.ch||[]),{id:mk(),date:s.date,ER:s.ER,T:s.T,CC:s.CC,CO:s.CO,IN:s.IN}];saveCl(c);sSL(null);sTab("detail")}}>Save</Bt></div>
-<div style={{textAlign:"center",marginBottom:16}}><Lb color={$.g}>SESSION #{s.sn} \u00B7 {s.block}</Lb><div style={{fontSize:9,color:$.dr,marginTop:2}}>{s.blockD}</div></div>
-{cl.arc&&cl.arc.filter(a=>a.dt).length>0&&(()=>{const prev=cl.arc.filter(a=>a.dt);const last=prev[prev.length-1];const actHw=(cl.hw||[]).filter(h=>h.status!=="done");return <div style={{marginBottom:14,padding:10,background:$.bg,borderRadius:4,border:"1px solid "+$.bd}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><Lb color={$.dm}>Last Session</Lb><span style={{fontSize:9,color:$.dr}}>{last.dt}</span></div>{last.nt&&<div style={{fontSize:10,color:$.dm,marginBottom:4}}>{last.nt}</div>}{last.comp!=null&&<div style={{fontSize:9,color:$.dm}}>Compass: {last.comp}/25</div>}{actHw.length>0&&<div style={{marginTop:6}}><Lb color={$.g}>Active Homework</Lb>{actHw.map(h=>{const ex=EX.find(e=>e.id===h.exId);return <div key={h.id} style={{fontSize:9,color:$.dm,marginTop:2}}>{ex?ex.nm:h.exId} — {h.status}</div>})}</div>}</div>})()}
-<In label="Date" value={s.date} onChange={v=>set("date",v)} type="date" style={{marginBottom:12}}/><In label="Session Focus" value={s.focus} onChange={v=>set("focus",v)} placeholder="What did you work on?" style={{marginBottom:16}}/>
-<Se title="Dog Metrics" accent={$.bl}><div style={{marginBottom:10}}><Lb>Recovery (0\u20133)</Lb><div style={{display:"flex",gap:6,marginTop:6}}>{[0,1,2,3].map(n=><Cp key={n} active={s.rec===n} color={sc(Math.max(n,.5),3)} onClick={()=>set("rec",n)}>{n}</Cp>)}</div></div><div style={{marginBottom:10}}><Lb>Check-ins (per 10m)</Lb><In value={s.chk} onChange={v=>set("chk",v===""?null:parseInt(v)||0)} type="number" placeholder="0" style={{marginTop:4}}/></div><div style={{marginBottom:10}}><Lb>High State</Lb><div style={{display:"flex",gap:4,marginTop:4}}>{ST.map(st=><Cp key={st.n} active={s.hs===st.n} color={st.c} onClick={()=>set("hs",st.n)}>{st.n}</Cp>)}</div>{s.hs&&<div style={{fontSize:9,color:ST[s.hs-1].c,marginTop:4}}>{ST[s.hs-1].nm}</div>}</div></Se>
-<Se title={"Compass \u00B7 "+cTotal+"/25"} accent={sc(cTotal,25)}>{COMP.map(cat=><SB key={cat.k} label={cat.k} value={s[cat.k]} onChange={v=>set(cat.k,v)}/>)}</Se>
-<Se title="Handler Read" accent={$.dm}><div style={{marginBottom:10}}><Lb>Profile</Lb><div style={{marginTop:4}}><PfSel value={s.pf} onChange={v=>set("pf",v)}/></div></div><div><Lb>Trend</Lb><div style={{display:"flex",gap:6,marginTop:4}}>{["\u2191","\u2192","\u2193"].map(t=><Cp key={t} active={s.tr===t} color={t==="\u2191"?$.gn:t==="\u2192"?$.g:$.rd} onClick={()=>set("tr",t)}>{t}</Cp>)}</div></div></Se>
-<Se title="Emotional Spillover" accent={$.rd}><div style={{display:"flex",gap:8}}><Cp active={s.spill===true} color={$.rd} onClick={()=>set("spill",true)}>Yes</Cp><Cp active={s.spill===false} color={$.gn} onClick={()=>set("spill",false)}>No</Cp></div>{s.spill&&<In value={s.spillNote||""} onChange={v=>set("spillNote",v)} placeholder="What carried in?" style={{marginTop:6}}/>}</Se>
-<Ta label="Notes" value={s.notes} onChange={v=>set("notes",v)} placeholder="What happened\u2026"/>
-</div><Nav/></div>}
+  // ─── SESSION LOG EDIT ───
+  if (view === "sessionEdit" && editData && client) {
+    const es = editData;
+    const set = (k, v) => setEditData({ ...es, [k]: v });
+    return (
+      <div style={sty.shell}>
+        <div style={sty.topBar}>
+          <button onClick={() => { setEditData(null); setView("detail"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
+          <span style={{ fontSize: 9, letterSpacing: 3, color: C.accent }}>SESSION LOG</span>
+          <button onClick={async () => {
+            const c = { ...client }; const idx = c.sessions.findIndex(x => x.id === es.id);
+            if (idx >= 0) c.sessions[idx] = es; else c.sessions.push(es);
+            await updateClient(c); setEditData(null); setView("detail");
+          }} style={sty.btnSm(true)}>Save</button>
+        </div>
+        <div style={{ padding: "0 16px" }}>
+          <Field label="Date" value={es.date} onChange={v => set("date", v)} type="date" style={{ marginBottom: 12 }} />
+          <div style={{ marginBottom: 12 }}>
+            <label style={sty.label}>Handler Profile</label>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{PROFILES.map(p => <Badge key={p} active={es.profile === p} onClick={() => set("profile", p)}>{p}</Badge>)}</div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={sty.label}>Dominant Pressure Channel</label>
+            <div style={{ display: "flex", gap: 4 }}>{CHANNELS.map(ch => <Badge key={ch} active={es.dominantChannel === ch} onClick={() => set("dominantChannel", ch)}>{ch}</Badge>)}</div>
+          </div>
+          <Field label="Session Focus" value={es.focus} onChange={v => set("focus", v)} placeholder="One sentence — what did you work on?" style={{ marginBottom: 12 }} />
+          <div style={{ marginBottom: 12 }}>
+            <label style={sty.label}>Session Quality</label>
+            <div style={{ display: "flex", gap: 4 }}>{QUALITIES.map(q => <Badge key={q.v} active={es.quality === q.v} onClick={() => set("quality", q.v)} color={q.c}>{q.l}</Badge>)}</div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={sty.label}>Journey Stage</label>
+            <div style={{ display: "flex", gap: 4 }}>{JOURNEY_STAGES.map(j => <Badge key={j} active={es.journeyStage === j} onClick={() => set("journeyStage", j)}>{j}</Badge>)}</div>
+          </div>
+          <div><label style={sty.label}>Notes</label><textarea value={es.notes || ""} onChange={e => set("notes", e.target.value)} style={sty.textarea} placeholder="Anything worth remembering" /></div>
+        </div>
+        <BottomNav active={tab} onNav={setTab} />
+      </div>
+    );
+  }
 
-// ARC
-if(tab==="arc"&&cl){const arc=cl.arc||[],logged=arc.filter(s=>s.dt),cb=Math.floor(logged.length/4);let det=[];if(logged.length>=3){const l3=logged.slice(-3),rec=l3.map(s=>s.rec).filter(v=>v!==null),chk=l3.map(s=>s.chk).filter(v=>v!==null),hs=l3.map(s=>s.hs).filter(v=>v!==null),comp=l3.map(s=>s.comp).filter(v=>v!==null),profs=l3.map(s=>s.pf).filter(Boolean);const rT=rec.length>=2?rec[rec.length-1]-rec[0]:0,cT=chk.length>=2?chk[chk.length-1]-chk[0]:0,hT=hs.length>=2?hs[hs.length-1]-hs[0]:0,coT=comp.length>=2?comp[comp.length-1]-comp[0]:0;if(rT>0&&cT>0)det.push(PAT[0]);if(rT<0&&hT>0)det.push(PAT[1]);if(coT<0&&new Set(profs).size>1)det.push(PAT[2]);if(rT===0&&cT===0&&coT===0)det.push(PAT[3]);if(rT>0&&cT<0)det.push(PAT[4]);if(cT>0&&rT<0)det.push(PAT[5])}
-return <div style={sh}><div ref={sr} style={ct}><Bk onClick={()=>sTab("detail")} label={cl.nm}/><Lb color={$.bl} style={{display:"block",marginBottom:12}}>90-DAY ARC \u00B7 {logged.length}/16</Lb><div style={{display:"flex",gap:4,marginBottom:16}}>{BL.map((b,i)=><div key={i} style={{flex:1,padding:"6px 4px",borderRadius:3,background:i<=cb?$.bl+"18":$.bg,textAlign:"center",border:i===cb?"1px solid "+$.bl:"1px solid "+$.bd}}><div style={{fontSize:8,color:i<=cb?$.bl:$.dr,fontWeight:700}}>{b.r}</div><div style={{fontSize:7,color:$.dm,marginTop:2}}>{b.l}</div></div>)}</div>{det.length>0&&<Se title="Patterns" accent={$.or}>{det.map((p,i)=><div key={i} style={{marginBottom:8,padding:8,background:$.bg,borderRadius:4}}><div style={{fontSize:11,fontWeight:700,color:$.or}}>{p.p}</div><div style={{fontSize:10,color:$.dm,marginTop:2}}>{p.m}</div><div style={{fontSize:10,color:$.tx,marginTop:2}}>{p.a}</div></div>)}</Se>}{arc.map((s,i)=><button key={i} onClick={()=>{sAI(i);sTab("arcEdit")}} style={{display:"flex",alignItems:"center",gap:6,width:"100%",padding:"8px 6px",background:s.dt?$.cd:"transparent",border:"1px solid "+(s.dt?$.bd:$.bd+"44"),borderRadius:4,marginBottom:4,cursor:"pointer",textAlign:"left",opacity:s.dt?1:.5}}><span style={{width:22,fontSize:11,fontWeight:700,color:$.bl}}>#{s.s}</span><span style={{flex:1,fontSize:10,color:$.dm}}>{s.dt||"\u2014"}</span>{s.rec!==null&&<span style={{fontSize:9,padding:"2px 4px",borderRadius:2,background:sc(s.rec,3)+"18",color:sc(s.rec,3)}}>R{s.rec}</span>}{s.comp!==null&&<span style={{fontSize:9,padding:"2px 4px",borderRadius:2,background:sc(s.comp,25)+"18",color:sc(s.comp,25)}}>C{s.comp}</span>}{s.tr&&<span style={{fontSize:12}}>{s.tr}</span>}</button>)}</div><Nav/></div>}
+  // ─── COMPASS EDIT ───
+  if (view === "compassEdit" && editData && client) {
+    const ec = editData;
+    const set = (k, v) => setEditData({ ...ec, [k]: v });
+    const total = ec.ER + ec.T + ec.CC + ec.CO + ec.IN;
+    return (
+      <div style={sty.shell}>
+        <div style={sty.topBar}>
+          <button onClick={() => { setEditData(null); setView("detail"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
+          <span style={{ fontSize: 9, letterSpacing: 3, color: C.accent }}>COMPASS SCORE</span>
+          <button onClick={async () => {
+            const c = { ...client }; const idx = c.compassHistory.findIndex(x => x.id === ec.id);
+            if (idx >= 0) c.compassHistory[idx] = ec; else c.compassHistory.push(ec);
+            await updateClient(c); setEditData(null); setView("detail");
+          }} style={sty.btnSm(true)}>Save</button>
+        </div>
+        <div style={{ padding: "0 16px" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+            <Field label="Date" value={ec.date} onChange={v => set("date", v)} type="date" style={{ flex: 1 }} />
+            <div style={{ flex: 1 }}><label style={sty.label}>Checkpoint</label>
+              <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>{CHECKPOINTS.map(cp => <Badge key={cp} active={ec.checkpoint === cp} onClick={() => set("checkpoint", cp)}>{cp}</Badge>)}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+            {COMPASS_CATS.map(cat => <ScoreRow key={cat.key} label={cat.key} value={ec[cat.key]} onChange={v => set(cat.key, v)} />)}
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: sc(total, 25) }}>{total}<span style={{ fontSize: 14, color: C.textMuted }}>/25</span></div>
+          </div>
+        </div>
+        <BottomNav active={tab} onNav={setTab} />
+      </div>
+    );
+  }
 
-// ARC EDIT
-if(tab==="arcEdit"&&cl&&arcI!==null){const s=cl.arc[arcI],block=BL[Math.floor(arcI/4)];const set=(k,v)=>{const c={...cl};c.arc=[...c.arc];c.arc[arcI]={...c.arc[arcI],[k]:v};saveCl(c)};return <div style={sh}><div ref={sr} style={ct}><Bk onClick={()=>{sAI(null);sTab("arc")}} label="Arc"/><Lb color={$.bl}>SESSION #{s.s} \u00B7 {block?block.l:""}</Lb><div style={{fontSize:9,color:$.dr,marginTop:2,marginBottom:14}}>{block?block.d:""}</div>{s.nt&&<div style={{padding:8,background:$.bg,borderRadius:4,marginTop:8,marginBottom:8,border:"1px solid "+$.bd}}><Lb color={$.dm}>Session Notes</Lb><div style={{fontSize:10,color:$.dm,marginTop:4}}>{s.nt}</div></div>}<In label="Date" value={s.dt} onChange={v=>set("dt",v)} type="date" style={{marginBottom:12}}/><Se title="Recovery" accent={sc(s.rec||0,3)}><div style={{display:"flex",gap:6}}>{[0,1,2,3].map(n=><Cp key={n} active={s.rec===n} color={sc(Math.max(n,.5),3)} onClick={()=>set("rec",n)}>{n}</Cp>)}</div></Se><Se title="Check-ins" accent={$.gn}><In value={s.chk} onChange={v=>set("chk",v===""?null:parseInt(v)||0)} type="number" placeholder="per 10m"/></Se><Se title="Compass"><In value={s.comp} onChange={v=>set("comp",v===""?null:parseInt(v)||0)} type="number" placeholder="/25"/></Se><Se title="High State" accent={ST[(s.hs||1)-1].c}><div style={{display:"flex",gap:4}}>{ST.map(st=><Cp key={st.n} active={s.hs===st.n} color={st.c} onClick={()=>set("hs",st.n)}>{st.n}</Cp>)}</div></Se><Se title="Profile"><PfSel value={s.pf} onChange={v=>set("pf",v)}/></Se><Se title="Trend"><div style={{display:"flex",gap:6}}>{["\u2191","\u2192","\u2193"].map(t=><Cp key={t} active={s.tr===t} color={t==="\u2191"?$.gn:t==="\u2192"?$.g:$.rd} onClick={()=>set("tr",t)}>{t}</Cp>)}</div></Se><Ta label="Notes" value={s.nt} onChange={v=>set("nt",v)}/></div><Nav/></div>}
+  // ─── CLIENT EDIT ───
+  if (view === "clientEdit" && editData) {
+    const ec = editData;
+    const set = (k, v) => setEditData({ ...ec, [k]: v });
+    const setSig = (k, v) => setEditData({ ...ec, signature: { ...ec.signature, [k]: v } });
+    return (
+      <div style={sty.shell}>
+        <div style={sty.topBar}>
+          <button onClick={() => { setEditData(null); setView(activeId ? "detail" : "list"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
+          <span style={{ fontSize: 9, letterSpacing: 3, color: C.accent }}>{data.clients.find(x => x.id === ec.id) ? "EDIT" : "NEW"} CLIENT</span>
+          <button onClick={async () => { await updateClient(ec); setActiveId(ec.id); setEditData(null); setView("detail"); }} style={sty.btnSm(true)}>Save</button>
+        </div>
+        <div style={{ padding: "0 16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+            <Field label="Handler" value={ec.name} onChange={v => set("name", v)} placeholder="Name" />
+            <Field label="Dog" value={ec.dog} onChange={v => set("dog", v)} placeholder="Dog name" />
+            <Field label="Breed" value={ec.breed} onChange={v => set("breed", v)} placeholder="Breed" />
+            <Field label="Age" value={ec.age} onChange={v => set("age", v)} placeholder="Age" />
+          </div>
+          <Field label="Context" value={ec.context} onChange={v => set("context", v)} placeholder="e.g., Vet Clinic, Board & Train, Private" style={{ marginBottom: 16 }} />
 
-// TUNE-UP
-if(tab==="tuNew"&&tu&&cl){const t=tu,set=(k,v)=>sTu({...t,[k]:v});return <div style={sh}><div ref={sr} style={ct}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><Bk onClick={()=>{sTu(null);sTab("detail")}}/><Bt accent onClick={()=>{saveCl({...cl,tu:[...(cl.tu||[]),t]});sTu(null);sTab("detail")}}>Save</Bt></div><Lb color={$.or} style={{display:"block",marginBottom:12}}>TUNE-UP</Lb><In label="Date" value={t.date} onChange={v=>set("date",v)} type="date" style={{marginBottom:12}}/>{t.ph.map((p,i)=><div key={i} style={{marginBottom:10,padding:10,background:p.done?$.cd:"transparent",border:"1px solid "+(p.done?$.or+"33":$.bd),borderRadius:4}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><button onClick={()=>{const ph=[...t.ph];ph[i]={...ph[i],done:!ph[i].done};set("ph",ph)}} style={{width:20,height:20,borderRadius:3,border:"1px solid "+(p.done?$.or:$.bd),background:p.done?$.or:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:$.bg,fontSize:11,fontWeight:700}}>{p.done?"\u2713":""}</button><span style={{fontSize:10,color:$.or,fontWeight:700}}>{p.tm}</span><span style={{fontSize:11,color:$.tx,fontWeight:600}}>{p.nm}</span></div><div style={{fontSize:9,color:$.dm,marginLeft:28}}>{p.ac}</div></div>)}<Se title="Compass" accent={$.or}><div style={{display:"flex",gap:10}}><In label="Before" value={t.cb} onChange={v=>set("cb",v===""?null:parseInt(v)||0)} type="number" style={{flex:1}}/><In label="After" value={t.ca} onChange={v=>set("ca",v===""?null:parseInt(v)||0)} type="number" style={{flex:1}}/></div></Se><In label="The Win" value={t.win} onChange={v=>set("win",v)} placeholder="One clear win."/></div><Nav/></div>}
+          <div style={sty.section(C.accent)}>
+            <div style={sty.sectionTitle(C.accent)}>HANDLER SIGNATURE</div>
+            {["dominant", "blind", "ghost"].map(id => (
+              <div key={id} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red, marginBottom: 4, textTransform: "uppercase" }}>{id}</div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {CHANNELS.map(ch => <Badge key={ch} active={ec.signature[id] === ch} onClick={() => setSig(id, ch)} color={id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red}>{ch}</Badge>)}
+                </div>
+              </div>
+            ))}
+          </div>
 
-// RESET
-if(tab==="resetRun"&&rst&&cl){const r=rst,set=(k,v)=>sRst({...r,[k]:v});return <div style={sh}><div ref={sr} style={ct}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><Bk onClick={()=>{sRst(null);sTab("detail")}}/><Bt accent onClick={()=>{saveCl({...cl,rs:[...(cl.rs||[]),r]});sRst(null);sTab("detail")}}>Save</Bt></div><Lb color={$.rd} style={{display:"block",marginBottom:4}}>RESET PROTOCOL</Lb><div style={{fontSize:10,color:$.dm,marginBottom:16,fontStyle:"italic"}}>Regression isn't failure. It's a boundary test you haven't answered yet.</div>{r.steps.map((s,i)=><div key={i} style={{marginBottom:12,padding:10,background:s.done?$.cd:"transparent",border:"1px solid "+(s.done?$.rd+"33":$.bd),borderRadius:4}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><button onClick={()=>{const steps=[...r.steps];steps[i]={...steps[i],done:!steps[i].done};set("steps",steps)}} style={{width:22,height:22,borderRadius:3,border:"1px solid "+(s.done?$.rd:$.bd),background:s.done?$.rd:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:11,fontWeight:700}}>{s.done?"\u2713":""}</button><span style={{fontSize:12,fontWeight:700,color:$.tx}}>Step {s.n}: {s.t}</span></div><div style={{fontSize:10,color:$.dm,marginLeft:30,marginBottom:4}}>{s.d}</div><div style={{fontSize:10,color:$.g,marginLeft:30,marginBottom:6,fontStyle:"italic"}}>{s.q}</div><input value={s.ans||""} onChange={e=>{const steps=[...r.steps];steps[i]={...steps[i],ans:e.target.value};set("steps",steps)}} placeholder="Your answer\u2026" style={{width:"calc(100% - 30px)",marginLeft:30,background:$.bg,border:"1px solid "+$.bd,borderRadius:3,padding:"5px 7px",color:$.tx,fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/></div>)}<div style={{display:"flex",gap:8,marginTop:8}}><Cp active={r.ok} color={$.gn} onClick={()=>set("ok",true)}>Resolved</Cp><Cp active={!r.ok} color={$.rd} onClick={()=>set("ok",false)}>Book Tune-Up</Cp></div></div><Nav/></div>}
+          <div style={sty.section(C.green)}>
+            <div style={sty.sectionTitle(C.green)}>HANDLER PROFILE</div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{PROFILES.map(p => <Badge key={p} active={ec.profile === p} onClick={() => set("profile", p)} color={C.green}>{p}</Badge>)}</div>
+          </div>
 
-// DIAGNOSE
-if(tab==="diagnose"){const steps=[{t:"1. Find the Dominant",d:"Watch what fires FIRST when the dog breaks.",tl:"They defend it. They lead with it.",c:$.g},{t:"2. Find the Blind",d:"Listen for surprise.",tl:"Friction when named. They push back.",c:$.or},{t:"3. Find the Ghost",d:"Tell me about a time you used [channel] deliberately.",tl:"Blankness. Curious. No shelf for it.",c:$.rd}];
-return <div style={sh}><div ref={sr} style={ct}><div style={{padding:"16px 0 8px"}}><Lb color={$.g}>HANDLER INDEX\u2122 DIAGNOSTIC CARD</Lb><div style={{fontSize:10,color:$.dr,marginTop:4,fontStyle:"italic"}}>Dominant \u2192 Blind \u2192 Ghost.</div></div>{steps.map((st,i)=><div key={i} style={{marginBottom:12,padding:10,background:dS===i?$.cd:"transparent",border:"1px solid "+(dS===i?st.c+"33":$.bd),borderRadius:4}}><button onClick={()=>sDS(i)} style={{background:"none",border:"none",cursor:"pointer",width:"100%",textAlign:"left",padding:0}}><div style={{fontSize:12,fontWeight:700,color:st.c}}>{st.t}</div><div style={{fontSize:10,color:$.dm,marginTop:3}}>{st.d}</div><div style={{fontSize:9,color:$.dr,marginTop:3,fontStyle:"italic"}}>{st.tl}</div></button>{dS===i&&<div style={{marginTop:10}}><div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{CH.map(ch=><Cp key={ch} active={dD[["dominant","blind","ghost"][i]]===ch} color={st.c} onClick={()=>sDD({...dD,[["dominant","blind","ghost"][i]]:ch})}>{ch}</Cp>)}</div></div>}</div>)}<Se title="Channel Questions" accent={$.bl}>{CH.map(ch=><div key={ch} style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:700,color:$.tx}}>{ch}</div><div style={{fontSize:10,color:$.g,fontStyle:"italic",marginTop:2}}>"{DQ[ch].a}"</div><div style={{fontSize:9,color:$.dm,marginTop:2}}>{DQ[ch].l}</div></div>)}</Se><Se title="Blind vs Ghost" accent={$.or}><div style={{display:"flex",gap:8}}><div style={{flex:1,padding:8,background:$.bg,borderRadius:4,borderTop:"2px solid "+$.or}}><div style={{fontSize:10,fontWeight:700,color:$.or}}>BLIND</div><div style={{fontSize:9,color:$.or,marginTop:3}}>FRICTION</div><div style={{fontSize:8,color:$.dr}}>Correct the channel.</div></div><div style={{flex:1,padding:8,background:$.bg,borderRadius:4,borderTop:"2px solid "+$.rd}}><div style={{fontSize:10,fontWeight:700,color:$.rd}}>GHOST</div><div style={{fontSize:9,color:$.rd,marginTop:3}}>BLANKNESS</div><div style={{fontSize:8,color:$.dr}}>Introduce the channel.</div></div></div></Se>{(dD.dominant||dD.blind||dD.ghost)&&<Se title="Current Read"><div style={{display:"flex",gap:10,alignItems:"center"}}><Radar sg={dD} size={80}/><div>{dD.dominant&&<div style={{fontSize:11,color:$.g}}>Dom: {dD.dominant}</div>}{dD.blind&&<div style={{fontSize:11,color:$.or}}>Blind: {dD.blind}</div>}{dD.ghost&&<div style={{fontSize:11,color:$.rd}}>Ghost: {dD.ghost}</div>}</div></div>{cl&&<Bt full onClick={()=>{saveCl({...cl,sg:{dominant:dD.dominant,blind:dD.blind,ghost:dD.ghost}});sTab("detail")}} style={{marginTop:10}}>Apply to {cl.nm}</Bt>}</Se>}</div><Nav/></div>}
+          <div style={sty.section(C.textDim)}>
+            <div style={sty.sectionTitle(C.textDim)}>NOTES</div>
+            <textarea value={ec.notes || ""} onChange={e => set("notes", e.target.value)} style={sty.textarea} placeholder="Anything worth remembering..." />
+          </div>
 
-// FIVE STATES
-if(tab==="fiveState")return <div style={sh}><div ref={sr} style={ct}><div style={{padding:"16px 0 8px"}}><Lb color={$.g}>FIVE-STATE AWARENESS MAP\u2122</Lb></div>{ST.map(s=><div key={s.n} style={{marginBottom:10,padding:10,background:$.cd,border:"1px solid "+(s.n===3?s.c+"44":$.bd),borderRadius:4,borderLeft:"3px solid "+s.c}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{fontSize:16,fontWeight:700,color:s.c}}>{s.n}</span><span style={{fontSize:12,fontWeight:600,color:$.tx}}>{s.nm}</span></div><div style={{fontSize:10,color:$.dm,marginBottom:4}}>{s.d}</div><div style={{fontSize:9,color:$.dr}}>{s.s}</div>{s.n===3&&<div style={{fontSize:9,color:s.c,marginTop:6,fontStyle:"italic",fontWeight:600}}>State 3 is the fulcrum. Everything before it is reading. Everything after it is recovery.</div>}</div>)}<div style={{padding:10,background:$.bg,borderRadius:4,border:"1px solid "+$.g+"18",marginTop:8}}><div style={{fontSize:10,color:$.g,fontWeight:600}}>THE PRINCIPLE</div><div style={{fontSize:10,color:$.dm,marginTop:4}}>The dog doesn't need you to be perfect. They need you to be present at State 3.</div></div></div><Nav/></div>;
+          {data.clients.find(x => x.id === ec.id) && (
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <button onClick={async () => { if (confirm("Delete this client?")) { await persist({ ...data, clients: data.clients.filter(x => x.id !== ec.id) }); setActiveId(null); setEditData(null); setView("list"); } }} style={{ ...sty.btnSm(), color: C.red, borderColor: C.red + "33" }}>Delete Client</button>
+            </div>
+          )}
+        </div>
+        <BottomNav active={tab} onNav={setTab} />
+      </div>
+    );
+  }
 
-// REFERENCE
-if(tab==="ref")return <div style={sh}><div ref={sr} style={ct}><div style={{padding:"16px 0 12px"}}><Lb color={$.g}>REFERENCE</Lb></div><Se title="Profiles" accent={$.gn}>{Object.entries(PW).map(([p,d])=><div key={p} style={{marginBottom:8,padding:8,background:$.bg,borderRadius:4}}><div style={{fontSize:11,fontWeight:700,color:$.gn}}>{p}</div><div style={{fontSize:9,color:$.dm,marginTop:2}}>{d.w}</div><div style={{fontSize:9,color:$.or,marginTop:2,fontStyle:"italic"}}>"{d.c}"</div></div>)}</Se><Se title="Channels\u2122" accent={$.bl}>{CH.map(ch=><div key={ch} style={{marginBottom:8,padding:8,background:$.bg,borderRadius:4}}><div style={{fontSize:11,fontWeight:700,color:$.bl}}>{ch}</div><div style={{fontSize:9,color:$.g,fontStyle:"italic",marginTop:2}}>"{DQ[ch].a}"</div><div style={{fontSize:9,color:$.dm,marginTop:2}}>{DQ[ch].l}</div></div>)}<div style={{fontSize:9,color:$.dm,marginTop:8,padding:8,background:$.bg,borderRadius:4,borderLeft:"2px solid "+$.g}}>You are adding to the pressure load or stabilizing it. There is no neutral.</div></Se><Se title="Compass" accent={$.g}>{COMP.map(cat=><div key={cat.k} style={{marginBottom:6,padding:"6px 8px",background:$.bg,borderRadius:4}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,fontWeight:700,color:$.g}}>{cat.k}</span><span style={{fontSize:9,color:$.dm}}>{cat.l}</span></div><div style={{fontSize:8,color:$.dr,marginTop:2}}>1: {cat.lo}</div><div style={{fontSize:8,color:$.dr}}>5: {cat.hi}</div></div>)}</Se><Se title="Tune-Up" accent={$.or}>{TP.map((p,i)=><div key={i} style={{marginBottom:6,padding:"6px 8px",background:$.bg,borderRadius:4}}><div style={{display:"flex",gap:8}}><span style={{fontSize:9,color:$.or,fontWeight:700}}>{p.tm}</span><span style={{fontSize:10,fontWeight:600,color:$.tx}}>{p.nm}</span></div><div style={{fontSize:9,color:$.dm,marginTop:2}}>{p.ac}</div></div>)}</Se><Se title="Patterns" accent={$.or}><div style={{fontSize:9,color:$.dm,marginBottom:8}}>3\u20134 sessions minimum. Single sessions lie.</div>{PAT.map((p,i)=><div key={i} style={{marginBottom:6,padding:"6px 8px",background:$.bg,borderRadius:4}}><div style={{fontSize:10,fontWeight:700,color:$.or}}>{p.p}</div><div style={{fontSize:9,color:$.dm,marginTop:2}}>{p.m}</div><div style={{fontSize:9,color:$.tx,marginTop:1}}>{p.a}</div></div>)}</Se><Se title="Future Ideas" accent={$.dm}>
-<div style={{fontSize:9,color:$.dm,marginBottom:6}}>Logged ideas for the ecosystem.</div>
-<div style={{marginBottom:6,padding:"6px 8px",background:$.bg,borderRadius:4}}><div style={{fontSize:10,fontWeight:700,color:$.dm}}>Blind Spot Workshop</div><div style={{fontSize:9,color:$.dr,marginTop:2}}>Clients wear blindfolds during exercises. Removes visual channel, forces Ghost channel processing. Walk them by hand while dog is on leash.</div></div>
-<div style={{marginBottom:6,padding:"6px 8px",background:$.bg,borderRadius:4}}><div style={{fontSize:10,fontWeight:700,color:$.dm}}>AI Training Companion</div><div style={{fontSize:9,color:$.dr,marginTop:2}}>British accent. Jarvis meets Geoffrey. Daily training reminders with humor.</div></div>
-</Se>
-<div style={{textAlign:"center",padding:"16px 0",color:$.dr,fontSize:8,letterSpacing:2}}>STEADY HAND DOG TRAINING<br/>THE SIGNATURE IS THE MAP. THE COMPASS IS THE PROOF OF MOVEMENT.</div></div><Nav/></div>;
+  // ─── CLIENT DETAIL ───
+  if (view === "detail" && client) {
+    const latestCompass = client.compassHistory.length > 0 ? client.compassHistory[client.compassHistory.length - 1] : null;
+    const total = latestCompass ? latestCompass.ER + latestCompass.T + latestCompass.CC + latestCompass.CO + latestCompass.IN : null;
+    const hasSig = client.signature.dominant || client.signature.blind || client.signature.ghost;
+    const recentSessions = [...(client.sessions || [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
-return <div style={sh}><div style={ct}><Bt onClick={()=>sTab("clients")}>{"\u2190"} Back</Bt></div><Nav/></div>;
+    return (
+      <div style={sty.shell}>
+        <div style={sty.topBar}>
+          <button onClick={() => { setActiveId(null); setView("list"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← All</button>
+          <button onClick={() => { setEditData({ ...client }); setView("clientEdit"); }} style={sty.btnSm()}>Edit</button>
+        </div>
+
+        {/* Header */}
+        <div style={{ textAlign: "center", padding: "12px 16px 16px" }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>{client.name || "Unnamed"}</div>
+          <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>{client.dog}</div>
+          {client.profile && <div style={{ marginTop: 6 }}><span style={{ fontSize: 11, padding: "3px 12px", borderRadius: 4, border: `1px solid ${C.cardBorder}`, color: C.textDim }}>{client.profile}</span></div>}
+          {client.context && <div style={{ fontSize: 11, color: C.blue, marginTop: 6 }}>{client.context}</div>}
+        </div>
+
+        {/* Session Log + Eval action cards */}
+        <div style={{ padding: "0 16px", marginBottom: 16 }}>
+          <div style={{ ...sty.card, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div><div style={{ fontSize: 11, letterSpacing: 2, color: C.accent, fontWeight: 700 }}>SESSION LOG</div><div style={{ fontSize: 10, color: C.textDim }}>Feeds Arc + Compass</div></div>
+            <button onClick={() => { setEditData(emptySession()); setView("sessionEdit"); }} style={{ ...sty.btnSm(true), background: C.accent }}>+ Log</button>
+          </div>
+          <div style={{ ...sty.card, display: "flex", alignItems: "center", justifyContent: "space-between", borderColor: C.blue + "44" }}>
+            <div><div style={{ fontSize: 11, letterSpacing: 2, color: C.blue, fontWeight: 700 }}>HANDLER INDEX™ EVAL</div><div style={{ fontSize: 10, color: C.textDim }}>Full diagnostic walkthrough</div></div>
+            <button onClick={() => { setTab("diagnose"); setEditData(emptyEval()); setView("eval"); }} style={{ ...sty.btnSm(true), background: C.blue }}>+ Eval</button>
+          </div>
+        </div>
+
+        {/* Homework */}
+        <div style={sty.section(C.green)}>
+          <div style={sty.sectionTitle(C.green)}>HOMEWORK · {(client.homework || []).length}</div>
+          {(client.homework || []).length === 0 && <div style={{ fontSize: 11, color: C.textMuted }}>No homework assigned.</div>}
+          {(client.homework || []).map((hw, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.surface}` }}>
+              <span style={{ fontSize: 11, color: C.textDim, flex: 1 }}>{hw.text}</span>
+              <span style={{ fontSize: 9, color: C.textMuted, marginRight: 8 }}>{hw.date}</span>
+              <button onClick={async () => { const c = { ...client, homework: client.homework.filter((_, j) => j !== i) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14 }}>×</button>
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <input value={hwInput} onChange={e => setHwInput(e.target.value)} placeholder="Assign homework…" style={{ ...sty.input, flex: 1 }}
+              onKeyDown={async e => { if (e.key === "Enter" && hwInput.trim()) { const c = { ...client, homework: [...(client.homework || []), { text: hwInput.trim(), date: today() }] }; await updateClient(c); setHwInput(""); } }} />
+            <button onClick={async () => { if (hwInput.trim()) { const c = { ...client, homework: [...(client.homework || []), { text: hwInput.trim(), date: today() }] }; await updateClient(c); setHwInput(""); } }} style={sty.btnSm()}>+</button>
+          </div>
+        </div>
+
+        {/* Recurring Issues */}
+        <div style={sty.section(C.amber)}>
+          <div style={sty.sectionTitle(C.amber)}>RECURRING ISSUES · {(client.recurringIssues || []).length}</div>
+          {(client.recurringIssues || []).map((ri, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.surface}` }}>
+              <span style={{ fontSize: 11, color: C.textDim, flex: 1 }}>{ri.text}</span>
+              <span style={{ fontSize: 9, color: C.textMuted, marginRight: 8 }}>{ri.date}</span>
+              <button onClick={async () => { const c = { ...client, recurringIssues: client.recurringIssues.filter((_, j) => j !== i) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14 }}>×</button>
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <input value={issueInput} onChange={e => setIssueInput(e.target.value)} placeholder="Pattern you keep seeing…" style={{ ...sty.input, flex: 1 }}
+              onKeyDown={async e => { if (e.key === "Enter" && issueInput.trim()) { const c = { ...client, recurringIssues: [...(client.recurringIssues || []), { text: issueInput.trim(), date: today() }] }; await updateClient(c); setIssueInput(""); } }} />
+            <button onClick={async () => { if (issueInput.trim()) { const c = { ...client, recurringIssues: [...(client.recurringIssues || []), { text: issueInput.trim(), date: today() }] }; await updateClient(c); setIssueInput(""); } }} style={sty.btnSm()}>+</button>
+          </div>
+        </div>
+
+        {/* Signature */}
+        {hasSig && (
+          <div style={sty.section(C.accent)}>
+            <div style={sty.sectionTitle(C.accent)}>HANDLER SIGNATURE</div>
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <ChannelRadar signature={client.signature} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {[["dominant", C.accent], ["blind", C.amber], ["ghost", C.red]].map(([id, color]) => (
+                  client.signature[id] ? (
+                    <div key={id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
+                      <span style={{ fontSize: 9, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", width: 55 }}>{id}</span>
+                      <span style={{ fontSize: 12, color, fontWeight: 600 }}>{client.signature[id]}</span>
+                    </div>
+                  ) : null
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Compass */}
+        <div style={sty.section(total ? sc(total, 25) : C.accent)}>
+          <div style={sty.sectionTitle(total ? sc(total, 25) : C.accent)}>COMPASS</div>
+          {latestCompass ? (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
+                <div style={{ fontSize: 28, fontWeight: 700, color: sc(total, 25) }}>{total}<span style={{ fontSize: 12, color: C.textMuted }}>/25</span></div>
+                <div style={{ fontSize: 9, color: C.textDim }}>{latestCompass.checkpoint} · {latestCompass.date}</div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                {COMPASS_CATS.map(cat => (
+                  <div key={cat.key} style={{ background: C.surface, borderRadius: 4, padding: "4px 8px", textAlign: "center" }}>
+                    <div style={{ fontSize: 8, color: C.textMuted }}>{cat.key}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: sc(latestCompass[cat.key], 5) }}>{latestCompass[cat.key]}</div>
+                  </div>
+                ))}
+              </div>
+              <CompassSpark history={client.compassHistory} />
+              {client.compassHistory.map(ch => {
+                const t = ch.ER + ch.T + ch.CC + ch.CO + ch.IN;
+                return (
+                  <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.surface}` }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: sc(t, 25), width: 26 }}>{t}</span>
+                    <span style={{ fontSize: 10, color: C.textDim, flex: 1 }}>{ch.checkpoint} · {ch.date}</span>
+                    <button onClick={() => { setEditData({ ...ch }); setView("compassEdit"); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}>edit</button>
+                    <button onClick={async () => { const c = { ...client, compassHistory: client.compassHistory.filter(x => x.id !== ch.id) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.red + "66", cursor: "pointer", fontSize: 13 }}>×</button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <div style={{ fontSize: 11, color: C.textMuted }}>No compass scores yet.</div>}
+          <button onClick={() => { setEditData(emptyCompass(CHECKPOINTS[Math.min(client.compassHistory.length, 3)])); setView("compassEdit"); }} style={{ ...sty.btnSm(), marginTop: 8, width: "100%" }}>+ Score Compass</button>
+        </div>
+
+        {/* Recent Sessions */}
+        {recentSessions.length > 0 && (
+          <div style={sty.section(C.textDim)}>
+            <div style={sty.sectionTitle(C.textDim)}>RECENT SESSIONS</div>
+            {recentSessions.map(s => (
+              <div key={s.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 0", borderBottom: `1px solid ${C.surface}` }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", marginTop: 4, flexShrink: 0, background: s.quality === 1 ? C.red : s.quality === 3 ? C.green : C.amber }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.focus || "No focus noted"}</div>
+                  <div style={{ fontSize: 9, color: C.textMuted }}>{s.date}{s.dominantChannel ? ` · ${s.dominantChannel}` : ""}{s.journeyStage ? ` · ${s.journeyStage}` : ""}</div>
+                </div>
+                <button onClick={() => { setEditData({ ...s }); setView("sessionEdit"); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}>edit</button>
+                <button onClick={async () => { const c = { ...client, sessions: client.sessions.filter(x => x.id !== s.id) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.red + "66", cursor: "pointer", fontSize: 13 }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {client.notes && (
+          <div style={sty.section(C.textMuted)}>
+            <div style={sty.sectionTitle(C.textMuted)}>NOTES</div>
+            <div style={{ fontSize: 11, color: C.textDim, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{client.notes}</div>
+          </div>
+        )}
+        <BottomNav active={tab} onNav={setTab} />
+      </div>
+    );
+  }
+
+  // ─── CLIENT LIST ───
+  return (
+    <div style={sty.shell}>
+      <div style={{ padding: "24px 16px 6px", textAlign: "center" }}>
+        <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
+        <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 3, color: C.accent, marginTop: 4 }}>ARC TRACKER</div>
+        <div style={{ fontSize: 9, color: C.green, marginTop: 4 }}>✓ CLOUD SYNCED</div>
+      </div>
+      <div style={{ padding: "12px 16px" }}>
+        {data.clients.length === 0 && <div style={{ textAlign: "center", color: C.textMuted, padding: "30px 0", fontSize: 12 }}>No clients yet.</div>}
+        {data.clients.map(c => (
+          <button key={c.id} onClick={() => { setActiveId(c.id); setView("detail"); }} style={{ ...sty.card, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: C.surface, border: `1px solid ${C.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: C.accent, fontWeight: 700, flexShrink: 0 }}>{(c.name || "?")[0]?.toUpperCase()}</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{c.name || "Unnamed"}</div>
+              <div style={{ fontSize: 11, color: C.textDim }}>{c.dog} · {c.profile || "No profile"}</div>
+            </div>
+          </button>
+        ))}
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <button onClick={() => { const c = emptyClient(); setEditData(c); setActiveId(null); setView("clientEdit"); }} style={sty.btn(true)}>+ New Client</button>
+        </div>
+      </div>
+      <BottomNav active={tab} onNav={setTab} />
+    </div>
+  );
 }
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-</script>
-</body>
-</html>
