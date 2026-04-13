@@ -1,750 +1,474 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-// ═══════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════
-const CHANNELS = ["Spatial", "Verbal", "Environmental", "Internal"];
-const COMPASS_CATS = [
-  { key: "ER", label: "Emotional Regulation" },
-  { key: "T", label: "Timing & Pacing" },
-  { key: "CC", label: "Correction Confidence" },
-  { key: "CO", label: "Consistency" },
-  { key: "IN", label: "Intentionality" },
+const CH = ["Spatial", "Verbal", "Environmental", "Internal"];
+const CC = [
+  { k: "ER", l: "Emotional Regulation" }, { k: "T", l: "Timing & Pacing" },
+  { k: "CC", l: "Correction Confidence" }, { k: "CO", l: "Consistency" }, { k: "IN", l: "Intentionality" },
 ];
-const PROFILES = [
-  "Reactive", "Rigid", "Avoidant", "Passive",
-  "Imp. Reactive", "Imp. Rigid", "Imp. Avoidant", "Imp. Passive",
-  "Attuned",
-];
-const CHECKPOINTS = ["Intake", "Day 25", "Day 60", "Day 84"];
-const JOURNEY_STAGES = ["Immersion", "Recall", "Undercurrent", "Other"];
-const QUALITIES = [
-  { v: 1, l: "Rough", c: "#a04040" },
-  { v: 2, l: "Okay", c: "#a08840" },
-  { v: 3, l: "Locked In", c: "#5a8a50" },
-];
-const TRENDS = ["↑", "→", "↓"];
+const PR = ["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"];
+const CP = ["Intake","Day 25","Day 60","Day 84"];
+const JS = ["Immersion","Recall","Undercurrent","Other"];
+const QL = [{v:1,l:"Rough",c:"#a04040"},{v:2,l:"Okay",c:"#a08840"},{v:3,l:"Locked In",c:"#5a8a50"}];
 
-const FIVE_STATES = [
-  { n: 1, name: "Compliant Calm", short: "The goal.", desc: "Loose muscles, soft eyes, regulated breathing, relaxed posture. Present, settled, at ease within the structure. Not scanning, not bracing, not waiting. Calm that isn't forced. Stillness that isn't frozen.", markers: "Body: Soft · Eyes: Relaxed · Breathing: Even · Weight: Centered", color: "#5a8a50" },
-  { n: 2, name: "Alert Neutral", short: "Awareness without commitment.", desc: "Notices something — a sound, a movement, another dog in the distance. Ears rotate, eyes shift, body may orient slightly. But they haven't moved. They haven't committed. Still with you. Healthy state.", markers: "Ears: Rotating · Eyes: Tracking · Body: Oriented but still · Connection: Intact", color: "#7a9a50" },
-  { n: 3, name: "Pre-Decision Tension", short: "This is where the real work happens.", desc: "No longer just noticing — weighing a decision. Weight shifts forward. Breathing changes. Ears lock. Body stiffens. Eye contact breaks or becomes intermittent. Between two pulls — your influence and the environment's. Catch it here and they come back.", markers: "Weight: Forward · Ears: Locked · Breathing: Changed · Eye contact: Breaking", color: "#a08840" },
-  { n: 4, name: "Committed Action", short: "The decision has been made.", desc: "Lunge. Break. Bark. Ignore. Committed to the environment over you. Not a bad dog — intervention came too late or influence wasn't deep enough yet. Corrections require more intensity, recovery takes longer, elevated baseline.", markers: "Body: Committed · Focus: Environment · Recovery: Slow · Baseline: Elevated", color: "#a06030" },
-  { n: 5, name: "Emotional Override", short: "Loss of cognitive access.", desc: "No longer making decisions. Reacting. Adrenaline running. Breathing rapid or held. Eyes wide and fixed. Body rigid or thrashing. Corrections largely ineffective. Cannot process information. Operating on instinct and emotion.", markers: "Eyes: Wide/fixed · Body: Rigid or thrashing · Cognition: Offline · Corrections: Ineffective", color: "#a04040" },
-];
-
-// ═══════════════════════════════════════════
-// COLOR PALETTE — olive military
-// ═══════════════════════════════════════════
-const C = {
-  bg: "#0f0e0c", card: "#1a1814", cardBorder: "#2e2b24",
-  accent: "#8a8050", accentDim: "#5a5535", accentBright: "#b0a860",
-  text: "#c8c0b0", textDim: "#706858", textMuted: "#4a4438",
-  blue: "#5b9bd5", green: "#5a8a50", red: "#a04040", amber: "#a08840",
-  surface: "#141210",
+const P = {
+  bg:"#0f0e0c", cd:"#1a1814", bd:"#2e2b24", ac:"#8a8050",
+  tx:"#c8c0b0", td:"#706858", tm:"#4a4438", bl:"#5b9bd5", gn:"#5a8a50",
+  rd:"#a04040", am:"#a08840", sf:"#141210"
 };
 
-// ═══════════════════════════════════════════
-// DATA FACTORIES
-// ═══════════════════════════════════════════
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const today = () => new Date().toISOString().split("T")[0];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const tdy = () => new Date().toISOString().split("T")[0];
+const sc = (v,m=5) => { const p=v/m; return p<=.3?P.rd:p<=.5?P.am:p<=.7?P.ac:P.gn; };
 
-const emptyClient = () => ({
-  id: uid(), name: "", dog: "", breed: "", age: "", context: "",
-  signature: { dominant: "", blind: "", ghost: "" },
-  profile: "", compassHistory: [], sessions: [], arcSessions: [],
-  homework: [], recurringIssues: [], notes: "", created: today(),
-});
-const emptyCompass = (cp) => ({ id: uid(), checkpoint: cp, date: today(), ER: 1, T: 1, CC: 1, CO: 1, IN: 1 });
-const emptySession = () => ({
-  id: uid(), date: today(), profile: "", dominantChannel: "", focus: "",
-  quality: 2, journeyStage: "", notes: "",
-});
-const emptyArcSession = (num) => ({
-  id: uid(), num, date: today(), recovery: 0, checkIns: 0, compass: 5,
-  highState: 1, profile: "", trend: "→", notes: "",
-});
-const emptyEval = () => ({
-  id: uid(), date: today(),
-  phase1: { spatialFeet: "", verbalMouth: "", spatialInternal: "", internalDogFace: "", firstBreak: "", bodyBeforeMouth: "", dogArousal: 1, hypothesis: "" },
-  phase2: { direction: "", notes: "" },
-  signatureResult: { dominant: "", blind: "", ghost: "" },
-  compassProjection: { ER: 1, T: 1, CC: 1, CO: 1, IN: 1 },
-  profileResult: "",
-});
+const mkClient = () => ({id:uid(),name:"",dog:"",breed:"",age:"",context:"",signature:{dominant:"",blind:"",ghost:""},profile:"",compass:[],sessions:[],homework:[],issues:[],notes:""});
+const mkCompass = (cp) => ({id:uid(),checkpoint:cp,date:tdy(),ER:1,T:1,CC:1,CO:1,IN:1});
+const mkSession = () => ({id:uid(),date:tdy(),profile:"",channel:"",focus:"",quality:2,stage:"",notes:""});
+const mkEval = () => ({id:uid(),date:tdy(),p1:{feet:"",mouth:"",leash:"",face:"",brk:"",bbm:"",arousal:1,hyp:""},p2:{dir:"",notes:""},sig:{dominant:"",blind:"",ghost:""},comp:{ER:1,T:1,CC:1,CO:1,IN:1},prof:""});
 
-// ═══════════════════════════════════════════
-// STORAGE
-// ═══════════════════════════════════════════
-const STORE_KEY = "shdt-arc-v2";
-const load = async () => { try { const r = await window.storage.get(STORE_KEY); return r ? JSON.parse(r.value) : { clients: [] }; } catch { return { clients: [] }; } };
-const save = async (d) => { try { await window.storage.set(STORE_KEY, JSON.stringify(d)); } catch (e) { console.error(e); } };
+const SK = "shdt-arc-v3";
+const ld = async()=>{try{const r=await window.storage.get(SK);return r?JSON.parse(r.value):{clients:[]};}catch{return{clients:[]};}};
+const sv = async(d)=>{try{await window.storage.set(SK,JSON.stringify(d));}catch(e){console.error(e);}};
 
-// ═══════════════════════════════════════════
-// MICRO COMPONENTS
-// ═══════════════════════════════════════════
-const sty = {
-  shell: { background: C.bg, color: C.text, minHeight: "100vh", fontFamily: "'JetBrains Mono', 'SF Mono', monospace", maxWidth: 520, margin: "0 auto", paddingBottom: 80, position: "relative" },
-  topBar: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${C.cardBorder}` },
-  section: (accent) => ({ borderLeft: `3px solid ${accent || C.accent}`, paddingLeft: 14, marginBottom: 22, marginLeft: 16, marginRight: 16 }),
-  sectionTitle: (accent) => ({ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: accent || C.accent, marginBottom: 8, fontFamily: "inherit" }),
-  card: { background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: "14px 16px", marginBottom: 8, cursor: "pointer", display: "block", width: "100%", textAlign: "left", transition: "border-color .15s" },
-  btn: (fill) => ({ padding: "10px 18px", borderRadius: 6, border: fill ? "none" : `1px solid ${C.cardBorder}`, background: fill ? C.accent : "transparent", color: fill ? C.bg : C.textDim, cursor: "pointer", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", fontFamily: "inherit" }),
-  btnSm: (fill) => ({ padding: "6px 12px", borderRadius: 4, border: fill ? "none" : `1px solid ${C.cardBorder}`, background: fill ? C.accent : "transparent", color: fill ? C.bg : C.textDim, cursor: "pointer", fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "inherit" }),
-  input: { background: C.surface, border: `1px solid ${C.cardBorder}`, borderRadius: 4, padding: "8px 10px", color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" },
-  label: { fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: C.textDim, fontFamily: "inherit", marginBottom: 4, display: "block" },
-  textarea: { background: C.surface, border: `1px solid ${C.cardBorder}`, borderRadius: 4, padding: 10, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box", resize: "vertical", minHeight: 70 },
-};
+const ff = "'JetBrains Mono','SF Mono',monospace";
 
-const Badge = ({ children, active, onClick, color }) => (
-  <button onClick={onClick} style={{ padding: "5px 12px", borderRadius: 4, border: `1px solid ${active ? (color || C.accent) : C.cardBorder}`, background: active ? (color || C.accent) + "20" : "transparent", color: active ? (color || C.accent) : C.textDim, cursor: "pointer", fontSize: 11, fontFamily: "inherit", transition: "all .12s", whiteSpace: "nowrap" }}>{children}</button>
+const Bd = ({children,on,onClick,color:c}) => (
+  <button onClick={onClick} style={{padding:"5px 11px",borderRadius:4,border:"1px solid "+(on?(c||P.ac):P.bd),background:on?(c||P.ac)+"20":"transparent",color:on?(c||P.ac):P.td,cursor:"pointer",fontSize:11,fontFamily:ff,whiteSpace:"nowrap"}}>{children}</button>
 );
 
-const Field = ({ label, value, onChange, placeholder, type = "text", style: s }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 3, ...s }}>
-    <label style={sty.label}>{label}</label>
-    <input type={type} value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={sty.input} />
+const Fl = ({label,value,onChange,placeholder,type="text",s}) => (
+  <div style={{display:"flex",flexDirection:"column",gap:3,...s}}>
+    <label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>{label}</label>
+    <input type={type} value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:"8px 10px",color:P.tx,fontSize:13,fontFamily:ff,outline:"none",width:"100%",boxSizing:"border-box"}}/>
   </div>
 );
 
-const ScoreRow = ({ label, value, onChange, max = 5 }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-    <span style={{ width: 28, fontSize: 10, color: C.textDim, textAlign: "right", flexShrink: 0 }}>{label}</span>
-    <div style={{ flex: 1, display: "flex", gap: 3 }}>
-      {Array.from({ length: max }, (_, i) => i + 1).map(n => (
-        <button key={n} onClick={() => onChange(n)} style={{ flex: 1, height: 26, borderRadius: 3, border: "none", cursor: "pointer", background: n <= value ? sc(value, max) : C.surface, color: n <= value ? "#000" : C.textMuted, fontSize: 11, fontWeight: 700, fontFamily: "inherit", transition: "all .1s" }}>{n}</button>
+const SR = ({label,value,onChange,max=5}) => (
+  <div style={{display:"flex",alignItems:"center",gap:8}}>
+    <span style={{width:28,fontSize:10,color:P.td,textAlign:"right",flexShrink:0,fontFamily:ff}}>{label}</span>
+    <div style={{flex:1,display:"flex",gap:3}}>
+      {Array.from({length:max},(_,i)=>i+1).map(n=>(
+        <button key={n} onClick={()=>onChange(n)} style={{flex:1,height:26,borderRadius:3,border:"none",cursor:"pointer",background:n<=value?sc(value,max):P.sf,color:n<=value?"#000":P.tm,fontSize:11,fontWeight:700,fontFamily:ff}}>{n}</button>
       ))}
     </div>
-    <span style={{ width: 18, fontSize: 13, fontWeight: 700, color: sc(value, max), fontFamily: "inherit" }}>{value}</span>
+    <span style={{width:18,fontSize:13,fontWeight:700,color:sc(value,max),fontFamily:ff}}>{value}</span>
   </div>
 );
 
-function sc(v, max = 5) {
-  const p = v / max;
-  if (p <= 0.3) return C.red;
-  if (p <= 0.5) return C.amber;
-  if (p <= 0.7) return C.accent;
-  return C.green;
-}
+const Sec = ({title,accent:a,children}) => (
+  <div style={{borderLeft:"3px solid "+(a||P.ac),paddingLeft:14,marginBottom:20,marginLeft:16,marginRight:16}}>
+    <div style={{fontSize:10,letterSpacing:3,textTransform:"uppercase",color:a||P.ac,marginBottom:8,fontFamily:ff}}>{title}</div>
+    {children}
+  </div>
+);
 
-const CompassSpark = ({ history }) => {
-  if (!history || history.length < 2) return null;
-  const totals = history.map(h => h.ER + h.T + h.CC + h.CO + h.IN);
-  const w = 220, h = 55, pad = 8;
-  const pts = totals.map((t, i) => ({ x: pad + (i / Math.max(totals.length - 1, 1)) * (w - pad * 2), y: pad + (1 - t / 25) * (h - pad * 2) }));
-  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+const Radar = ({sig}) => {
+  const r=36,cx=50,cy=50;
+  const a=[0,1,2,3].map(i=>(i*Math.PI*2)/4-Math.PI/2);
+  const gv=ch=>{if(ch===sig.dominant)return 1;if(ch===sig.blind)return .55;if(ch===sig.ghost)return .2;return .45;};
+  const v=CH.map(gv);
+  const pts=v.map((val,i)=>({x:cx+Math.cos(a[i])*r*val,y:cy+Math.sin(a[i])*r*val}));
+  const gc=ch=>{if(ch===sig.dominant)return P.ac;if(ch===sig.blind)return P.am;if(ch===sig.ghost)return P.rd;return P.tm;};
   return (
-    <svg width={w} height={h} style={{ display: "block", marginTop: 8 }}>
-      <path d={line} fill="none" stroke={C.accent} strokeWidth={2} />
-      {pts.map((p, i) => (
-        <g key={i}><circle cx={p.x} cy={p.y} r={3} fill={C.bg} stroke={C.accent} strokeWidth={1.5} />
-        <text x={p.x} y={p.y - 7} textAnchor="middle" fill={C.accent} fontSize={8} fontFamily="inherit">{totals[i]}</text></g>
-      ))}
+    <svg width={100} height={100} style={{display:"block",flexShrink:0}}>
+      {[.33,.66,1].map(s=><polygon key={s} points={a.map(ang=>""+(cx+Math.cos(ang)*r*s)+","+(cy+Math.sin(ang)*r*s)).join(" ")} fill="none" stroke={P.bd} strokeWidth={1}/>)}
+      <polygon points={pts.map(p=>""+p.x+","+p.y).join(" ")} fill={P.ac+"18"} stroke={P.ac} strokeWidth={1.5}/>
+      {a.map((ang,i)=><text key={i} x={cx+Math.cos(ang)*(r+10)} y={cy+Math.sin(ang)*(r+10)} textAnchor="middle" dominantBaseline="central" fill={gc(CH[i])} fontSize={9} fontWeight={700} fontFamily={ff}>{"SVEI"[i]}</text>)}
     </svg>
   );
 };
 
-const ChannelRadar = ({ signature }) => {
-  const r = 36, cx = 50, cy = 50;
-  const angles = [0, 1, 2, 3].map(i => (i * Math.PI * 2) / 4 - Math.PI / 2);
-  const labels = ["S", "V", "E", "I"];
-  const getVal = (ch) => { if (ch === signature.dominant) return 1; if (ch === signature.blind) return 0.55; if (ch === signature.ghost) return 0.2; return 0.45; };
-  const vals = CHANNELS.map(getVal);
-  const pts = vals.map((v, i) => ({ x: cx + Math.cos(angles[i]) * r * v, y: cy + Math.sin(angles[i]) * r * v }));
-  const poly = pts.map(p => `${p.x},${p.y}`).join(" ");
-  const gc = (ch) => { if (ch === signature.dominant) return C.accent; if (ch === signature.blind) return C.amber; if (ch === signature.ghost) return C.red; return C.textMuted; };
+const Spark = ({h}) => {
+  if(!h||h.length<2)return null;
+  const tots=h.map(x=>x.ER+x.T+x.CC+x.CO+x.IN);
+  const w=200,ht=50,pd=8;
+  const pts=tots.map((t,i)=>({x:pd+(i/Math.max(tots.length-1,1))*(w-pd*2),y:pd+(1-t/25)*(ht-pd*2)}));
   return (
-    <svg width={100} height={100} style={{ display: "block", flexShrink: 0 }}>
-      {[0.33, 0.66, 1].map(s => <polygon key={s} points={angles.map(a => `${cx + Math.cos(a) * r * s},${cy + Math.sin(a) * r * s}`).join(" ")} fill="none" stroke={C.cardBorder} strokeWidth={1} />)}
-      {angles.map((a, i) => <line key={i} x1={cx} y1={cy} x2={cx + Math.cos(a) * r} y2={cy + Math.sin(a) * r} stroke={C.cardBorder} strokeWidth={1} />)}
-      <polygon points={poly} fill={C.accent + "18"} stroke={C.accent} strokeWidth={1.5} />
-      {angles.map((a, i) => <text key={i} x={cx + Math.cos(a) * (r + 10)} y={cy + Math.sin(a) * (r + 10)} textAnchor="middle" dominantBaseline="central" fill={gc(CHANNELS[i])} fontSize={9} fontWeight={700} fontFamily="inherit">{labels[i]}</text>)}
+    <svg width={w} height={ht} style={{display:"block",marginTop:6}}>
+      <path d={pts.map((p,i)=>(i===0?"M":"L")+p.x+","+p.y).join(" ")} fill="none" stroke={P.ac} strokeWidth={2}/>
+      {pts.map((p,i)=><g key={i}><circle cx={p.x} cy={p.y} r={3} fill={P.bg} stroke={P.ac} strokeWidth={1.5}/><text x={p.x} y={p.y-7} textAnchor="middle" fill={P.ac} fontSize={8} fontFamily={ff}>{tots[i]}</text></g>)}
     </svg>
   );
 };
 
-// ═══════════════════════════════════════════
-// BOTTOM NAV
-// ═══════════════════════════════════════════
-const NAV_ITEMS = [
-  { key: "clients", icon: "◉", label: "CLIENTS" },
-  { key: "diagnose", icon: "⊘", label: "DIAGNOSE" },
-  { key: "states", icon: "◆", label: "STATES" },
-  { key: "reference", icon: "≡", label: "REFERENCE" },
-];
-
-const BottomNav = ({ active, onNav }) => (
-  <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.cardBorder}`, display: "flex", justifyContent: "center", zIndex: 100 }}>
-    <div style={{ display: "flex", maxWidth: 520, width: "100%", justifyContent: "space-around", padding: "8px 0 12px" }}>
-      {NAV_ITEMS.map(n => (
-        <button key={n.key} onClick={() => onNav(n.key)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 8px", color: active === n.key ? C.accent : C.textDim, fontFamily: "inherit" }}>
-          <span style={{ fontSize: 16 }}>{n.icon}</span>
-          <span style={{ fontSize: 8, letterSpacing: 2, fontWeight: 700 }}>{n.label}</span>
+const Nav = ({active,onNav}) => (
+  <div style={{position:"fixed",bottom:0,left:0,right:0,background:P.sf,borderTop:"1px solid "+P.bd,display:"flex",justifyContent:"center",zIndex:100}}>
+    <div style={{display:"flex",maxWidth:520,width:"100%",justifyContent:"space-around",padding:"8px 0 12px"}}>
+      {[["clients","CLIENTS"],["diagnose","DIAGNOSE"],["states","STATES"],["reference","REFERENCE"]].map(([k,l])=>(
+        <button key={k} onClick={()=>onNav(k)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 8px",color:active===k?P.ac:P.td,fontFamily:ff}}>
+          <span style={{fontSize:8,letterSpacing:2,fontWeight:700}}>{l}</span>
         </button>
       ))}
     </div>
   </div>
 );
 
-// ═══════════════════════════════════════════
-// MAIN APP
-// ═══════════════════════════════════════════
-export default function ArcTracker() {
-  const [data, setData] = useState({ clients: [] });
-  const [loaded, setLoaded] = useState(false);
-  const [tab, setTab] = useState("clients");
-  const [activeId, setActiveId] = useState(null);
-  const [view, setView] = useState("list");
-  const [editData, setEditData] = useState(null);
-  const [issueInput, setIssueInput] = useState("");
-  const [hwInput, setHwInput] = useState("");
+const TopBar = ({left,right,center}) => (
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",borderBottom:"1px solid "+P.bd}}>
+    {left}
+    {center && <span style={{fontSize:9,letterSpacing:3,color:P.ac,fontFamily:ff}}>{center}</span>}
+    {right}
+  </div>
+);
 
-  useEffect(() => { load().then(d => { setData(d); setLoaded(true); }); }, []);
-  const persist = useCallback(async (nd) => { setData(nd); await save(nd); }, []);
+const Bk = ({onClick,label}) => <button onClick={onClick} style={{background:"none",border:"none",color:P.td,cursor:"pointer",fontSize:12,fontFamily:ff}}>{label||"← Back"}</button>;
 
-  const client = data.clients.find(c => c.id === activeId);
-  const updateClient = async (c) => {
-    const nd = { ...data, clients: data.clients.map(x => x.id === c.id ? c : x) };
-    if (!data.clients.find(x => x.id === c.id)) nd.clients.push(c);
-    await persist(nd);
+const ta = {background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:10,color:P.tx,fontSize:12,fontFamily:ff,outline:"none",width:"100%",boxSizing:"border-box",resize:"vertical",minHeight:60};
+const bt = (f)=>({padding:"10px 18px",borderRadius:6,border:f?"none":"1px solid "+P.bd,background:f?P.ac:"transparent",color:f?P.bg:P.td,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",fontFamily:ff});
+const bs = (f)=>({padding:"6px 12px",borderRadius:4,border:f?"none":"1px solid "+P.bd,background:f?P.ac:"transparent",color:f?P.bg:P.td,cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",fontFamily:ff});
+
+export default function App() {
+  const [data,setData] = useState({clients:[]});
+  const [ok,setOk] = useState(false);
+  const [tab,setTab] = useState("clients");
+  const [aid,setAid] = useState(null);
+  const [vw,setVw] = useState("list");
+  const [ed,setEd] = useState(null);
+  const [ii,setIi] = useState("");
+  const [hi,setHi] = useState("");
+
+  useEffect(()=>{ld().then(d=>{setData(d);setOk(true);});},[]);
+  const ps = useCallback(async(nd)=>{setData(nd);await sv(nd);},[]);
+  const cl = data.clients.find(c=>c.id===aid);
+  const uc = async(c)=>{
+    const exists = data.clients.find(x=>x.id===c.id);
+    const nd={...data, clients: exists ? data.clients.map(x=>x.id===c.id?c:x) : [...data.clients,c]};
+    await ps(nd);
   };
 
-  if (!loaded) return <div style={{ ...sty.shell, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: C.textDim, fontSize: 12 }}>Loading...</span></div>;
+  const shell = {background:P.bg,color:P.tx,minHeight:"100vh",fontFamily:ff,maxWidth:520,margin:"0 auto",paddingBottom:80};
 
-  // ─── TAB: STATES ───
-  if (tab === "states") return (
-    <div style={sty.shell}>
-      <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
-        <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
-        <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 2, color: C.accent, marginTop: 4 }}>FIVE-STATE AWARENESS MAP™</div>
-        <div style={{ fontSize: 9, color: C.textMuted, marginTop: 6 }}>State 3 is the fulcrum. Everything before it is reading. Everything after it is recovery.</div>
+  if(!ok) return <div style={{...shell,display:"flex",alignItems:"center",justifyContent:"center",height:"100vh"}}><span style={{color:P.td}}>Loading...</span></div>;
+
+  // ── STATES ──
+  if(tab==="states") return (
+    <div style={shell}>
+      <div style={{padding:"20px 16px",textAlign:"center"}}>
+        <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
+        <div style={{fontSize:15,fontWeight:700,letterSpacing:2,color:P.ac,marginTop:4}}>FIVE-STATE MAP™</div>
       </div>
-      <div style={{ padding: "12px 16px" }}>
-        {FIVE_STATES.map(s => (
-          <div key={s.n} style={{ ...sty.card, borderLeft: `3px solid ${s.color}`, marginLeft: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-              <span style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.n}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{s.name}</div>
-                <div style={{ fontSize: 10, color: s.color, fontStyle: "italic" }}>{s.short}</div>
-              </div>
-            </div>
-            <div style={{ fontSize: 11, color: C.textDim, lineHeight: 1.5, marginBottom: 6 }}>{s.desc}</div>
-            <div style={{ fontSize: 9, color: C.textMuted, letterSpacing: 0.5 }}>{s.markers}</div>
+      <div style={{padding:"0 16px"}}>
+        {[[1,"Compliant Calm",P.gn,"Body: Soft · Eyes: Relaxed"],
+          [2,"Alert Neutral","#7a9a50","Ears: Rotating · Still with you"],
+          [3,"Pre-Decision Tension",P.am,"Weight: Forward · Ears: Locked"],
+          [4,"Committed Action","#a06030","Body: Committed · Recovery: Slow"],
+          [5,"Emotional Override",P.rd,"Cognition: Offline"]
+        ].map(([n,nm,c,m])=>(
+          <div key={n} style={{background:P.cd,border:"1px solid "+P.bd,borderLeft:"3px solid "+c,borderRadius:8,padding:"10px 14px",marginBottom:8}}>
+            <span style={{fontSize:18,fontWeight:700,color:c,marginRight:8}}>{n}</span>
+            <span style={{fontSize:12,fontWeight:600,color:P.tx}}>{nm}</span>
+            <div style={{fontSize:9,color:P.td,marginTop:4}}>{m}</div>
           </div>
         ))}
+        <div style={{fontSize:9,color:P.tm,textAlign:"center",marginTop:8}}>State 3 is the fulcrum.</div>
       </div>
-      <BottomNav active={tab} onNav={setTab} />
+      <Nav active={tab} onNav={setTab}/>
     </div>
   );
 
-  // ─── TAB: REFERENCE ───
-  if (tab === "reference") return (
-    <div style={sty.shell}>
-      <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
-        <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
-        <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 2, color: C.accent, marginTop: 4 }}>REFERENCE</div>
+  // ── REFERENCE ──
+  if(tab==="reference") return (
+    <div style={shell}>
+      <div style={{padding:"20px 16px",textAlign:"center"}}>
+        <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
+        <div style={{fontSize:15,fontWeight:700,letterSpacing:2,color:P.ac,marginTop:4}}>REFERENCE</div>
       </div>
-      <div style={{ padding: "0 16px" }}>
-        <div style={sty.section(C.accent)}>
-          <div style={sty.sectionTitle(C.accent)}>THE HANDLER INDEX™</div>
-          <div style={{ fontSize: 11, color: C.textDim, lineHeight: 1.6 }}>
-            The Signature is the map. The Compass is the proof of movement. The Profile is the name for where you stand.
-          </div>
-        </div>
-        <div style={sty.section(C.accent)}>
-          <div style={sty.sectionTitle(C.accent)}>COMPASS CATEGORIES</div>
-          {COMPASS_CATS.map(cat => (
-            <div key={cat.key} style={{ marginBottom: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.accent }}>{cat.key}</span>
-              <span style={{ fontSize: 11, color: C.textDim }}> — {cat.label}</span>
-            </div>
-          ))}
-          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>Each scored 1–5. Totaling /25. Tracked at Intake, Day 25, Day 60, Day 84.</div>
-        </div>
-        <div style={sty.section(C.accent)}>
-          <div style={sty.sectionTitle(C.accent)}>HANDLER PROFILES</div>
-          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 8 }}>Entry → Improved → Attuned</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {[
-              { p: "Reactive", sig: "Dom: Verbal/Spatial · Blind: Internal · Ghost: Environmental", range: "6–10" },
-              { p: "Rigid", sig: "Dom: Spatial · Blind: Timing · Ghost: Internal (attunement)", range: "14–19" },
-              { p: "Avoidant", sig: "Dom: Verbal · Blind: Internal · Ghost: Spatial", range: "8–13" },
-              { p: "Passive", sig: "Dom: Verbal · Blind: Spatial · Ghost: Environmental", range: "7–11" },
-            ].map(r => (
-              <div key={r.p} style={{ background: C.surface, borderRadius: 4, padding: "8px 10px" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{r.p} <span style={{ fontSize: 10, color: C.textMuted }}>({r.range}/25)</span></div>
-                <div style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>{r.sig}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={sty.section(C.accent)}>
-          <div style={sty.sectionTitle(C.accent)}>FOUR PRESSURE CHANNELS™</div>
-          <div style={{ fontSize: 11, color: C.textDim, lineHeight: 1.6 }}>
-            Spatial · Verbal · Environmental · Internal
-          </div>
-          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 4, lineHeight: 1.5 }}>
-            Pressure is not correction. Pressure is not force. Pressure is constant. You are adding to the pressure load or stabilizing it. There is no neutral.
-          </div>
-        </div>
-        <div style={sty.section(C.accent)}>
-          <div style={sty.sectionTitle(C.accent)}>90-DAY ARC PATTERN GUIDE</div>
-          {[
-            { p: "Recovery ↑ + Check-ins ↑", m: "Depth building. Influence is real. Stay the course." },
-            { p: "Recovery ↓ + High State ↑", m: "Environment ahead of foundation. Pull back. Run the Reset." },
-            { p: "Compass ↓ + Profile shifting", m: "Handler regression. Check Emotional Spillover. Breathing Reset." },
-            { p: "Everything flat 3+ sessions", m: "Plateau. Normal. You're building depth. Hold." },
-            { p: "Recovery ↑ but Check-ins ↓", m: "Compliance without connection. Add enrichment. Relationship work." },
-          ].map((r, i) => (
-            <div key={i} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.accent }}>{r.p}</div>
-              <div style={{ fontSize: 10, color: C.textDim }}>{r.m}</div>
-            </div>
-          ))}
-        </div>
-        <div style={sty.section(C.accent)}>
-          <div style={sty.sectionTitle(C.accent)}>DIAGNOSTIC RULES</div>
-          <div style={{ fontSize: 10, color: C.textDim, lineHeight: 1.6 }}>
-            Blind = friction when named. Ghost = blankness when named. The reaction is the diagnostic.
-            {"\n\n"}Do not introduce the ghost channel by correcting it. Introduce it. They need vocabulary before reps.
-            {"\n\n"}The client never sees the full diagnostic. The diagnostic belongs to the trainer. The direction belongs to both of them.
-          </div>
-        </div>
-      </div>
-      <BottomNav active={tab} onNav={setTab} />
+      <Sec title="COMPASS"><div style={{fontSize:10,color:P.td}}>ER + T + CC + CO + IN = /25</div></Sec>
+      <Sec title="CHANNELS" accent={P.am}><div style={{fontSize:10,color:P.td}}>Spatial · Verbal · Environmental · Internal</div></Sec>
+      <Sec title="DIAGNOSTICS" accent={P.rd}><div style={{fontSize:10,color:P.td}}>Blind = friction when named. Ghost = blankness when named.</div></Sec>
+      <Sec title="ARC PATTERNS"><div style={{fontSize:9,color:P.td}}>Recovery↑ + Check-ins↑ = Depth. Recovery↓ + High State↑ = Pull back. Flat 3+ = Plateau.</div></Sec>
+      <Nav active={tab} onNav={setTab}/>
     </div>
   );
 
-  // ─── TAB: DIAGNOSE (Eval flow) ───
-  if (tab === "diagnose") {
-    if (view === "eval" && editData) {
-      const ev = editData;
-      const set1 = (k, v) => setEditData({ ...ev, phase1: { ...ev.phase1, [k]: v } });
-      const set2 = (k, v) => setEditData({ ...ev, phase2: { ...ev.phase2, [k]: v } });
-      const setSig = (k, v) => setEditData({ ...ev, signatureResult: { ...ev.signatureResult, [k]: v } });
-      const setComp = (k, v) => setEditData({ ...ev, compassProjection: { ...ev.compassProjection, [k]: v } });
-      const total = ev.compassProjection.ER + ev.compassProjection.T + ev.compassProjection.CC + ev.compassProjection.CO + ev.compassProjection.IN;
-
+  // ── DIAGNOSE ──
+  if(tab==="diagnose"){
+    if(vw==="eval"&&ed&&cl){
+      const e=ed;
+      const s1=(k,v)=>setEd({...e,p1:{...e.p1,[k]:v}});
+      const s2=(k,v)=>setEd({...e,p2:{...e.p2,[k]:v}});
+      const ss=(k,v)=>setEd({...e,sig:{...e.sig,[k]:v}});
+      const scp=(k,v)=>setEd({...e,comp:{...e.comp,[k]:v}});
+      const tot=e.comp.ER+e.comp.T+e.comp.CC+e.comp.CO+e.comp.IN;
       return (
-        <div style={sty.shell}>
-          <div style={sty.topBar}>
-            <button onClick={() => { setEditData(null); setView("list"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
-            <span style={{ fontSize: 9, letterSpacing: 3, color: C.blue }}>HANDLER INDEX™ EVAL</span>
-            <button onClick={async () => {
-              if (client) {
-                const c = { ...client };
-                c.signature = ev.signatureResult.dominant ? ev.signatureResult : c.signature;
-                if (ev.profileResult) c.profile = ev.profileResult;
-                c.compassHistory = [...c.compassHistory, { id: uid(), checkpoint: "Intake", date: ev.date, ...ev.compassProjection }];
-                await updateClient(c);
-              }
-              setEditData(null); setView("detail");
-            }} style={sty.btnSm(true)}>Save</button>
-          </div>
-          <div style={{ padding: "0 16px" }}>
-            <Field label="Date" value={ev.date} onChange={v => setEditData({ ...ev, date: v })} type="date" style={{ marginBottom: 16 }} />
-
-            <div style={sty.section(C.blue)}>
-              <div style={sty.sectionTitle(C.blue)}>PHASE 1 — THE DEMONSTRATION</div>
-              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 12, fontStyle: "italic" }}>"Show me what a normal moment looks like for you two." Two minutes. No coaching. No correction.</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div><label style={sty.label}>SPATIAL — "Feet first — do they lead or follow?"</label><textarea value={ev.phase1.spatialFeet} onChange={e => set1("spatialFeet", e.target.value)} style={sty.textarea} /></div>
-                <div><label style={sty.label}>VERBAL — "Mouth second — how many commands before response?"</label><textarea value={ev.phase1.verbalMouth} onChange={e => set1("verbalMouth", e.target.value)} style={sty.textarea} /></div>
-                <div><label style={sty.label}>SPATIAL + INTERNAL — "Leash — tight because dog pulled or handler didn't move?"</label><textarea value={ev.phase1.spatialInternal} onChange={e => set1("spatialInternal", e.target.value)} style={sty.textarea} /></div>
-                <div><label style={sty.label}>INTERNAL — "Dog's face — where is the dog looking? Arousal at baseline?"</label><textarea value={ev.phase1.internalDogFace} onChange={e => set1("internalDogFace", e.target.value)} style={sty.textarea} /></div>
-                <div><label style={sty.label}>What did they do FIRST when the dog broke?</label><textarea value={ev.phase1.firstBreak} onChange={e => set1("firstBreak", e.target.value)} style={sty.textarea} /></div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <label style={{ ...sty.label, flex: 1 }}>Body move before mouth?</label>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {["Yes", "No", "Simultaneous"].map(o => <Badge key={o} active={ev.phase1.bodyBeforeMouth === o} onClick={() => set1("bodyBeforeMouth", o)} color={C.blue}>{o}</Badge>)}
-                  </div>
-                </div>
-                <ScoreRow label="Arousal" value={ev.phase1.dogArousal} onChange={v => set1("dogArousal", v)} />
-                <div><label style={sty.label}>Immediate Signature Hypothesis</label><textarea value={ev.phase1.hypothesis} onChange={e => set1("hypothesis", e.target.value)} style={sty.textarea} placeholder="What are you seeing?" /></div>
-              </div>
-            </div>
-
-            <div style={sty.section(C.blue)}>
-              <div style={sty.sectionTitle(C.blue)}>PHASE 2 — THE CONVERSATION</div>
-              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 12, fontStyle: "italic" }}>"Tell me about your dog."</div>
-              <div><label style={sty.label}>Direction they went</label>
-                <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
-                  {["Stats", "Emotional", "Problem"].map(d => <Badge key={d} active={ev.phase2.direction === d} onClick={() => set2("direction", d)} color={C.blue}>{d}</Badge>)}
-                </div>
-              </div>
-              <div><label style={sty.label}>Notes</label><textarea value={ev.phase2.notes} onChange={e => set2("notes", e.target.value)} style={sty.textarea} /></div>
-            </div>
-
-            <div style={sty.section(C.accent)}>
-              <div style={sty.sectionTitle(C.accent)}>SIGNATURE RESULT</div>
-              {["dominant", "blind", "ghost"].map(id => (
-                <div key={id} style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 9, letterSpacing: 2, color: id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red, marginBottom: 4, textTransform: "uppercase" }}>{id}</div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    {CHANNELS.map(ch => <Badge key={ch} active={ev.signatureResult[id] === ch} onClick={() => setSig(id, ch)} color={id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red}>{ch}</Badge>)}
-                  </div>
+        <div style={shell}>
+          <TopBar left={<Bk onClick={()=>{setEd(null);setVw("list");}}/>} center="EVAL" right={<button onClick={async()=>{
+            const c={...cl};
+            if(e.sig.dominant)c.signature=e.sig;
+            if(e.prof)c.profile=e.prof;
+            c.compass=[...c.compass,{id:uid(),checkpoint:"Intake",date:e.date,...e.comp}];
+            await uc(c);setEd(null);setVw("detail");setTab("clients");
+          }} style={bs(true)}>Save</button>}/>
+          <div style={{padding:"0 16px"}}>
+            <Fl label="Date" value={e.date} onChange={v=>setEd({...e,date:v})} type="date" s={{marginBottom:12}}/>
+            <Sec title="PHASE 1 — DEMONSTRATION" accent={P.bl}>
+              <div style={{fontSize:9,color:P.td,marginBottom:8,fontStyle:"italic"}}>"Show me what a normal moment looks like for you two."</div>
+              {[["feet","SPATIAL — Lead or follow?"],["mouth","VERBAL — Commands before response?"],["leash","LEASH — Dog or handler?"],["face","INTERNAL — Arousal?"],["brk","First thing when dog broke?"]].map(([k,l])=>(
+                <div key={k} style={{marginBottom:6}}>
+                  <label style={{fontSize:9,color:P.td}}>{l}</label>
+                  <textarea value={e.p1[k]||""} onChange={x=>s1(k,x.target.value)} style={ta}/>
                 </div>
               ))}
-            </div>
-
-            <div style={sty.section(C.green)}>
-              <div style={sty.sectionTitle(C.green)}>COMPASS PROJECTION — {total}/25</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {COMPASS_CATS.map(cat => <ScoreRow key={cat.key} label={cat.key} value={ev.compassProjection[cat.key]} onChange={v => setComp(cat.key, v)} />)}
+              <div style={{display:"flex",gap:4,marginBottom:6,alignItems:"center"}}>
+                <span style={{fontSize:9,color:P.td}}>Body before mouth?</span>
+                {["Yes","No","Simul."].map(o=><Bd key={o} on={e.p1.bbm===o} onClick={()=>s1("bbm",o)} color={P.bl}>{o}</Bd>)}
               </div>
-            </div>
-
-            <div style={sty.section(C.green)}>
-              <div style={sty.sectionTitle(C.green)}>PROFILE</div>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {PROFILES.map(p => <Badge key={p} active={ev.profileResult === p} onClick={() => setEditData({ ...ev, profileResult: p })} color={C.green}>{p}</Badge>)}
+              <SR label="Arousal" value={e.p1.arousal} onChange={v=>s1("arousal",v)}/>
+              <div style={{marginTop:6}}>
+                <label style={{fontSize:9,color:P.td}}>Hypothesis</label>
+                <textarea value={e.p1.hyp||""} onChange={x=>s1("hyp",x.target.value)} style={ta}/>
               </div>
-            </div>
+            </Sec>
+            <Sec title="PHASE 2 — CONVERSATION" accent={P.bl}>
+              <div style={{display:"flex",gap:4,marginBottom:6}}>
+                {["Stats","Emotional","Problem"].map(d=><Bd key={d} on={e.p2.dir===d} onClick={()=>s2("dir",d)} color={P.bl}>{d}</Bd>)}
+              </div>
+              <textarea value={e.p2.notes||""} onChange={x=>s2("notes",x.target.value)} style={ta}/>
+            </Sec>
+            <Sec title="SIGNATURE" accent={P.ac}>
+              {["dominant","blind","ghost"].map(id=>(
+                <div key={id} style={{marginBottom:6}}>
+                  <div style={{fontSize:9,color:id==="dominant"?P.ac:id==="blind"?P.am:P.rd,marginBottom:3,textTransform:"uppercase",letterSpacing:2}}>{id}</div>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{CH.map(ch=><Bd key={ch} on={e.sig[id]===ch} onClick={()=>ss(id,ch)} color={id==="dominant"?P.ac:id==="blind"?P.am:P.rd}>{ch}</Bd>)}</div>
+                </div>
+              ))}
+            </Sec>
+            <Sec title={"COMPASS — "+tot+"/25"} accent={sc(tot,25)}>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>{CC.map(cat=><SR key={cat.k} label={cat.k} value={e.comp[cat.k]} onChange={v=>scp(cat.k,v)}/>)}</div>
+            </Sec>
+            <Sec title="PROFILE" accent={P.gn}>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{PR.map(p=><Bd key={p} on={e.prof===p} onClick={()=>setEd({...e,prof:p})} color={P.gn}>{p}</Bd>)}</div>
+            </Sec>
           </div>
-          <BottomNav active={tab} onNav={setTab} />
+          <Nav active={tab} onNav={setTab}/>
         </div>
       );
     }
-
-    // Diagnose landing — select client to eval
     return (
-      <div style={sty.shell}>
-        <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
-          <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
-          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 2, color: C.blue, marginTop: 4 }}>HANDLER INDEX™ EVAL</div>
-          <div style={{ fontSize: 9, color: C.textMuted, marginTop: 6 }}>Full diagnostic walkthrough</div>
+      <div style={shell}>
+        <div style={{padding:"20px 16px",textAlign:"center"}}>
+          <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
+          <div style={{fontSize:15,fontWeight:700,letterSpacing:2,color:P.bl,marginTop:4}}>HANDLER INDEX™ EVAL</div>
+          <div style={{fontSize:9,color:P.tm,marginTop:4}}>Select client</div>
         </div>
-        <div style={{ padding: "12px 16px" }}>
-          {data.clients.length === 0 && <div style={{ textAlign: "center", color: C.textMuted, padding: "30px 0", fontSize: 12 }}>Add a client first.</div>}
-          {data.clients.map(c => (
-            <button key={c.id} onClick={() => { setActiveId(c.id); setEditData(emptyEval()); setView("eval"); }}
-              style={{ ...sty.card, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.surface, border: `1px solid ${C.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: C.accent, fontWeight: 700, flexShrink: 0 }}>{(c.name || "?")[0]?.toUpperCase()}</div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{c.name || "Unnamed"}</div>
-                <div style={{ fontSize: 10, color: C.textDim }}>{c.dog} · {c.profile || "No profile"}</div>
-              </div>
+        <div style={{padding:"0 16px"}}>
+          {data.clients.length===0&&<div style={{textAlign:"center",color:P.tm,padding:"30px 0"}}>Add a client first.</div>}
+          {data.clients.map(c=>(
+            <button key={c.id} onClick={()=>{setAid(c.id);setEd(mkEval());setVw("eval");}} style={{background:P.cd,border:"1px solid "+P.bd,borderRadius:8,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",alignItems:"center",gap:12,width:"100%",textAlign:"left"}}>
+              <div style={{width:36,height:36,borderRadius:"50%",background:P.sf,border:"1px solid "+P.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:P.ac,fontWeight:700,flexShrink:0}}>{(c.name||"?")[0]?.toUpperCase()}</div>
+              <div><div style={{fontSize:13,fontWeight:600,color:P.tx}}>{c.name||"Unnamed"}</div><div style={{fontSize:10,color:P.td}}>{c.dog} · {c.profile||"—"}</div></div>
             </button>
           ))}
         </div>
-        <BottomNav active={tab} onNav={setTab} />
+        <Nav active={tab} onNav={setTab}/>
       </div>
     );
   }
 
-  // ═══════════════════════════════════════════
-  // TAB: CLIENTS
-  // ═══════════════════════════════════════════
-
-  // ─── SESSION LOG EDIT ───
-  if (view === "sessionEdit" && editData && client) {
-    const es = editData;
-    const set = (k, v) => setEditData({ ...es, [k]: v });
+  // ── SESSION EDIT ──
+  if(vw==="sEdit"&&ed&&cl){
+    const s=ed, set=(k,v)=>setEd({...s,[k]:v});
     return (
-      <div style={sty.shell}>
-        <div style={sty.topBar}>
-          <button onClick={() => { setEditData(null); setView("detail"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
-          <span style={{ fontSize: 9, letterSpacing: 3, color: C.accent }}>SESSION LOG</span>
-          <button onClick={async () => {
-            const c = { ...client }; const idx = c.sessions.findIndex(x => x.id === es.id);
-            if (idx >= 0) c.sessions[idx] = es; else c.sessions.push(es);
-            await updateClient(c); setEditData(null); setView("detail");
-          }} style={sty.btnSm(true)}>Save</button>
+      <div style={shell}>
+        <TopBar left={<Bk onClick={()=>{setEd(null);setVw("detail");}}/>} center="SESSION LOG" right={<button onClick={async()=>{
+          const c={...cl},i=c.sessions.findIndex(x=>x.id===s.id);
+          if(i>=0)c.sessions[i]=s;else c.sessions.push(s);await uc(c);setEd(null);setVw("detail");
+        }} style={bs(true)}>Save</button>}/>
+        <div style={{padding:"0 16px"}}>
+          <Fl label="Date" value={s.date} onChange={v=>set("date",v)} type="date" s={{marginBottom:10}}/>
+          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Profile</label><div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}}>{PR.map(p=><Bd key={p} on={s.profile===p} onClick={()=>set("profile",p)}>{p}</Bd>)}</div></div>
+          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Channel</label><div style={{display:"flex",gap:4,marginTop:4}}>{CH.map(ch=><Bd key={ch} on={s.channel===ch} onClick={()=>set("channel",ch)}>{ch}</Bd>)}</div></div>
+          <Fl label="Focus" value={s.focus} onChange={v=>set("focus",v)} placeholder="One sentence" s={{marginBottom:10}}/>
+          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Quality</label><div style={{display:"flex",gap:4,marginTop:4}}>{QL.map(q=><Bd key={q.v} on={s.quality===q.v} onClick={()=>set("quality",q.v)} color={q.c}>{q.l}</Bd>)}</div></div>
+          <div style={{marginBottom:10}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Stage</label><div style={{display:"flex",gap:4,marginTop:4}}>{JS.map(j=><Bd key={j} on={s.stage===j} onClick={()=>set("stage",j)}>{j}</Bd>)}</div></div>
+          <div><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Notes</label><textarea value={s.notes||""} onChange={e=>set("notes",e.target.value)} style={{...ta,marginTop:4}}/></div>
         </div>
-        <div style={{ padding: "0 16px" }}>
-          <Field label="Date" value={es.date} onChange={v => set("date", v)} type="date" style={{ marginBottom: 12 }} />
-          <div style={{ marginBottom: 12 }}>
-            <label style={sty.label}>Handler Profile</label>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{PROFILES.map(p => <Badge key={p} active={es.profile === p} onClick={() => set("profile", p)}>{p}</Badge>)}</div>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={sty.label}>Dominant Pressure Channel</label>
-            <div style={{ display: "flex", gap: 4 }}>{CHANNELS.map(ch => <Badge key={ch} active={es.dominantChannel === ch} onClick={() => set("dominantChannel", ch)}>{ch}</Badge>)}</div>
-          </div>
-          <Field label="Session Focus" value={es.focus} onChange={v => set("focus", v)} placeholder="One sentence — what did you work on?" style={{ marginBottom: 12 }} />
-          <div style={{ marginBottom: 12 }}>
-            <label style={sty.label}>Session Quality</label>
-            <div style={{ display: "flex", gap: 4 }}>{QUALITIES.map(q => <Badge key={q.v} active={es.quality === q.v} onClick={() => set("quality", q.v)} color={q.c}>{q.l}</Badge>)}</div>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={sty.label}>Journey Stage</label>
-            <div style={{ display: "flex", gap: 4 }}>{JOURNEY_STAGES.map(j => <Badge key={j} active={es.journeyStage === j} onClick={() => set("journeyStage", j)}>{j}</Badge>)}</div>
-          </div>
-          <div><label style={sty.label}>Notes</label><textarea value={es.notes || ""} onChange={e => set("notes", e.target.value)} style={sty.textarea} placeholder="Anything worth remembering" /></div>
-        </div>
-        <BottomNav active={tab} onNav={setTab} />
+        <Nav active={tab} onNav={setTab}/>
       </div>
     );
   }
 
-  // ─── COMPASS EDIT ───
-  if (view === "compassEdit" && editData && client) {
-    const ec = editData;
-    const set = (k, v) => setEditData({ ...ec, [k]: v });
-    const total = ec.ER + ec.T + ec.CC + ec.CO + ec.IN;
+  // ── COMPASS EDIT ──
+  if(vw==="cEdit"&&ed&&cl){
+    const c=ed, set=(k,v)=>setEd({...c,[k]:v}), tot=c.ER+c.T+c.CC+c.CO+c.IN;
     return (
-      <div style={sty.shell}>
-        <div style={sty.topBar}>
-          <button onClick={() => { setEditData(null); setView("detail"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
-          <span style={{ fontSize: 9, letterSpacing: 3, color: C.accent }}>COMPASS SCORE</span>
-          <button onClick={async () => {
-            const c = { ...client }; const idx = c.compassHistory.findIndex(x => x.id === ec.id);
-            if (idx >= 0) c.compassHistory[idx] = ec; else c.compassHistory.push(ec);
-            await updateClient(c); setEditData(null); setView("detail");
-          }} style={sty.btnSm(true)}>Save</button>
+      <div style={shell}>
+        <TopBar left={<Bk onClick={()=>{setEd(null);setVw("detail");}}/>} center="COMPASS" right={<button onClick={async()=>{
+          const cl2={...cl},i=cl2.compass.findIndex(x=>x.id===c.id);
+          if(i>=0)cl2.compass[i]=c;else cl2.compass.push(c);await uc(cl2);setEd(null);setVw("detail");
+        }} style={bs(true)}>Save</button>}/>
+        <div style={{padding:"0 16px"}}>
+          <div style={{display:"flex",gap:8,marginBottom:14}}>
+            <Fl label="Date" value={c.date} onChange={v=>set("date",v)} type="date" s={{flex:1}}/>
+            <div style={{flex:1}}><label style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:P.td,fontFamily:ff}}>Checkpoint</label><div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>{CP.map(cp=><Bd key={cp} on={c.checkpoint===cp} onClick={()=>set("checkpoint",cp)}>{cp}</Bd>)}</div></div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
+            {CC.map(cat=><SR key={cat.k} label={cat.k} value={c[cat.k]} onChange={v=>set(cat.k,v)}/>)}
+          </div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:30,fontWeight:700,color:sc(tot,25)}}>{tot}<span style={{fontSize:14,color:P.tm}}>/25</span></div></div>
         </div>
-        <div style={{ padding: "0 16px" }}>
-          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-            <Field label="Date" value={ec.date} onChange={v => set("date", v)} type="date" style={{ flex: 1 }} />
-            <div style={{ flex: 1 }}><label style={sty.label}>Checkpoint</label>
-              <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>{CHECKPOINTS.map(cp => <Badge key={cp} active={ec.checkpoint === cp} onClick={() => set("checkpoint", cp)}>{cp}</Badge>)}</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-            {COMPASS_CATS.map(cat => <ScoreRow key={cat.key} label={cat.key} value={ec[cat.key]} onChange={v => set(cat.key, v)} />)}
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: sc(total, 25) }}>{total}<span style={{ fontSize: 14, color: C.textMuted }}>/25</span></div>
-          </div>
-        </div>
-        <BottomNav active={tab} onNav={setTab} />
+        <Nav active={tab} onNav={setTab}/>
       </div>
     );
   }
 
-  // ─── CLIENT EDIT ───
-  if (view === "clientEdit" && editData) {
-    const ec = editData;
-    const set = (k, v) => setEditData({ ...ec, [k]: v });
-    const setSig = (k, v) => setEditData({ ...ec, signature: { ...ec.signature, [k]: v } });
+  // ── CLIENT EDIT ──
+  if(vw==="clEdit"&&ed){
+    const c=ed, set=(k,v)=>setEd({...c,[k]:v});
+    const ssg=(k,v)=>setEd({...c,signature:{...c.signature,[k]:v}});
     return (
-      <div style={sty.shell}>
-        <div style={sty.topBar}>
-          <button onClick={() => { setEditData(null); setView(activeId ? "detail" : "list"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← Back</button>
-          <span style={{ fontSize: 9, letterSpacing: 3, color: C.accent }}>{data.clients.find(x => x.id === ec.id) ? "EDIT" : "NEW"} CLIENT</span>
-          <button onClick={async () => { await updateClient(ec); setActiveId(ec.id); setEditData(null); setView("detail"); }} style={sty.btnSm(true)}>Save</button>
-        </div>
-        <div style={{ padding: "0 16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-            <Field label="Handler" value={ec.name} onChange={v => set("name", v)} placeholder="Name" />
-            <Field label="Dog" value={ec.dog} onChange={v => set("dog", v)} placeholder="Dog name" />
-            <Field label="Breed" value={ec.breed} onChange={v => set("breed", v)} placeholder="Breed" />
-            <Field label="Age" value={ec.age} onChange={v => set("age", v)} placeholder="Age" />
+      <div style={shell}>
+        <TopBar left={<Bk onClick={()=>{setEd(null);setVw(aid?"detail":"list");}}/>} center={data.clients.find(x=>x.id===c.id)?"EDIT":"NEW CLIENT"} right={<button onClick={async()=>{await uc(c);setAid(c.id);setEd(null);setVw("detail");}} style={bs(true)}>Save</button>}/>
+        <div style={{padding:"0 16px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            <Fl label="Handler" value={c.name} onChange={v=>set("name",v)} placeholder="Name"/>
+            <Fl label="Dog" value={c.dog} onChange={v=>set("dog",v)} placeholder="Dog"/>
+            <Fl label="Breed" value={c.breed} onChange={v=>set("breed",v)} placeholder="Breed"/>
+            <Fl label="Age" value={c.age} onChange={v=>set("age",v)} placeholder="Age"/>
           </div>
-          <Field label="Context" value={ec.context} onChange={v => set("context", v)} placeholder="e.g., Vet Clinic, Board & Train, Private" style={{ marginBottom: 16 }} />
-
-          <div style={sty.section(C.accent)}>
-            <div style={sty.sectionTitle(C.accent)}>HANDLER SIGNATURE</div>
-            {["dominant", "blind", "ghost"].map(id => (
-              <div key={id} style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 9, letterSpacing: 2, color: id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red, marginBottom: 4, textTransform: "uppercase" }}>{id}</div>
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {CHANNELS.map(ch => <Badge key={ch} active={ec.signature[id] === ch} onClick={() => setSig(id, ch)} color={id === "dominant" ? C.accent : id === "blind" ? C.amber : C.red}>{ch}</Badge>)}
-                </div>
+          <Fl label="Context" value={c.context} onChange={v=>set("context",v)} placeholder="Vet Clinic, B&T..." s={{marginBottom:14}}/>
+          <Sec title="SIGNATURE" accent={P.ac}>
+            {["dominant","blind","ghost"].map(id=>(
+              <div key={id} style={{marginBottom:8}}>
+                <div style={{fontSize:9,letterSpacing:2,color:id==="dominant"?P.ac:id==="blind"?P.am:P.rd,marginBottom:4,textTransform:"uppercase"}}>{id}</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{CH.map(ch=><Bd key={ch} on={c.signature[id]===ch} onClick={()=>ssg(id,ch)} color={id==="dominant"?P.ac:id==="blind"?P.am:P.rd}>{ch}</Bd>)}</div>
               </div>
             ))}
-          </div>
-
-          <div style={sty.section(C.green)}>
-            <div style={sty.sectionTitle(C.green)}>HANDLER PROFILE</div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{PROFILES.map(p => <Badge key={p} active={ec.profile === p} onClick={() => set("profile", p)} color={C.green}>{p}</Badge>)}</div>
-          </div>
-
-          <div style={sty.section(C.textDim)}>
-            <div style={sty.sectionTitle(C.textDim)}>NOTES</div>
-            <textarea value={ec.notes || ""} onChange={e => set("notes", e.target.value)} style={sty.textarea} placeholder="Anything worth remembering..." />
-          </div>
-
-          {data.clients.find(x => x.id === ec.id) && (
-            <div style={{ textAlign: "center", marginTop: 16 }}>
-              <button onClick={async () => { if (confirm("Delete this client?")) { await persist({ ...data, clients: data.clients.filter(x => x.id !== ec.id) }); setActiveId(null); setEditData(null); setView("list"); } }} style={{ ...sty.btnSm(), color: C.red, borderColor: C.red + "33" }}>Delete Client</button>
-            </div>
-          )}
+          </Sec>
+          <Sec title="PROFILE" accent={P.gn}>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{PR.map(p=><Bd key={p} on={c.profile===p} onClick={()=>set("profile",p)} color={P.gn}>{p}</Bd>)}</div>
+          </Sec>
+          <Sec title="NOTES" accent={P.td}>
+            <textarea value={c.notes||""} onChange={e=>set("notes",e.target.value)} style={ta}/>
+          </Sec>
+          {data.clients.find(x=>x.id===c.id)&&<div style={{textAlign:"center",marginTop:12}}>
+            <button onClick={async()=>{if(confirm("Delete?")){await ps({...data,clients:data.clients.filter(x=>x.id!==c.id)});setAid(null);setEd(null);setVw("list");}}} style={{...bs(),color:P.rd}}>Delete</button>
+          </div>}
         </div>
-        <BottomNav active={tab} onNav={setTab} />
+        <Nav active={tab} onNav={setTab}/>
       </div>
     );
   }
 
-  // ─── CLIENT DETAIL ───
-  if (view === "detail" && client) {
-    const latestCompass = client.compassHistory.length > 0 ? client.compassHistory[client.compassHistory.length - 1] : null;
-    const total = latestCompass ? latestCompass.ER + latestCompass.T + latestCompass.CC + latestCompass.CO + latestCompass.IN : null;
-    const hasSig = client.signature.dominant || client.signature.blind || client.signature.ghost;
-    const recentSessions = [...(client.sessions || [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-
+  // ── CLIENT DETAIL ──
+  if(vw==="detail"&&cl){
+    const lc=cl.compass.length>0?cl.compass[cl.compass.length-1]:null;
+    const tot=lc?lc.ER+lc.T+lc.CC+lc.CO+lc.IN:null;
+    const hs=cl.signature.dominant||cl.signature.blind||cl.signature.ghost;
+    const rs=[...(cl.sessions||[])].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
     return (
-      <div style={sty.shell}>
-        <div style={sty.topBar}>
-          <button onClick={() => { setActiveId(null); setView("list"); }} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>← All</button>
-          <button onClick={() => { setEditData({ ...client }); setView("clientEdit"); }} style={sty.btnSm()}>Edit</button>
+      <div style={shell}>
+        <TopBar left={<Bk onClick={()=>{setAid(null);setVw("list");}} label="← All"/>} right={<button onClick={()=>{setEd({...cl});setVw("clEdit");}} style={bs()}>Edit</button>}/>
+        <div style={{textAlign:"center",padding:"10px 16px 14px"}}>
+          <div style={{fontSize:18,fontWeight:700,color:P.tx}}>{cl.name||"Unnamed"}</div>
+          <div style={{fontSize:11,color:P.td,marginTop:2}}>{cl.dog}</div>
+          {cl.profile&&<div style={{marginTop:5}}><span style={{fontSize:10,padding:"3px 10px",borderRadius:4,border:"1px solid "+P.bd,color:P.td}}>{cl.profile}</span></div>}
+          {cl.context&&<div style={{fontSize:10,color:P.bl,marginTop:5}}>{cl.context}</div>}
         </div>
-
-        {/* Header */}
-        <div style={{ textAlign: "center", padding: "12px 16px 16px" }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>{client.name || "Unnamed"}</div>
-          <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>{client.dog}</div>
-          {client.profile && <div style={{ marginTop: 6 }}><span style={{ fontSize: 11, padding: "3px 12px", borderRadius: 4, border: `1px solid ${C.cardBorder}`, color: C.textDim }}>{client.profile}</span></div>}
-          {client.context && <div style={{ fontSize: 11, color: C.blue, marginTop: 6 }}>{client.context}</div>}
-        </div>
-
-        {/* Session Log + Eval action cards */}
-        <div style={{ padding: "0 16px", marginBottom: 16 }}>
-          <div style={{ ...sty.card, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div><div style={{ fontSize: 11, letterSpacing: 2, color: C.accent, fontWeight: 700 }}>SESSION LOG</div><div style={{ fontSize: 10, color: C.textDim }}>Feeds Arc + Compass</div></div>
-            <button onClick={() => { setEditData(emptySession()); setView("sessionEdit"); }} style={{ ...sty.btnSm(true), background: C.accent }}>+ Log</button>
+        <div style={{padding:"0 16px",marginBottom:14}}>
+          <div style={{background:P.cd,border:"1px solid "+P.bd,borderRadius:8,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div><div style={{fontSize:10,letterSpacing:2,color:P.ac,fontWeight:700}}>SESSION LOG</div><div style={{fontSize:9,color:P.td}}>Feeds Arc + Compass</div></div>
+            <button onClick={()=>{setEd(mkSession());setVw("sEdit");}} style={{...bs(true),background:P.ac}}>+ Log</button>
           </div>
-          <div style={{ ...sty.card, display: "flex", alignItems: "center", justifyContent: "space-between", borderColor: C.blue + "44" }}>
-            <div><div style={{ fontSize: 11, letterSpacing: 2, color: C.blue, fontWeight: 700 }}>HANDLER INDEX™ EVAL</div><div style={{ fontSize: 10, color: C.textDim }}>Full diagnostic walkthrough</div></div>
-            <button onClick={() => { setTab("diagnose"); setEditData(emptyEval()); setView("eval"); }} style={{ ...sty.btnSm(true), background: C.blue }}>+ Eval</button>
+          <div style={{background:P.cd,border:"1px solid "+P.bl+"44",borderRadius:8,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div><div style={{fontSize:10,letterSpacing:2,color:P.bl,fontWeight:700}}>HANDLER INDEX™ EVAL</div><div style={{fontSize:9,color:P.td}}>Full diagnostic walkthrough</div></div>
+            <button onClick={()=>{setTab("diagnose");setEd(mkEval());setVw("eval");}} style={{...bs(true),background:P.bl}}>+ Eval</button>
           </div>
         </div>
-
-        {/* Homework */}
-        <div style={sty.section(C.green)}>
-          <div style={sty.sectionTitle(C.green)}>HOMEWORK · {(client.homework || []).length}</div>
-          {(client.homework || []).length === 0 && <div style={{ fontSize: 11, color: C.textMuted }}>No homework assigned.</div>}
-          {(client.homework || []).map((hw, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.surface}` }}>
-              <span style={{ fontSize: 11, color: C.textDim, flex: 1 }}>{hw.text}</span>
-              <span style={{ fontSize: 9, color: C.textMuted, marginRight: 8 }}>{hw.date}</span>
-              <button onClick={async () => { const c = { ...client, homework: client.homework.filter((_, j) => j !== i) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14 }}>×</button>
-            </div>
-          ))}
-          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-            <input value={hwInput} onChange={e => setHwInput(e.target.value)} placeholder="Assign homework…" style={{ ...sty.input, flex: 1 }}
-              onKeyDown={async e => { if (e.key === "Enter" && hwInput.trim()) { const c = { ...client, homework: [...(client.homework || []), { text: hwInput.trim(), date: today() }] }; await updateClient(c); setHwInput(""); } }} />
-            <button onClick={async () => { if (hwInput.trim()) { const c = { ...client, homework: [...(client.homework || []), { text: hwInput.trim(), date: today() }] }; await updateClient(c); setHwInput(""); } }} style={sty.btnSm()}>+</button>
+        <Sec title={"HOMEWORK · "+(cl.homework||[]).length} accent={P.gn}>
+          {(cl.homework||[]).length===0&&<div style={{fontSize:10,color:P.tm}}>No homework assigned.</div>}
+          {(cl.homework||[]).map((h,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid "+P.sf}}>
+            <span style={{fontSize:10,color:P.td,flex:1}}>{h.text}</span><span style={{fontSize:8,color:P.tm,marginRight:6}}>{h.date}</span>
+            <button onClick={async()=>{await uc({...cl,homework:cl.homework.filter((_,j)=>j!==i)});}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:13}}>×</button>
+          </div>)}
+          <div style={{display:"flex",gap:4,marginTop:6}}>
+            <input value={hi} onChange={e=>setHi(e.target.value)} placeholder="Assign homework…" style={{background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:"7px 9px",color:P.tx,fontSize:11,fontFamily:ff,outline:"none",flex:1}}
+              onKeyDown={async e=>{if(e.key==="Enter"&&hi.trim()){await uc({...cl,homework:[...(cl.homework||[]),{text:hi.trim(),date:tdy()}]});setHi("");}}}/>
+            <button onClick={async()=>{if(hi.trim()){await uc({...cl,homework:[...(cl.homework||[]),{text:hi.trim(),date:tdy()}]});setHi("");}}} style={bs()}>+</button>
           </div>
-        </div>
-
-        {/* Recurring Issues */}
-        <div style={sty.section(C.amber)}>
-          <div style={sty.sectionTitle(C.amber)}>RECURRING ISSUES · {(client.recurringIssues || []).length}</div>
-          {(client.recurringIssues || []).map((ri, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.surface}` }}>
-              <span style={{ fontSize: 11, color: C.textDim, flex: 1 }}>{ri.text}</span>
-              <span style={{ fontSize: 9, color: C.textMuted, marginRight: 8 }}>{ri.date}</span>
-              <button onClick={async () => { const c = { ...client, recurringIssues: client.recurringIssues.filter((_, j) => j !== i) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14 }}>×</button>
-            </div>
-          ))}
-          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-            <input value={issueInput} onChange={e => setIssueInput(e.target.value)} placeholder="Pattern you keep seeing…" style={{ ...sty.input, flex: 1 }}
-              onKeyDown={async e => { if (e.key === "Enter" && issueInput.trim()) { const c = { ...client, recurringIssues: [...(client.recurringIssues || []), { text: issueInput.trim(), date: today() }] }; await updateClient(c); setIssueInput(""); } }} />
-            <button onClick={async () => { if (issueInput.trim()) { const c = { ...client, recurringIssues: [...(client.recurringIssues || []), { text: issueInput.trim(), date: today() }] }; await updateClient(c); setIssueInput(""); } }} style={sty.btnSm()}>+</button>
+        </Sec>
+        <Sec title={"RECURRING ISSUES · "+(cl.issues||[]).length} accent={P.am}>
+          {(cl.issues||[]).map((r,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid "+P.sf}}>
+            <span style={{fontSize:10,color:P.td,flex:1}}>{r.text}</span><span style={{fontSize:8,color:P.tm,marginRight:6}}>{r.date}</span>
+            <button onClick={async()=>{await uc({...cl,issues:cl.issues.filter((_,j)=>j!==i)});}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:13}}>×</button>
+          </div>)}
+          <div style={{display:"flex",gap:4,marginTop:6}}>
+            <input value={ii} onChange={e=>setIi(e.target.value)} placeholder="Pattern you keep seeing…" style={{background:P.sf,border:"1px solid "+P.bd,borderRadius:4,padding:"7px 9px",color:P.tx,fontSize:11,fontFamily:ff,outline:"none",flex:1}}
+              onKeyDown={async e=>{if(e.key==="Enter"&&ii.trim()){await uc({...cl,issues:[...(cl.issues||[]),{text:ii.trim(),date:tdy()}]});setIi("");}}}/>
+            <button onClick={async()=>{if(ii.trim()){await uc({...cl,issues:[...(cl.issues||[]),{text:ii.trim(),date:tdy()}]});setIi("");}}} style={bs()}>+</button>
           </div>
-        </div>
-
-        {/* Signature */}
-        {hasSig && (
-          <div style={sty.section(C.accent)}>
-            <div style={sty.sectionTitle(C.accent)}>HANDLER SIGNATURE</div>
-            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-              <ChannelRadar signature={client.signature} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {[["dominant", C.accent], ["blind", C.amber], ["ghost", C.red]].map(([id, color]) => (
-                  client.signature[id] ? (
-                    <div key={id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
-                      <span style={{ fontSize: 9, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", width: 55 }}>{id}</span>
-                      <span style={{ fontSize: 12, color, fontWeight: 600 }}>{client.signature[id]}</span>
-                    </div>
-                  ) : null
-                ))}
-              </div>
+        </Sec>
+        {hs&&<Sec title="HANDLER SIGNATURE" accent={P.ac}>
+          <div style={{display:"flex",gap:12,alignItems:"center"}}>
+            <Radar sig={cl.signature}/>
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              {[["dominant",P.ac],["blind",P.am],["ghost",P.rd]].map(([id,color])=>cl.signature[id]?<div key={id} style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:6,height:6,borderRadius:"50%",background:color}}/>
+                <span style={{fontSize:8,color:P.tm,textTransform:"uppercase",width:50}}>{id}</span>
+                <span style={{fontSize:11,color:color,fontWeight:600}}>{cl.signature[id]}</span>
+              </div>:null)}
             </div>
           </div>
-        )}
-
-        {/* Compass */}
-        <div style={sty.section(total ? sc(total, 25) : C.accent)}>
-          <div style={sty.sectionTitle(total ? sc(total, 25) : C.accent)}>COMPASS</div>
-          {latestCompass ? (
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
-                <div style={{ fontSize: 28, fontWeight: 700, color: sc(total, 25) }}>{total}<span style={{ fontSize: 12, color: C.textMuted }}>/25</span></div>
-                <div style={{ fontSize: 9, color: C.textDim }}>{latestCompass.checkpoint} · {latestCompass.date}</div>
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                {COMPASS_CATS.map(cat => (
-                  <div key={cat.key} style={{ background: C.surface, borderRadius: 4, padding: "4px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 8, color: C.textMuted }}>{cat.key}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: sc(latestCompass[cat.key], 5) }}>{latestCompass[cat.key]}</div>
-                  </div>
-                ))}
-              </div>
-              <CompassSpark history={client.compassHistory} />
-              {client.compassHistory.map(ch => {
-                const t = ch.ER + ch.T + ch.CC + ch.CO + ch.IN;
-                return (
-                  <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.surface}` }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: sc(t, 25), width: 26 }}>{t}</span>
-                    <span style={{ fontSize: 10, color: C.textDim, flex: 1 }}>{ch.checkpoint} · {ch.date}</span>
-                    <button onClick={() => { setEditData({ ...ch }); setView("compassEdit"); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}>edit</button>
-                    <button onClick={async () => { const c = { ...client, compassHistory: client.compassHistory.filter(x => x.id !== ch.id) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.red + "66", cursor: "pointer", fontSize: 13 }}>×</button>
-                  </div>
-                );
-              })}
+        </Sec>}
+        <Sec title="COMPASS" accent={tot?sc(tot,25):P.ac}>
+          {lc?<div>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
+              <div style={{fontSize:26,fontWeight:700,color:sc(tot,25)}}>{tot}<span style={{fontSize:12,color:P.tm}}>/25</span></div>
+              <div style={{fontSize:9,color:P.td}}>{lc.checkpoint} · {lc.date}</div>
             </div>
-          ) : <div style={{ fontSize: 11, color: C.textMuted }}>No compass scores yet.</div>}
-          <button onClick={() => { setEditData(emptyCompass(CHECKPOINTS[Math.min(client.compassHistory.length, 3)])); setView("compassEdit"); }} style={{ ...sty.btnSm(), marginTop: 8, width: "100%" }}>+ Score Compass</button>
-        </div>
-
-        {/* Recent Sessions */}
-        {recentSessions.length > 0 && (
-          <div style={sty.section(C.textDim)}>
-            <div style={sty.sectionTitle(C.textDim)}>RECENT SESSIONS</div>
-            {recentSessions.map(s => (
-              <div key={s.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 0", borderBottom: `1px solid ${C.surface}` }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", marginTop: 4, flexShrink: 0, background: s.quality === 1 ? C.red : s.quality === 3 ? C.green : C.amber }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.focus || "No focus noted"}</div>
-                  <div style={{ fontSize: 9, color: C.textMuted }}>{s.date}{s.dominantChannel ? ` · ${s.dominantChannel}` : ""}{s.journeyStage ? ` · ${s.journeyStage}` : ""}</div>
-                </div>
-                <button onClick={() => { setEditData({ ...s }); setView("sessionEdit"); }} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}>edit</button>
-                <button onClick={async () => { const c = { ...client, sessions: client.sessions.filter(x => x.id !== s.id) }; await updateClient(c); }} style={{ background: "none", border: "none", color: C.red + "66", cursor: "pointer", fontSize: 13 }}>×</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {client.notes && (
-          <div style={sty.section(C.textMuted)}>
-            <div style={sty.sectionTitle(C.textMuted)}>NOTES</div>
-            <div style={{ fontSize: 11, color: C.textDim, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{client.notes}</div>
-          </div>
-        )}
-        <BottomNav active={tab} onNav={setTab} />
+            <div style={{display:"flex",gap:5,marginBottom:6}}>
+              {CC.map(cat=><div key={cat.k} style={{background:P.sf,borderRadius:4,padding:"3px 7px",textAlign:"center"}}>
+                <div style={{fontSize:8,color:P.tm}}>{cat.k}</div>
+                <div style={{fontSize:13,fontWeight:700,color:sc(lc[cat.k],5)}}>{lc[cat.k]}</div>
+              </div>)}
+            </div>
+            <Spark h={cl.compass}/>
+            {cl.compass.map(ch=>{const t=ch.ER+ch.T+ch.CC+ch.CO+ch.IN;return <div key={ch.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderBottom:"1px solid "+P.sf}}>
+              <span style={{fontSize:12,fontWeight:700,color:sc(t,25),width:24}}>{t}</span>
+              <span style={{fontSize:9,color:P.td,flex:1}}>{ch.checkpoint} · {ch.date}</span>
+              <button onClick={()=>{setEd({...ch});setVw("cEdit");}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:9,fontFamily:ff}}>edit</button>
+              <button onClick={async()=>{await uc({...cl,compass:cl.compass.filter(x=>x.id!==ch.id)});}} style={{background:"none",border:"none",color:P.rd+"66",cursor:"pointer",fontSize:12}}>×</button>
+            </div>;})}
+          </div>:<div style={{fontSize:10,color:P.tm}}>No scores yet.</div>}
+          <button onClick={()=>{setEd(mkCompass(CP[Math.min(cl.compass.length,3)]));setVw("cEdit");}} style={{...bs(),marginTop:8,width:"100%"}}>+ Score Compass</button>
+        </Sec>
+        {rs.length>0&&<Sec title="SESSIONS" accent={P.td}>
+          {rs.map(s=><div key={s.id} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"5px 0",borderBottom:"1px solid "+P.sf}}>
+            <div style={{width:7,height:7,borderRadius:"50%",marginTop:4,flexShrink:0,background:s.quality===1?P.rd:s.quality===3?P.gn:P.am}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:10,color:P.tx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.focus||"No focus"}</div>
+              <div style={{fontSize:8,color:P.tm}}>{s.date}{s.channel?" · "+s.channel:""}</div>
+            </div>
+            <button onClick={()=>{setEd({...s});setVw("sEdit");}} style={{background:"none",border:"none",color:P.tm,cursor:"pointer",fontSize:9,fontFamily:ff}}>edit</button>
+            <button onClick={async()=>{await uc({...cl,sessions:cl.sessions.filter(x=>x.id!==s.id)});}} style={{background:"none",border:"none",color:P.rd+"66",cursor:"pointer",fontSize:12}}>×</button>
+          </div>)}
+        </Sec>}
+        {cl.notes&&<Sec title="NOTES" accent={P.tm}><div style={{fontSize:10,color:P.td,whiteSpace:"pre-wrap"}}>{cl.notes}</div></Sec>}
+        <Nav active={tab} onNav={setTab}/>
       </div>
     );
   }
 
-  // ─── CLIENT LIST ───
+  // ── CLIENT LIST ──
   return (
-    <div style={sty.shell}>
-      <div style={{ padding: "24px 16px 6px", textAlign: "center" }}>
-        <div style={{ fontSize: 9, letterSpacing: 4, color: C.textDim }}>STEADY HAND RaD™</div>
-        <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 3, color: C.accent, marginTop: 4 }}>ARC TRACKER</div>
-        <div style={{ fontSize: 9, color: C.green, marginTop: 4 }}>✓ CLOUD SYNCED</div>
+    <div style={shell}>
+      <div style={{padding:"20px 16px 4px",textAlign:"center"}}>
+        <div style={{fontSize:9,letterSpacing:4,color:P.td}}>STEADY HAND RaD™</div>
+        <div style={{fontSize:17,fontWeight:700,letterSpacing:3,color:P.ac,marginTop:4}}>ARC TRACKER</div>
+        <div style={{fontSize:9,color:P.gn,marginTop:4}}>✓ CLOUD SYNCED</div>
       </div>
-      <div style={{ padding: "12px 16px" }}>
-        {data.clients.length === 0 && <div style={{ textAlign: "center", color: C.textMuted, padding: "30px 0", fontSize: 12 }}>No clients yet.</div>}
-        {data.clients.map(c => (
-          <button key={c.id} onClick={() => { setActiveId(c.id); setView("detail"); }} style={{ ...sty.card, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: C.surface, border: `1px solid ${C.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: C.accent, fontWeight: 700, flexShrink: 0 }}>{(c.name || "?")[0]?.toUpperCase()}</div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{c.name || "Unnamed"}</div>
-              <div style={{ fontSize: 11, color: C.textDim }}>{c.dog} · {c.profile || "No profile"}</div>
-            </div>
+      <div style={{padding:"10px 16px"}}>
+        {data.clients.length===0&&<div style={{textAlign:"center",color:P.tm,padding:"30px 0"}}>No clients yet.</div>}
+        {data.clients.map(c=>(
+          <button key={c.id} onClick={()=>{setAid(c.id);setVw("detail");}} style={{background:P.cd,border:"1px solid "+P.bd,borderRadius:8,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",alignItems:"center",gap:12,width:"100%",textAlign:"left"}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:P.sf,border:"1px solid "+P.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:P.ac,fontWeight:700,flexShrink:0}}>{(c.name||"?")[0]?.toUpperCase()}</div>
+            <div><div style={{fontSize:14,fontWeight:600,color:P.tx}}>{c.name||"Unnamed"}</div><div style={{fontSize:10,color:P.td}}>{c.dog} · {c.profile||"—"}</div></div>
           </button>
         ))}
-        <div style={{ textAlign: "center", marginTop: 16 }}>
-          <button onClick={() => { const c = emptyClient(); setEditData(c); setActiveId(null); setView("clientEdit"); }} style={sty.btn(true)}>+ New Client</button>
+        <div style={{textAlign:"center",marginTop:14}}>
+          <button onClick={()=>{const c=mkClient();setEd(c);setAid(null);setVw("clEdit");}} style={bt(true)}>+ New Client</button>
         </div>
       </div>
-      <BottomNav active={tab} onNav={setTab} />
+      <Nav active={tab} onNav={setTab}/>
     </div>
   );
 }
