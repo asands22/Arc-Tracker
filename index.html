@@ -473,12 +473,106 @@ function renderDiagnose(app){
   hdr.appendChild(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"4px"}},"Select client for diagnostic walkthrough"));
   app.appendChild(hdr);
   const wrap=h("div",{style:{padding:"8px 16px"}});
+
+  // ── Pre-Flight Card ──
+  const pf=h("div",{style:{background:"#1a1814",border:"1px solid #2e2b24",borderLeft:"3px solid #5b9bd5",borderRadius:"8px",padding:"12px 14px",marginBottom:"14px"}});
+  pf.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#5b9bd5",fontWeight:"700",marginBottom:"8px"}},"PRE-FLIGHT — OBSERVATION SEQUENCE"));
+  ["1. Feet first — do they lead or follow?","2. Mouth second — how many commands before response?","3. Leash third — tight because dog pulled or handler didn't move?","4. Dog's face — where are they looking? Arousal at baseline?","5. What did they do FIRST when the dog broke?"].forEach((step,i)=>{
+    pf.appendChild(h("div",{style:{fontSize:"10px",color:i===4?"#5b9bd5":"#706858",lineHeight:"1.6",marginBottom:"2px"}},step));
+  });
+  pf.appendChild(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"6px",fontStyle:"italic"}},'"Show me what a normal moment looks like for you two." Two minutes. No coaching. No correction.'));
+  wrap.appendChild(pf);
+
+  // ── Clients Needing Attention ──
+  const flags=[];
+  const now=new Date();
+  DATA.c.forEach(c=>{
+    const reasons=[];
+    // Compass drop 2+
+    if(c.comp.length>=2){const last=cTotal(c.comp[c.comp.length-1]),prev=cTotal(c.comp[c.comp.length-2]);if(prev-last>=2)reasons.push("Compass dropped "+(prev-last)+" pts")}
+    // No session in 14+ days
+    if(c.sess.length>0){const lastDt=new Date([...c.sess].sort((a,b)=>b.dt.localeCompare(a.dt))[0].dt);const days=Math.floor((now-lastDt)/(1000*60*60*24));if(days>=14)reasons.push(days+" days since last session")}
+    else if(c.sess.length===0&&c.comp.length>0)reasons.push("No sessions logged yet");
+    // Recurring issues stacking
+    if(c.issues&&c.issues.length>=3)reasons.push(c.issues.length+" recurring issues");
+    if(reasons.length>0)flags.push({client:c,reasons});
+  });
+  if(flags.length>0){
+    const attn=h("div",{style:{background:"#1a1814",border:"1px solid #2e2b24",borderLeft:"3px solid #a04040",borderRadius:"8px",padding:"12px 14px",marginBottom:"14px"}});
+    attn.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#a04040",fontWeight:"700",marginBottom:"8px"}},"NEEDS ATTENTION · "+flags.length));
+    flags.forEach(f=>{
+      const row=h("div",{style:{padding:"6px 0",borderBottom:"1px solid #141210"}});
+      row.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"600",color:"#c8c0b0"}},f.client.name||"Unnamed"));
+      f.reasons.forEach(r=>{row.appendChild(h("div",{style:{fontSize:"9px",color:"#a04040",marginTop:"1px"}},"⚠ "+r))});
+      attn.appendChild(row);
+    });
+    wrap.appendChild(attn);
+  }
+
+  // ── Profile Distribution ──
+  if(DATA.c.length>0){
+    const dist=h("div",{style:{background:"#1a1814",border:"1px solid #2e2b24",borderLeft:"3px solid #8a8050",borderRadius:"8px",padding:"12px 14px",marginBottom:"14px"}});
+    dist.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#8a8050",fontWeight:"700",marginBottom:"8px"}},"CASELOAD · "+DATA.c.length));
+    const tiers={entry:0,improved:0,attuned:0,unset:0};
+    const profCounts={};
+    DATA.c.forEach(c=>{
+      const p=c.prof||"";
+      if(p==="Attuned"){tiers.attuned++}
+      else if(p.startsWith("Imp.")){tiers.improved++}
+      else if(["Reactive","Rigid","Avoidant","Passive"].includes(p)){tiers.entry++}
+      else{tiers.unset++}
+      if(p){profCounts[p]=(profCounts[p]||0)+1}
+    });
+    const tierRow=h("div",{style:{display:"flex",gap:"6px",marginBottom:"8px"}});
+    [["Entry",tiers.entry,"#a08840"],["Improved",tiers.improved,"#8a8050"],["Attuned",tiers.attuned,"#5a8a50"]].forEach(([lb,n,c])=>{
+      if(n===0)return;
+      const d=h("div",{style:{background:"#141210",borderRadius:"6px",padding:"6px 10px",textAlign:"center",flex:"1"}});
+      d.appendChild(h("div",{style:{fontSize:"16px",fontWeight:"700",color:c}},String(n)));
+      d.appendChild(h("div",{style:{fontSize:"8px",color:"#4a4438"}},lb));tierRow.appendChild(d);
+    });
+    if(tiers.unset>0){const d=h("div",{style:{background:"#141210",borderRadius:"6px",padding:"6px 10px",textAlign:"center",flex:"1"}});d.appendChild(h("div",{style:{fontSize:"16px",fontWeight:"700",color:"#4a4438"}},String(tiers.unset)));d.appendChild(h("div",{style:{fontSize:"8px",color:"#4a4438"}},"Unset"));tierRow.appendChild(d)}
+    dist.appendChild(tierRow);
+    // Profile breakdown
+    const profList=Object.entries(profCounts).sort((a,b)=>b[1]-a[1]);
+    if(profList.length>0){
+      const pl=h("div",{style:{display:"flex",gap:"4px",flexWrap:"wrap"}});
+      profList.forEach(([p,n])=>{pl.appendChild(h("span",{style:{fontSize:"9px",color:"#706858",background:"#141210",borderRadius:"4px",padding:"2px 6px"}},p+" ×"+n))});
+      dist.appendChild(pl);
+    }
+    wrap.appendChild(dist);
+  }
+
+  // ── Client Cards (enhanced) ──
   if(DATA.c.length===0)wrap.appendChild(h("div",{style:{textAlign:"center",color:"#4a4438",padding:"30px 0",fontSize:"12px"}},"Add a client first."));
   DATA.c.forEach(c=>{
-    const card=h("button",{className:"card",onClick:()=>{AID=c.id;ED=mkEval();VW="eval";render()}});
+    const card=h("button",{style:{background:"#1a1814",border:"1px solid #2e2b24",borderRadius:"8px",padding:"12px 14px",marginBottom:"8px",cursor:"pointer",display:"flex",alignItems:"center",gap:"12px",width:"100%",textAlign:"left",fontFamily:"inherit"},onClick:()=>{AID=c.id;ED=mkEval();VW="eval";render()}});
     const av=h("div",{className:"avatar",style:{width:"36px",height:"36px",fontSize:"13px"}},(c.name||"?")[0]?.toUpperCase());
-    card.appendChild(av);const info=h("div");info.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"600"}},c.name||"Unnamed"));
-    info.appendChild(h("div",{style:{fontSize:"10px",color:"#706858"}},`${c.dog} · ${c.prof||"No profile"}`));card.appendChild(info);wrap.appendChild(card);
+    card.appendChild(av);
+    const info=h("div",{style:{flex:"1",minWidth:"0"}});
+    info.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"600",color:"#c8c0b0"}},c.name||"Unnamed"));
+    // Second line: dog · profile
+    info.appendChild(h("div",{style:{fontSize:"10px",color:"#706858"}},`${c.dog||"—"} · ${c.prof||"No profile"}`));
+    // Third line: compass + trend + last session
+    const meta=[];
+    if(c.comp.length>0){
+      const lc=c.comp[c.comp.length-1],t=cTotal(lc);
+      let trend="";
+      if(c.comp.length>=2){const prev=cTotal(c.comp[c.comp.length-2]);trend=t>prev?" ↑":t<prev?" ↓":" →"}
+      meta.push(t+"/25"+trend);
+    }
+    if(c.sess.length>0){
+      const lastS=[...c.sess].sort((a,b)=>b.dt.localeCompare(a.dt))[0];
+      meta.push("Last: "+lastS.dt);
+    }else{meta.push("No sessions")}
+    if(meta.length>0)info.appendChild(h("div",{style:{fontSize:"9px",color:"#4a4438",marginTop:"2px"}},meta.join(" · ")));
+    card.appendChild(info);
+    // Compass score badge on right
+    if(c.comp.length>0){
+      const t=cTotal(c.comp[c.comp.length-1]);
+      const badge=h("div",{style:{fontSize:"16px",fontWeight:"700",color:sc(t,25),flexShrink:"0"}});
+      badge.textContent=t;card.appendChild(badge);
+    }
+    wrap.appendChild(card);
   });
   app.appendChild(wrap);
 }
