@@ -135,7 +135,7 @@ const Spk=({data:d,w=220,h=50,c=$.g})=>{if(!d||d.length<2)return null;const pad=
 
 // APP
 function App(){
-const[idx,sIdx]=useState([]);const[cl,sCl]=useState(null);const[tab,sTab]=useState("clients");const[ed,sEd]=useState(null);const[arcI,sAI]=useState(null);const[tu,sTu]=useState(null);const[rst,sRst]=useState(null);const[sLog,sSL]=useState(null);const[dS,sDS]=useState(0);const[dD,sDD]=useState({dominant:"",blind:"",ghost:"",notes:{}});const[ev,sEv]=useState(null);const[rdy,sRdy]=useState(false);const[synced,sSynced]=useState(false);const sr=useRef(null);
+const[idx,sIdx]=useState([]);const[cl,sCl]=useState(null);const[tab,sTab]=useState("clients");const[ed,sEd]=useState(null);const[arcI,sAI]=useState(null);const[tu,sTu]=useState(null);const[rst,sRst]=useState(null);const[sLog,sSL]=useState(null);const[dS,sDS]=useState(0);const[dD,sDD]=useState({dominant:"",blind:"",ghost:"",notes:{}});const[ev,sEv]=useState(null);const[rdy,sRdy]=useState(false);const[hwExp,sHwExp]=useState(null);const[synced,sSynced]=useState(false);const sr=useRef(null);
 
 // Cloud sync on mount
 useEffect(()=>{syncFromCloud().then(i=>{sIdx(i);sRdy(true);sSynced(true)}).catch(()=>{sIdx(LS.gi());sRdy(true)})},[]);
@@ -174,7 +174,25 @@ return <div style={sh}><div ref={sr} style={ct}><div style={{display:"flex",just
 <div style={{background:$.bl+"0D",border:"1px solid "+$.bl+"44",borderRadius:6,padding:12,marginBottom:20}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><Lb color={$.bl}>Handler Index\u2122 Eval</Lb><div style={{fontSize:10,color:$.dm,marginTop:2}}>Full diagnostic walkthrough</div></div><Bt accent onClick={()=>{sEv(freshEval());sTab("eval")}} style={{background:$.bl}}>+ Eval</Bt></div></div>
 {/* Homework */}
 <Se title={"Homework \u00B7 "+((cl.hw||[]).filter(h=>h.status!=="done").length)} accent={$.g}>
-{(cl.hw||[]).length>0?(cl.hw||[]).filter(h=>h.status!=="done").slice(-3).map(h=>{const ex=EX.find(e=>e.id===h.exId);return <div key={h.id} style={{display:"flex",gap:8,padding:"5px 0",alignItems:"center"}}><span style={{fontSize:11,color:$.tx,flex:1}}>{ex?ex.nm:h.exId}</span><span style={{fontSize:9,padding:"2px 6px",borderRadius:2,background:h.status==="struggling"?$.rd+"18":h.status==="consistent"?$.gn+"18":$.g+"18",color:h.status==="struggling"?$.rd:h.status==="consistent"?$.gn:$.g}}>{h.status}</span></div>}):<div style={{fontSize:11,color:$.dr}}>No homework assigned.</div>}
+{(cl.hw||[]).length>0?(cl.hw||[]).filter(h=>h.status!=="done").map(h=>{const ex=EX.find(e=>e.id===h.exId);const isX=hwExp===h.id;return <div key={h.id} style={{marginBottom:4,background:isX?$.cd:"transparent",borderRadius:4,border:isX?"1px solid "+$.bd:"none",padding:isX?8:0}}>
+<div style={{display:"flex",gap:8,padding:isX?"0":"5px 0",alignItems:"center",cursor:"pointer"}} onClick={()=>sHwExp(isX?null:h.id)}>
+<span style={{fontSize:11,color:$.tx,flex:1,fontWeight:isX?700:400}}>{ex?ex.nm:h.exId}</span>
+<div style={{display:"flex",gap:3}}>
+{["assigned","active","\u2713","!","\u00D7"].map((lbl,li)=>{const sts=["assigned","in-progress","consistent","struggling","remove"];const st=sts[li];return <button key={st} onClick={ev=>{ev.stopPropagation();const c={...cl};if(st==="remove"){c.hw=c.hw.filter(x=>x.id!==h.id);sHwExp(null)}else{c.hw=c.hw.map(x=>x.id===h.id?{...x,status:st}:x)}saveCl(c)}} style={{fontSize:7,padding:"2px 5px",borderRadius:2,border:"none",cursor:"pointer",background:h.status===st?(st==="struggling"||st==="remove"?$.rd:st==="consistent"?$.gn:$.g)+"33":$.bg,color:h.status===st?(st==="struggling"||st==="remove"?$.rd:st==="consistent"?$.gn:$.g):$.dr}}>{lbl}</button>})}
+</div></div>
+{isX&&ex&&<div style={{marginTop:8}}>
+<div style={{fontSize:10,color:$.dm,marginBottom:8}}>{ex.teach}</div>
+{ex.steps.map((step,si)=><div key={si} style={{marginBottom:4,padding:"4px 6px",background:$.bg,borderRadius:3}}><div style={{fontSize:9,fontWeight:700,color:$.g}}>{step.n}</div><div style={{fontSize:9,color:$.dm,marginTop:2}}>{step.d}</div></div>)}
+<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8,marginBottom:4,fontSize:8}}>
+<span style={{color:$.g}}>Dom: {ex.domCh}</span>
+{ex.secCh&&ex.secCh!=="\u2014"&&<span style={{color:$.bl}}>Sec: {ex.secCh}</span>}
+<span style={{color:$.rd}}>Removes: {ex.removed}</span>
+</div>
+<div style={{fontSize:9,color:$.or,marginBottom:2}}>Failure: {ex.fail}</div>
+<div style={{fontSize:9,color:$.gn}}>Grows: {ex.grows}</div>
+<div style={{fontSize:8,color:$.dr,marginTop:4}}>Assigned: {h.date}</div>
+</div>}
+</div>}):<div style={{fontSize:11,color:$.dr}}>No homework assigned.</div>}
 <Bt full onClick={()=>sTab("hwAssign")} style={{marginTop:8}}>+ Assign Homework</Bt>
 </Se>
 {/* Recurring Issues */}
