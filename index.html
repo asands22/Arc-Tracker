@@ -1,1166 +1,195 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Arc Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Arc Tracker — Steady Hand</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Raleway:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Raleway:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#1E1E1E;--cd:#282825;--cb:#3a3a35;--ac:#6F745C;--ad:#555848;--ab:#8a8f74;--tx:#F6F4F1;--td:#a09e96;--tm:#5a5a55;--bl:#7EAEC4;--gn:#6F745C;--rd:#A05050;--am:#A09050;--sf:#232321}
-body{color-scheme:dark;background:var(--bg);color:var(--tx);font-family:'Raleway',sans-serif;font-size:16px;max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:70px;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
-button{font-family:inherit;cursor:pointer;background:none;border:none;color:inherit;-webkit-appearance:none;appearance:none}
-input,textarea,select{font-family:inherit;color-scheme:dark;font-size:16px!important}
-.top{display:flex;justify-content:space-between;align-items:center;padding:16px 16px;border-bottom:1px solid var(--cb)}
-.hdr{padding:28px 16px 12px;text-align:center}
-.hdr .sub{font-size:15px;letter-spacing:4px;color:var(--td);font-family:'Cinzel',serif}
-.hdr .ttl{font-size:30px;font-weight:700;letter-spacing:3px;color:var(--ac);margin-top:4px;font-family:'Cinzel',serif}
-.hdr .sync{font-size:15px;color:var(--gn);margin-top:4px}
-.sec{border-left:3px solid var(--ac);padding-left:16px;margin:0 16px 32px;transition:border-color .3s ease}
-.sec-t{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--ac);margin-bottom:14px;font-family:'Cinzel',serif}
-.card{background:var(--cd);border:1px solid var(--cb);border-radius:8px;padding:14px 16px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-left:1px solid var(--cb);transition:border-color .2s ease,transform .15s ease,box-shadow .2s ease}
-.card:active{border-color:var(--ac);transform:scale(.98);box-shadow:0 0 12px rgba(111,116,92,.15)}
-.avatar{width:40px;height:40px;border-radius:50%;background:var(--sf);border:1px solid var(--cb);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ac);font-weight:700;flex-shrink:0}
-;cursor:pointer;white-space:nowrap;transition:all .12s}
-.badge.on{border-color:var(--ac);background:rgba(111,116,92,.2);color:var(--ab);box-shadow:0 0 8px rgba(111,116,92,.15)}
-;font-weight:700;letter-spacing:2px;text-transform:uppercase}
-.btn-f{border:none;background:var(--ac);color:var(--bg);font-size:17px;box-shadow:0 2px 8px rgba(111,116,92,.2)}
-.btn-bl{border:none;background:var(--bl);color:var(--bg)}
-;outline:none;width:100%;box-sizing:border-box}
-.lbl{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--td);display:block;margin-bottom:8px;font-family:'Cinzel',serif}
-;outline:none;width:100%;box-sizing:border-box;resize:vertical;min-height:60px}
-.row{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--sf)}
-.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.x-btn{background:none;border:none;color:var(--tm);font-size:15px;cursor:pointer}
-.nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--cb);display:flex;justify-content:center;z-index:100}
-.nav-inner{display:flex;max-width:520px;width:100%;justify-content:space-around;padding:8px 0 12px}
-.nav-btn{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;color:var(--td);font-family:inherit;transition:color .2s ease,filter .3s ease}
-.nav-btn.on{color:var(--tx);filter:drop-shadow(0 0 12px rgba(246,244,241,.6));animation:navGlow 2.5s ease-in-out infinite}
-.nav-btn span:first-child{font-size:18px}
-.nav-btn span:last-child{font-size:10px;letter-spacing:2px;font-weight:600;font-family:'Cinzel',serif}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.badges{display:flex;gap:6px;flex-wrap:wrap}
-.score-row{display:flex;align-items:center;gap:12px}
-.score-row .sl{width:28px;font-size:12px;color:var(--td);text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace}
-.score-row .dots{flex:1;display:flex;gap:3px}
-.score-row .dots button{flex:1;height:32px;border-radius:3px;border:none;font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer}
-.score-row .sv{width:18px;font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace}
-.action-card{background:var(--cd);border:1px solid var(--cb);border-radius:8px;padding:18px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;transition:border-color .2s ease,box-shadow .2s ease}
-.hidden{display:none}
-
-.select-wrap{position:relative;width:100%}
-.select-btn{width:100%;padding:14px 16px;background:var(--sf);border:1px solid var(--cb);border-radius:6px;color:var(--tx);font-size:16px;font-family:'Raleway',sans-serif;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:border-color .2s ease,box-shadow .2s ease}
-.select-btn .arrow{color:var(--td);font-size:10px;transition:transform .2s}
-.select-btn .arrow.open{transform:rotate(180deg)}
-.select-menu{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--cd);border:1px solid var(--cb);border-radius:6px;z-index:50;max-height:280px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.select-menu.show{display:block;animation:fadeIn .15s ease-out}
-.select-opt{padding:12px 14px;color:var(--td);font-size:13px;font-family:'Raleway',sans-serif;border-bottom:1px solid var(--sf);cursor:pointer;transition:background .2s ease,color .2s ease}
-.select-opt:last-child{border-bottom:none}
-.select-opt:active{background:var(--sf)}
-.select-opt.active{color:var(--ac);background:rgba(111,116,92,.12)}
-
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeInSoft{from{opacity:0}to{opacity:1}}
-@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes glowPulse{0%{filter:drop-shadow(0 0 4px rgba(111,116,92,.4))}50%{filter:drop-shadow(0 0 8px rgba(111,116,92,.7))}100%{filter:drop-shadow(0 0 4px rgba(111,116,92,.4))}}
-@keyframes navGlow{0%{filter:drop-shadow(0 0 8px rgba(246,244,241,.45))}50%{filter:drop-shadow(0 0 18px rgba(246,244,241,.75))}100%{filter:drop-shadow(0 0 8px rgba(246,244,241,.45))}}
-#app>*{animation:fadeIn .3s ease-out}
-
-.backup-panel{background:var(--cd);border:1px solid var(--cb);border-radius:8px;padding:16px;margin:0 16px 20px;animation:fadeIn .2s ease-out}
-.backup-btn{width:100%;padding:12px 14px;border-radius:6px;border:1px solid var(--cb);background:var(--sf);color:var(--td);font-size:14px;font-family:'Raleway',sans-serif;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:10px;transition:border-color .2s ease}
-.backup-btn:active{border-color:var(--ac)}
-.backup-btn .ico{font-size:16px}
-.backup-btn .lbl2{flex:1}
-.backup-btn .sub2{font-size:11px;color:var(--tm);margin-top:2px}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f0f0e;--card:#1a1a18;--card2:#222220;--border:#2e2e2a;--olive:#6F745C;--cream:#F6F4F1;--gold:#c8a96e;--muted:#8a8a7a;--red:#c25c3a;--green:#7aaa72;--text:#e8e4dc;--fd:'Cinzel',serif;--fb:'Raleway',sans-serif;--fm:'JetBrains Mono',monospace;}
+html,body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;font-size:14px;-webkit-text-size-adjust:100%}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+input,textarea,select{background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:9px 12px;font-family:var(--fb);font-size:14px;outline:none;width:100%;display:block;-webkit-appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,169,110,.1)}
+select option{background:var(--card)}textarea{resize:vertical;min-height:70px}
+button{cursor:pointer;font-family:var(--fb);border:none;outline:none;font-size:14px;background:none;-webkit-tap-highlight-color:transparent}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes shimmer{0%{left:-80%}100%{left:120%}}
+.fu{animation:fadeUp .25s cubic-bezier(.2,.8,.3,1) both}.fi{animation:fadeIn .2s ease both}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;position:relative;overflow:hidden}
+.card.glow{border-color:var(--gold)!important;box-shadow:0 0 20px rgba(200,169,110,.1)}
+.card::after{content:'';position:absolute;top:0;left:-80%;width:30%;height:100%;background:linear-gradient(105deg,transparent 35%,rgba(200,169,110,.04) 50%,transparent 65%);animation:shimmer 7s ease-in-out infinite;pointer-events:none}
+.st{font-family:var(--fd);font-size:11px;color:var(--gold);letter-spacing:.18em;text-transform:uppercase;margin-bottom:12px}
+.lbl{font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border-radius:4px;font-size:13px;font-weight:500;letter-spacing:.04em;transition:all .18s;cursor:pointer;border:1px solid var(--border);color:var(--text);background:var(--border)}
+.btn-gold{background:var(--gold);color:var(--bg);border-color:var(--gold)}.btn-olive{background:var(--olive);color:var(--cream);border-color:var(--olive)}.btn-ghost{background:transparent;color:var(--muted);border-color:var(--border)}.btn-danger{background:transparent;color:var(--red);border-color:var(--red)}.btn-sm{padding:5px 11px;font-size:12px}
+.pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid var(--border);color:var(--muted);background:transparent}
+.pill.active{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.acc-card{background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden;transition:border-color .25s,box-shadow .25s}
+.acc-card.open{border-color:var(--gold);box-shadow:0 0 20px rgba(200,169,110,.08)}
+.acc-header{cursor:pointer;user-select:none;padding:14px 16px;-webkit-tap-highlight-color:transparent}
+.acc-chev{display:inline-block;transition:transform .35s cubic-bezier(.4,0,.2,1);color:var(--muted);font-size:12px;margin-left:6px;vertical-align:middle}
+.acc-body{max-height:0;overflow:hidden;transition:max-height .45s cubic-bezier(.4,0,.2,1)}.acc-body.open{max-height:9999px}
+.tab-bar{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{flex:1;min-width:0;padding:10px 6px;font-size:12px;letter-spacing:.03em;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;font-family:var(--fb);text-align:center;background:none}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-pane{display:none;padding:16px 16px 20px;animation:fadeIn .2s ease}.tab-pane.active{display:block}
+.star{font-size:20px;cursor:pointer;color:var(--border);transition:color .12s}.star.on{color:var(--gold)}
+input[type=range]{padding:0;border:none;background:none;width:100%;accent-color:var(--gold);cursor:pointer;height:20px}
+#nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nb{flex:1;padding:11px 0 9px;color:var(--muted);border-top:2px solid transparent;transition:all .2s;text-align:center;background:none;border-left:none;border-right:none;border-bottom:none}
+.nb.active{color:var(--gold);border-top-color:var(--gold)}.nb-icon{font-size:17px}.nb-label{font-size:10px;font-family:var(--fm);letter-spacing:.08em;margin-top:2px}
+#toast{position:fixed;bottom:80px;right:14px;background:var(--olive);color:var(--cream);font-size:12px;padding:5px 13px;border-radius:20px;pointer-events:none;z-index:200;opacity:0;transition:opacity .3s}
+#toast.show{opacity:1}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.row{display:flex;align-items:center}.jb{justify-content:space-between}.wrap{flex-wrap:wrap}
+.gap4{gap:4px}.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}
+.mt6{margin-top:6px}.mt8{margin-top:8px}.mt10{margin-top:10px}.mt12{margin-top:12px}
+.mb6{margin-bottom:6px}.mb8{margin-bottom:8px}.mb10{margin-bottom:10px}.mb12{margin-bottom:12px}.mb14{margin-bottom:14px}
+.badge{font-size:11px;padding:2px 7px;border-radius:8px;background:var(--border);color:var(--muted);margin-left:4px}
+.pbar{height:3px;background:var(--border);border-radius:2px}.pbar-fill{height:100%;border-radius:2px;transition:width .4s}
+.stat-card{text-align:center;padding:11px 8px;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.stat-card.active{border-color:var(--gold)!important;box-shadow:0 0 14px rgba(200,169,110,.12)}
+.state-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.eval-q{font-size:13px;line-height:1.65;color:var(--text);margin-bottom:10px}
+.eval-opt{padding:9px 13px;border-radius:4px;border:1px solid var(--border);font-size:13px;cursor:pointer;transition:all .15s;text-align:left;color:var(--muted);background:transparent;width:100%;display:block;margin-bottom:6px;font-family:var(--fb)}
+.eval-opt.sel{border-color:var(--gold);color:var(--gold);background:rgba(200,169,110,.08)}
+.eval-result{border-left:3px solid var(--gold);padding:12px 14px;background:rgba(200,169,110,.06);border-radius:0 4px 4px 0}
 </style>
 </head>
 <body>
-<div id="app"></div>
-<div class="nav"><div class="nav-inner" id="nav"></div></div>
-
+<div style="background:var(--card);border-bottom:1px solid var(--border);padding:13px 16px 11px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50">
+  <div><div style="font-family:var(--fd);font-size:16px;color:var(--cream);letter-spacing:.12em">STEADY HAND</div><div style="font-family:var(--fm);font-size:10px;color:var(--gold);letter-spacing:.18em;margin-top:1px">HANDLER INDEX ARC TRACKER™</div></div>
+  <div class="row gap8">
+    <button class="btn btn-ghost btn-sm" onclick="exportData()">↓ Export</button>
+    <label style="display:inline-flex;cursor:pointer"><button class="btn btn-ghost btn-sm" type="button" onclick="this.closest('label').querySelector('input').click()">↑ Import</button><input type="file" accept=".json" onchange="importData(event)" style="display:none;width:1px;opacity:0"></label>
+  </div>
+</div>
+<div id="toast">Saved ✓</div>
+<div id="page-clients" class="page" style="padding:14px 14px 90px;max-width:640px;margin:0 auto">
+  <div class="row gap8 mb12"><input id="search" placeholder="Search handlers or dogs…" oninput="renderClients()" style="flex:1"><button class="btn btn-gold" onclick="addClient()">+ New</button></div>
+  <div id="stats-strip" class="g3 mb12" style="display:none"></div>
+  <div id="client-list"></div>
+</div>
+<div id="page-eval" class="page" style="display:none;padding:14px 14px 90px;max-width:640px;margin:0 auto"></div>
+<div id="page-diagnose" class="page" style="display:none;padding:14px 14px 90px;max-width:640px;margin:0 auto"></div>
+<div id="page-reference" class="page" style="display:none;padding:14px 14px 90px;max-width:640px;margin:0 auto"></div>
+<div id="nav">
+  <button class="nb active" onclick="showPage('clients',this)"><div class="nb-icon">⬡</div><div class="nb-label">Clients</div></button>
+  <button class="nb" onclick="showPage('eval',this)"><div class="nb-icon">◈</div><div class="nb-label">Eval</div></button>
+  <button class="nb" onclick="showPage('diagnose',this)"><div class="nb-icon">◎</div><div class="nb-label">Diagnose</div></button>
+  <button class="nb" onclick="showPage('reference',this)"><div class="nb-icon">≡</div><div class="nb-label">Reference</div></button>
+</div>
 <script>
-// ═══════ DATA ═══════
-const CH=["Spatial","Verbal","Environmental","Internal"],CK=["ER","T","CC","CO","IN"],
-CL=["Emotional Regulation","Timing & Pacing","Correction Confidence","Consistency","Intentionality"],
-PR=["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"],
-CPT=["Intake","Day 25","Day 60","Day 84"],JS=["Immersion","Recall","Undercurrent","Other"],
-QL=[{v:1,l:"Rough",c:"#A05050"},{v:2,l:"Okay",c:"#A09050"},{v:3,l:"Locked In",c:"#6F745C"}];
+const CH=["Spatial","Verbal","Environmental","Internal"];
+const COMPASS=[{key:"ER",label:"Emotional Regulation",low:"Frustration leaking",high:"Neutral regardless"},{key:"T",label:"Timing & Pacing",low:"Late or early",high:"Pre-decision tension"},{key:"CC",label:"Correction Confidence",low:"Hesitating/apologizing",high:"Clean, proportionate"},{key:"CO",label:"Consistency",low:"Rules shift with state",high:"Same boundary, every time"},{key:"IN",label:"Intentionality",low:"Going through motions",high:"Every action has purpose"}];
+const CMAX=COMPASS.length*5;
+const CHECKPOINTS=["Intake","Day 25","Day 60","Day 84"];
+const PROFILES=["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"];
+const PNOTES={"Reactive":"High ER volatility. Lead with Spatial channel stability before verbal work.","Rigid":"Low CO flexibility. Introduce Environmental variation carefully. Don't disrupt the structure — redirect it.","Avoidant":"Ghost channel dominant in self-awareness. Introduce vocabulary before reps.","Passive":"Low IN and CC. Accountability framing required. The dog is doing all the work.","Imp. Reactive":"Reactive profile with Attuned flashes. Protect the glimpses.","Imp. Rigid":"Rigid profile with emerging flexibility. Don't over-praise the bend.","Imp. Avoidant":"Avoidant profile with growing vocabulary. Ghost channel named but not yet integrated.","Imp. Passive":"Passive profile activating. Watch for CC jumps — they can overcorrect.","Attuned":"All channels load-bearing. Compass scores consistent across states. The dog confirms it."};
+const EXERCISES=[{id:"e1",name:"Attention Threshold Walk",ch:"Spatial",desc:"Handler maintains spatial position while dog self-regulates to threshold distance. No verbal cues."},{id:"e2",name:"One-Word Rule",ch:"Verbal",desc:"Handler allowed one word per 30 seconds. Tracks verbal load vs dog compliance rate."},{id:"e3",name:"Environmental Exposure Set",ch:"Environmental",desc:"Controlled introduction to novel stimuli. Handler reads dog state before advancing."},{id:"e4",name:"Silent Correction Drill",ch:"Internal",desc:"Handler corrects without verbal or spatial escalation. Internal regulation only."},{id:"e5",name:"Boundary Hold",ch:"Spatial",desc:"Static boundary drill. Handler holds position regardless of dog pressure. Measures ER under load."},{id:"e6",name:"Recovery Window Tracking",ch:"Internal",desc:"Track time from peak arousal to baseline. Handler role: stabilize, not escalate."},{id:"e7",name:"Parallel Walk",ch:"Spatial",desc:"Side-by-side movement drill. Handler reads dog proximity tension without verbal interference."},{id:"e8",name:"Threshold Decision Point",ch:"Environmental",desc:"Handler identifies and names the environmental trigger before the dog hits threshold. Pre-decision awareness."}];
+const FIVE_STATES=[{s:"1 — Baseline",c:"#6F745C",d:"Dog is calm, collected, responsive. Handler is the anchor."},{s:"2 — Alert",c:"#c8a96e",d:"Heightened attention. Orienting response. Not yet overloaded."},{s:"3 — Engaged",c:"#d4894a",d:"Active arousal. Dog is in the work or in the distraction."},{s:"4 — Threshold",c:"#c25c3a",d:"Tipping point. Handler decisions here determine the next 10 minutes."},{s:"5 — Over Threshold",c:"#8b2020",d:"Cortisol load is running the show. Management only. No training."}];
+const AXIOMS=["The dog was always the mirror.","You are adding to the pressure load or stabilizing it. There is no neutral.","Pressure is constant. Pressure is not correction. Pressure is not force.","The Signature is the map. The Compass is the proof of movement.","Blind = friction when named. Ghost = blankness when named. The reaction is the diagnostic.","Do not introduce the ghost channel by correcting it. Introduce it. They need vocabulary before reps.","Handler profiles are diagnostic snapshots, not permanent labels.","The Four Pressure Channels™ are NOT a reframe of the four quadrants. Never conflate them."];
+const CH_DESC={Spatial:"Physical position, proximity, and movement. Dominant = uses body as primary tool. Blind = moves unconsciously, doesn't read the dog's spatial response. Ghost = can't feel how their position is loading pressure.",Verbal:"Word choice, tone, frequency, and timing of verbal output. Dominant = narrates constantly, praise-heavy. Blind = keeps talking through escalation. Ghost = unaware that their voice is a pressure channel at all.",Environmental:"Awareness and use of the training environment — distractions, surfaces, thresholds, setup. Dominant = reads context before entering. Blind = environment keeps hijacking the session. Ghost = the dog's environment is invisible to them.",Internal:"The handler's internal state — regulation, intention, presence. Dominant = internal state drives every rep. Blind = dysregulation leaks without awareness. Ghost = no concept that their internal state affects the dog."};
+const EVAL_Q=[{id:"q1",phase:1,q:"When your dog pulls toward something, your first instinct is to:",opts:["Say 'no' or their name","Tighten the leash / step in front","Redirect with food or toy","Take a breath and wait"],ch:["Verbal","Spatial","Environmental","Internal"]},{id:"q2",phase:1,q:"When you enter a new environment with your dog, you:",opts:["Start talking to them immediately","Scan the space and adjust your position","Watch what your dog is watching","Focus on keeping your own breathing steady"],ch:["Verbal","Environmental","Environmental","Internal"]},{id:"q3",phase:1,q:"After a correction, you typically:",opts:["Explain what you wanted verbally","Move away or change direction","Look for environmental reasons","Check your own emotional state first"],ch:["Verbal","Spatial","Environmental","Internal"]},{id:"q4",phase:1,q:"Your dog is distracted. You:",opts:["Call their name or use a cue","Step closer or use your body","Remove the distraction or increase distance","Wait until you're regulated before asking"],ch:["Verbal","Spatial","Environmental","Internal"]},{id:"q5",phase:2,q:"How aware are you of how much you talk during training?",opts:["Very aware — I consciously limit it","Somewhat — I notice after the fact","Not very — I don't track it","I hadn't thought about it"],ch:["Verbal","Verbal","Verbal","Verbal"],blind:[false,true,false,true]},{id:"q6",phase:2,q:"If someone pointed out that your body position is adding pressure to your dog, you'd:",opts:["Feel frustrated — I'm doing my best","Immediately want to understand how","Dismiss it — I can't see that","Feel curious but uncertain what to change"],ch:["Spatial","Spatial","Spatial","Spatial"],blind:[true,false,true,false]},{id:"q7",phase:2,q:"When your dog is at threshold, your awareness of the environment is:",opts:["High — I read it before we enter","Medium — I notice mid-session","Low — I'm focused on the dog not the space","I focus inward on staying calm"],ch:["Environmental","Environmental","Environmental","Internal"],blind:[false,false,true,false]},{id:"q8",phase:2,q:"When you're frustrated during training, your dog:",opts:["Usually gets more reactive","Usually shuts down","Seems unaffected — or I haven't noticed","I manage my state before it gets there"],ch:["Internal","Internal","Internal","Internal"],blind:[false,false,true,false]}];
 
-const STATES=[
-{n:1,nm:"Compliant Calm",sh:"The goal.",c:"#6F745C",mk:"Body: Soft · Eyes: Relaxed · Breathing: Even · Weight: Centered",desc:"Loose muscles, soft eyes, regulated breathing, relaxed posture. Present, settled, at ease. Not scanning, not bracing, not waiting. Calm that isn't forced. Stillness that isn't frozen."},
-{n:2,nm:"Alert Neutral",sh:"Awareness without commitment.",c:"#7a8068",mk:"Ears: Rotating · Eyes: Tracking · Body: Oriented but still · Connection: Intact",desc:"Notices something — a sound, a movement, another dog. Ears rotate, eyes shift, body may orient slightly. But they haven't moved. Haven't committed. Still with you. Healthy state."},
-{n:3,nm:"Pre-Decision Tension",sh:"Where the real work happens.",c:"#A09050",mk:"Weight: Forward · Ears: Locked · Breathing: Changed · Eye contact: Breaking",desc:"No longer just noticing — weighing a decision. Weight shifts forward. Breathing changes. Ears lock. Body stiffens. Eye contact breaks. Between two pulls — your influence and the environment's. Catch it here and they come back."},
-{n:4,nm:"Committed Action",sh:"The decision has been made.",c:"#8a7050",mk:"Body: Committed · Focus: Environment · Recovery: Slow · Baseline: Elevated",desc:"Lunge. Break. Bark. Ignore. Committed to the environment over you. Not a bad dog — intervention came too late or influence wasn't deep enough. Corrections require more intensity, recovery takes longer."},
-{n:5,nm:"Emotional Override",sh:"Loss of cognitive access.",c:"#A05050",mk:"Eyes: Wide/fixed · Body: Rigid or thrashing · Cognition: Offline · Corrections: Ineffective",desc:"No longer making decisions. Reacting. Adrenaline running. Breathing rapid or held. Eyes wide and fixed. Body rigid or thrashing. Cannot process information. Our job is not to correct. Remove, reduce, wait for downregulation."}
-];
-
-const EXERCISES=[
-{id:"kennel",name:"Kennel Boundary",cat:"Single-Channel",dom:"Internal (handler) / Spatial (dog)",removed:"Verbal",compass:"ER · IN",
-mechanic:"Stand still, block exit, leash pop + \"In,\" shrink distance gradually, introduce ambiguity tugs.",
-failure:"Handler rushes it. Fills the silence with commands. Moves to the next shoe-length before the dog has actually settled — not just paused.",
-grows:"Handler's Internal regulation (stillness, breathing, patience). Dog's impulse control at the simplest threshold.",
-teach:"The kennel has only one exit — the simplest boundary. Position yourself in front of the open door. Gentle leash guidance — tug, then release. Watch for signs: ears turning outward, softer eyes, yawning. As soon as they settle, release pressure and praise. Increase distance one shoe-length at a time."},
-{id:"doorway",name:"Doorway Boundary",cat:"Single-Channel",dom:"Environmental (dog) / Internal (secondary)",removed:"Verbal (except \"Out\")",compass:"T · CC",
-mechanic:"Open door slowly, release-turn-snap if they forge, wait one beat at the pause, release with \"Out.\"",
-failure:"Releases too early because the dog looked calm for two seconds. Or hesitates on the correction — classic Avoidant move.",
-grows:"Dog separating opportunity from permission. Handler's Timing and Correction Confidence.",
-teach:"Same principle as kennel, but now what's on the other side is the world. Stand next to the closed door on leash. Open slightly. If they push through, release-turn-snap. Repeat until they wait. Then release with \"Out.\" Every threshold is an opportunity."},
-{id:"heel",name:"Heel Protocol",cat:"Progressive",dom:"Internal (dog) / Spatial (dog, secondary)",removed:"Verbal",compass:"CO · CC",
-mechanic:"Two-handed grip, 180° turns, 90° turns, knee against leash. Through the core, not the shoulders.",
-failure:"Handler compromises the standard when the dog \"has been good enough.\" Left hand grabs the leash to prevent the mistake instead of allowing it.",
-grows:"Dog's internal regulation in a passive state. Handler's Consistency and Correction Confidence.",
-teach:"Two hands anchor you inside your center of gravity. Prevent strength-based escalation, reduce emotional spillover, create repeatable communication. Hands near belt line. Leash slack folds downward. Corrections travel at 45 degrees, through your core. The mechanics keep you honest."},
-{id:"spot",name:"Spot Command",cat:"Integration",dom:"Internal + Environmental (dog)",removed:"Verbal",compass:"CO · IN",
-mechanic:"Place command, down-stay, random pressure spikes while handler lives their life.",
-failure:"Handler forgets to enforce it. Dog breaks, handler doesn't notice or doesn't want to walk over. The standard dies quietly, not loudly.",
-grows:"Dog's self-regulation under real-world pressure. Handler's Intentionality — are you designing the environment or just existing in it?",
-teach:"Put your dog in a spot. Throw random pressure spikes — louder voice, movement, doorbell. Go about your business so long as they remain. Every hold through a distraction deepens Commitment Depth. Requires almost no extra time — living your life while your dog practices regulation within it."},
-{id:"walkprep",name:"Walk Prep",cat:"Integration",dom:"Environmental + Internal (both)",removed:"Verbal (mostly)",compass:"IN · T",
-mechanic:"Run leash drills before stepping outside. Training first, then walk.",
-failure:"Handler skips it. \"We're just going for a quick walk.\" That compromise sets up the entire walk to fail.",
-grows:"Handler's Intentionality. Dog's ability to transition from indoor state to outdoor state without spiking.",
-teach:"Pre-walk routine: a few minutes of leash training — release, turn and snap, turn and kick, right-handed quick pop. Five minutes of precision will do more than thirty minutes of sloppy walking. Training first, then walk."}
-];
-const HW_STATUS=["Assigned","In Progress","Consistent","Struggling"];
+// ── DUAL-MODE STORAGE: window.storage (Claude) + localStorage (browser) ──────
+const SK=“shdt-arc-v8”;
+let DB={clients:[]};
+let saveTimer=null;
+function hasWS(){try{return typeof window!==“undefined”&&window.storage&&typeof window.storage.get===“function”;}catch(e){return false;}}
+async function loadDB(){
+try{
+if(hasWS()){const r=await window.storage.get(SK);if(r&&r.value)DB=JSON.parse(r.value);}
+else{const raw=localStorage.getItem(SK);if(raw)DB=JSON.parse(raw);}
+}catch(e){DB={clients:[]};}
+renderClients();
+}
+function scheduleSave(){
+clearTimeout(saveTimer);
+saveTimer=setTimeout(async()=>{
+try{
+if(hasWS())await window.storage.set(SK,JSON.stringify(DB));
+else localStorage.setItem(SK,JSON.stringify(DB));
+}catch(e){}
+const t=document.getElementById(“toast”);if(t){t.classList.add(“show”);setTimeout(()=>t.classList.remove(“show”),1500);}
+},600);
+}
 
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-const tdy=()=>new Date().toISOString().split("T")[0];
-const sc=(v,m=5)=>(v/m<=.3?"#A05050":v/m<=.5?"#A09050":v/m<=.7?"#6F745C":"#6F745C");
-const cTotal=c=>c.ER+c.T+c.CC+c.CO+c.IN;
-const SK="shdt-v5";
-
-const mkClient=()=>({id:uid(),name:"",dog:"",breed:"",age:"",ctx:"",sig:{d:"",b:"",g:""},prof:"",comp:[],sess:[],hw:[],issues:[],notes:""});
-const mkComp=cp=>({id:uid(),cp,dt:tdy(),ER:1,T:1,CC:1,CO:1,IN:1});
-const mkSess=()=>({id:uid(),dt:tdy(),prof:"",ch:"",focus:"",q:2,stage:"",notes:""});
-const mkEval=()=>({id:uid(),dt:tdy(),p1:{feet:"",mouth:"",leash:"",face:"",brk:"",bodyFirst:"",arousal:1,hyp:""},p2:{dir:"",notes:""},sig:{d:"",b:"",g:""},comp:{ER:1,T:1,CC:1,CO:1,IN:1},prof:""});
-
-// ═══════ STATE ═══════
-let DATA={c:[]},TAB="clients",AID=null,VW="list",ED=null;
-
-async function load(){
-  const dbg=[];
-  let found=false;
-  
-  // Method 1: Try window.storage API
-  if(window.storage){
-    dbg.push("storage API exists");
-    try{
-      const r=await window.storage.get(SK,false);
-      if(r&&r.value){
-        DATA=JSON.parse(r.value);
-        if(DATA.c&&DATA.c.length>0){dbg.push("Loaded "+DATA.c.length+" clients from storage");found=true}
-      }
-    }catch(e){
-      dbg.push("storage.get: "+e.message);
-      // Try without shared parameter
-      try{
-        const r2=await window.storage.get(SK);
-        if(r2&&r2.value){
-          DATA=JSON.parse(r2.value);
-          if(DATA.c&&DATA.c.length>0){dbg.push("Loaded "+DATA.c.length+" (no shared param)");found=true}
-        }
-      }catch(e2){dbg.push("storage.get no-param: "+e2.message)}
-    }
-  }else{dbg.push("No storage API")}
-  
-  // Method 2: Try localStorage fallback
-  if(!found){
-    try{
-      const ls=localStorage.getItem(SK);
-      if(ls){DATA=JSON.parse(ls);if(DATA.c&&DATA.c.length>0){dbg.push("Loaded "+DATA.c.length+" from localStorage");found=true}}
-    }catch(e){dbg.push("localStorage: "+e.message)}
-  }
-  
-  if(!found){DATA={c:[]};dbg.push("No saved data found")}
-  
-  // Ensure arrays
-  if(!DATA.c)DATA.c=[];
-  DATA.c.forEach(c=>{if(!c.comp)c.comp=[];if(!c.sess)c.sess=[];if(!c.hw)c.hw=[];if(!c.issues)c.issues=[];if(!c.exAssign)c.exAssign=[];if(!c.sig)c.sig={d:"",b:"",g:""}});
-  window._dbg=dbg;
-  render();
+const now=()=>new Date().toISOString().slice(0,10);
+const ct=c=>COMPASS.reduce((a,{key})=>a+(c[key]||0),0);
+const esc=s=>(s||””).replace(/&/g,”&”).replace(/</g,”<”).replace(/>/g,”>”).replace(/”/g,”"”);
+const pcol=p=>p>=70?“var(–green)”:p>=40?“var(–gold)”:“var(–red)”;
+function ring(score,max,sz){const r=sz/2-4,cx=sz/2,circ=2*Math.PI*r,p=score/max,fill=p*circ,cl=pcol(Math.round(p*100));return`<svg width="${sz}" height="${sz}" style="flex-shrink:0"><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--border)" stroke-width="3"/><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="${cl}" stroke-width="3" stroke-dasharray="${fill.toFixed(1)} ${circ.toFixed(1)}" stroke-dashoffset="${(circ/4).toFixed(1)}" stroke-linecap="round"/><text x="${cx}" y="${cx+4}" text-anchor="middle" style="fill:${cl};font-size:${sz>40?12:10}px;font-family:var(--fm)">${score}</text></svg>`;}
+function spark(scores){if(scores.length<2)return””;const W=110,H=30,pd=4,totals=scores.map(ct),mn=Math.min(…totals),mx=Math.max(…totals,mn+1);const pts=totals.map((v,i)=>`${pd+(i/(totals.length-1))*(W-pd*2)},${H-pd-((v-mn)/(mx-mn))*(H-pd*2)}`).join(” “);return`<svg width="${W}" height="${H}"><polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/>${totals.map((v,i)=>{const x=pd+(i/(totals.length-1))*(W-pd*2),y=H-pd-((v-mn)/(mx-mn))*(H-pd*2);return`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="var(--gold)"/>`;}).join("")}</svg>`;}
+function newClient(){return{id:uid(),created:now(),name:””,dog:””,breed:””,age:””,signature:{dominant:””,blind:””,ghost:””},profile:””,compass:[],sessions:[],issues:[],notes:””};}
+const gc=id=>DB.clients.find(c=>c.id===id);
+function sc(c){const i=DB.clients.findIndex(x=>x.id===c.id);if(i>=0)DB.clients[i]=c;else DB.clients.push(c);scheduleSave();}
+function showPage(name,btn){document.querySelectorAll(”.page”).forEach(p=>p.style.display=“none”);document.querySelectorAll(”.nb”).forEach(b=>b.classList.remove(“active”));document.getElementById(“page-”+name).style.display=“block”;if(btn)btn.classList.add(“active”);if(name===“eval”)buildEvalPage();if(name===“diagnose”)buildDiagnosePage();if(name===“reference”)buildReferencePage();}
+const openCards=new Set();const activeTab={};let activeFilter=“all”;
+function addClient(){const c=newClient();DB.clients.push(c);scheduleSave();renderClients();}
+function deleteClient(id){if(!confirm(“Delete this client?”))return;DB.clients=DB.clients.filter(c=>c.id!==id);openCards.delete(id);delete activeTab[id];scheduleSave();renderClients();}
+function setFilter(key){activeFilter=activeFilter===key?“all”:key;renderClients();}
+function renderClients(){
+const q=(document.getElementById(“search”)||{value:””}).value.toLowerCase();
+const attuned=DB.clients.filter(c=>c.profile===“Attuned”).length;
+const flagged=DB.clients.filter(c=>!c.signature.dominant||!c.signature.blind||!c.signature.ghost||c.compass.length===0);
+const strip=document.getElementById(“stats-strip”);
+if(DB.clients.length>0){strip.style.display=“grid”;strip.innerHTML=[{key:“all”,label:“Clients”,val:DB.clients.length,color:“var(–gold)”},{key:“attuned”,label:“Attuned”,val:attuned,color:“var(–green)”},{key:“flags”,label:“Flags”,val:flagged.length,color:flagged.length>0?“var(–red)”:“var(–muted)”}].map(s=>`<div class="card stat-card${activeFilter===s.key?" active":""}" onclick="setFilter('${s.key}')"><div style="font-family:var(--fm);font-size:22px;color:${s.color}">${s.val}</div><div class="lbl" style="margin:3px 0 0">${s.label}</div>${activeFilter===s.key?`<div style="width:16px;height:2px;background:var(--gold);border-radius:2px;margin:5px auto 0"></div>`:""}</div>`).join(””);}else strip.style.display=“none”;
+let pool=DB.clients;if(activeFilter===“attuned”)pool=DB.clients.filter(c=>c.profile===“Attuned”);if(activeFilter===“flags”)pool=flagged;
+const filtered=pool.filter(c=>!q||c.name.toLowerCase().includes(q)||c.dog.toLowerCase().includes(q));
+const list=document.getElementById(“client-list”);
+if(filtered.length===0){list.innerHTML=`<div style="text-align:center;color:var(--muted);padding:50px 0;font-size:13px">${DB.clients.length===0?"No clients yet. Add your first handler.":activeFilter!=="all"?"No clients match this filter.":"No results."}</div>`;return;}
+list.innerHTML=filtered.map(c=>buildAccCard(c)).join(””);
+filtered.forEach(c=>{if(openCards.has(c.id)){const body=document.getElementById(“body-”+c.id),chev=document.getElementById(“chev-”+c.id),card=document.getElementById(“acc-”+c.id);if(body)body.classList.add(“open”);if(chev)chev.style.transform=“rotate(180deg)”;if(card)card.classList.add(“open”);renderTab(c.id,activeTab[c.id]||“overview”);}});
 }
-async function save(){
-  try{
-    const payload=JSON.stringify(DATA);
-    const r=await window.storage.set(SK,payload,false);
-    window._lastSave=r?"OK":"null result";
-    window._saveTime=new Date().toLocaleTimeString();
-    window._saveSize=payload.length+" chars";
-  }catch(e){
-    window._lastSave="SAVE ERROR: "+e.message;
-    // Fallback to localStorage
-    try{localStorage.setItem(SK,JSON.stringify(DATA));window._lastSave="OK (localStorage fallback)";window._saveTime=new Date().toLocaleTimeString()}catch(e2){window._lastSave="ALL SAVE FAILED: "+e.message+" / "+e2.message}
-  }
-}
-function getCl(){return DATA.c.find(x=>x.id===AID)}
-function updCl(c){const i=DATA.c.findIndex(x=>x.id===c.id);if(i>=0)DATA.c[i]=c;else DATA.c.push(c);save()}
-function delCl(id){DATA.c=DATA.c.filter(x=>x.id!==id);save()}
-
-// ═══════ HELPERS ═══════
-const h=(tag,attrs,ch)=>{const e=document.createElement(tag);if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(e.style,v);else if(k.startsWith("on"))e.addEventListener(k.slice(2).toLowerCase(),v);else if(k==="className")e.className=v;else if(k==="innerHTML")e.innerHTML=v;else e.setAttribute(k,v)});if(ch!==undefined){if(Array.isArray(ch))ch.forEach(c=>{if(c)e.appendChild(typeof c==="string"?document.createTextNode(c):c)});else if(typeof ch==="string")e.textContent=ch;else if(ch)e.appendChild(ch)}return e};
-
-function badges(items,active,onSelect,color){
-  const d=h("div",{className:"badges"});
-  items.forEach(it=>{const b=h("button",{className:"badge"+(active===it?" on":""),onClick:()=>onSelect(it)},it);if(active===it&&color){b.style.borderColor=color;b.style.background=color+"20";b.style.color=color}d.appendChild(b)});
-  return d;
-}
-
-function profileSelect(current,onSelect){
-  const wrap=h("div",{className:"select-wrap"});
-  const btn=h("button",{className:"select-btn"});
-  const label=h("span",{},current||"Select profile…");
-  if(!current)label.style.color="#5a5a55";
-  const arrow=h("span",{className:"arrow"},"▼");
-  btn.appendChild(label);btn.appendChild(arrow);
-  const menu=h("div",{className:"select-menu"});
-  const profiles=["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"];
-  // Group headers
-  const groups=[{label:"ENTRY",items:["Reactive","Rigid","Avoidant","Passive"]},{label:"IMPROVED",items:["Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive"]},{label:"SUMMIT",items:["Attuned"]}];
-  groups.forEach(g=>{
-    const gh=h("div",{style:{padding:"6px 12px",fontSize:"10px",letterSpacing:"2px",color:"#6F745C",fontFamily:"'Cinzel',serif",background:"#1E1E1E"}},g.label);
-    menu.appendChild(gh);
-    g.items.forEach(p=>{
-      const opt=h("div",{className:"select-opt"+(current===p?" active":""),onClick:(e)=>{e.stopPropagation();onSelect(p);menu.classList.remove("show");arrow.classList.remove("open")}},p);
-      menu.appendChild(opt);
-    });
-  });
-  // Clear option
-  const clr=h("div",{className:"select-opt",style:{color:"#A05050",fontSize:"11px"},onClick:(e)=>{e.stopPropagation();onSelect("");menu.classList.remove("show");arrow.classList.remove("open")}},"Clear selection");
-  menu.appendChild(clr);
-  btn.addEventListener("click",(e)=>{e.stopPropagation();const isOpen=menu.classList.contains("show");document.querySelectorAll(".select-menu").forEach(m=>m.classList.remove("show"));document.querySelectorAll(".arrow").forEach(a=>a.classList.remove("open"));if(!isOpen){menu.classList.add("show");arrow.classList.add("open")}});
-  document.addEventListener("click",()=>{menu.classList.remove("show");arrow.classList.remove("open")});
-  wrap.appendChild(btn);wrap.appendChild(menu);
-  return wrap;
-}
-
-function scoreRow(label,val,onChange,max=5){
-  const r=h("div",{className:"score-row"});
-  r.appendChild(h("span",{className:"sl"},label));
-  const dots=h("div",{className:"dots"});
-  for(let i=1;i<=max;i++){const b=h("button",{onClick:()=>onChange(i)},String(i));b.style.background=i<=val?sc(val,max):"#232321";b.style.color=i<=val?"#000":"#5a5a55";dots.appendChild(b)}
-  r.appendChild(dots);
-  const sv=h("span",{className:"sv"},String(val));sv.style.color=sc(val,max);r.appendChild(sv);
-  return r;
-}
-function field(label,val,onChange,opts={}){
-  const d=h("div",{style:{display:"flex",flexDirection:"column",gap:"3px",...(opts.style||{})}});
-  d.appendChild(h("label",{className:"lbl"},label));
-  const inp=h("input",{className:"inp",value:val||"",placeholder:opts.ph||""});
-  if(opts.type)inp.type=opts.type;
-  inp.addEventListener("input",e=>onChange(e.target.value));
-  d.appendChild(inp);return d;
-}
-function tarea(val,onChange,ph){
-  const t=h("textarea",{className:"ta",placeholder:ph||""});t.value=val||"";
-  t.addEventListener("input",e=>onChange(e.target.value));return t;
-}
-function sec(title,color,children){
-  const s=h("div",{className:"sec"});if(color)s.style.borderLeftColor=color;
-  const t=h("div",{className:"sec-t"},title);if(color)t.style.color=color;
-  s.appendChild(t);
-  if(Array.isArray(children))children.forEach(c=>{if(c)s.appendChild(c)});else if(children)s.appendChild(children);
-  return s;
-}
-function topBar(leftEl,center,rightEl){
-  const t=h("div",{className:"top"});t.appendChild(leftEl);
-  if(center){const c=h("span",{style:{fontSize:"12px",letterSpacing:"3px",color:"#6F745C",fontFamily:"'Cinzel',serif"}},center);t.appendChild(c)}
-  t.appendChild(rightEl);return t;
-}
-function backBtn(label,onClick){return h("button",{style:{background:"none",border:"none",color:"#a09e96",fontSize:"14px",fontFamily:"inherit"},onClick},label||"← Back")}
-function btnEl(text,fill,onClick){const b=h("button",{className:"btn"+(fill?" btn-f":""),onClick},text);return b}
-
-function radarSVG(sig){
-  const r=34,cx=48,cy=48,ns="http://www.w3.org/2000/svg";
-  const svg=document.createElementNS(ns,"svg");svg.setAttribute("width","96");svg.setAttribute("height","96");
-  const angles=[0,1,2,3].map(i=>(i*Math.PI*2)/4-Math.PI/2);
-  const gv=ch=>ch===sig.d?1:ch===sig.b?.55:ch===sig.g?.2:.45;
-  const gc=ch=>ch===sig.d?"#6F745C":ch===sig.b?"#A09050":ch===sig.g?"#A05050":"#5a5a55";
-  [.33,.66,1].forEach(s=>{const p=document.createElementNS(ns,"polygon");p.setAttribute("points",angles.map(a=>`${cx+Math.cos(a)*r*s},${cy+Math.sin(a)*r*s}`).join(" "));p.setAttribute("fill","none");p.setAttribute("stroke","#3a3a35");svg.appendChild(p)});
-  angles.forEach(a=>{const l=document.createElementNS(ns,"line");l.setAttribute("x1",cx);l.setAttribute("y1",cy);l.setAttribute("x2",cx+Math.cos(a)*r);l.setAttribute("y2",cy+Math.sin(a)*r);l.setAttribute("stroke","#3a3a35");svg.appendChild(l)});
-  const vals=CH.map(gv),pts=vals.map((v,i)=>({x:cx+Math.cos(angles[i])*r*v,y:cy+Math.sin(angles[i])*r*v}));
-  const poly=document.createElementNS(ns,"polygon");poly.setAttribute("points",pts.map(p=>`${p.x},${p.y}`).join(" "));poly.setAttribute("fill","rgba(111,116,92,.12)");poly.setAttribute("stroke","#6F745C");poly.setAttribute("stroke-width","1.5");svg.appendChild(poly);
-  const labels=["S","V","E","I"];
-  angles.forEach((a,i)=>{const t=document.createElementNS(ns,"text");t.setAttribute("x",cx+Math.cos(a)*(r+10));t.setAttribute("y",cy+Math.sin(a)*(r+10));t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");t.setAttribute("fill",gc(CH[i]));t.setAttribute("font-size","9");t.setAttribute("font-weight","700");t.setAttribute("font-family","'JetBrains Mono',monospace");t.textContent=labels[i];svg.appendChild(t)});
-  return svg;
-}
-function sparkSVG(hist){
-  if(!hist||hist.length<2)return null;
-  const ns="http://www.w3.org/2000/svg",tots=hist.map(cTotal),w=200,ht=50,pd=8;
-  const svg=document.createElementNS(ns,"svg");svg.setAttribute("width",w);svg.setAttribute("height",ht);svg.style.display="block";svg.style.marginTop="6px";
-  const pts=tots.map((t,i)=>({x:pd+(i/(tots.length-1))*(w-pd*2),y:pd+(1-t/25)*(ht-pd*2)}));
-  const path=document.createElementNS(ns,"path");path.setAttribute("d",pts.map((p,i)=>`${i?"L":"M"}${p.x},${p.y}`).join(" "));path.setAttribute("fill","none");path.setAttribute("stroke","#6F745C");path.setAttribute("stroke-width","2");svg.appendChild(path);
-  pts.forEach((p,i)=>{const c=document.createElementNS(ns,"circle");c.setAttribute("cx",p.x);c.setAttribute("cy",p.y);c.setAttribute("r","3");c.setAttribute("fill","#1E1E1E");c.setAttribute("stroke","#6F745C");c.setAttribute("stroke-width","1.5");svg.appendChild(c);
-  const t=document.createElementNS(ns,"text");t.setAttribute("x",p.x);t.setAttribute("y",p.y-7);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#6F745C");t.setAttribute("font-size","8");t.setAttribute("font-family","'JetBrains Mono',monospace");t.textContent=tots[i];svg.appendChild(t)});
-  return svg;
-}
-
-// ═══════ RENDER ═══════
-function render(){
-  const app=document.getElementById("app");app.innerHTML="";
-  renderNav();
-  if(TAB==="states")return renderStates(app);
-  if(TAB==="reference")return renderReference(app);
-  if(TAB==="diagnose")return renderDiagnose(app);
-  // clients tab
-  if(VW==="clientEdit"&&ED)return renderClientEdit(app);
-  if(VW==="sessionEdit"&&ED&&getCl())return renderSessionEdit(app);
-  if(VW==="compassEdit"&&ED&&getCl())return renderCompassEdit(app);
-  if(VW==="dossier"&&getCl())return renderDossier(app);
-  if(VW==="exercises"&&getCl())return renderExerciseBank(app);
-  if(VW==="detail"&&getCl())return renderDetail(app);
-  renderList(app);
-}
-
-function renderNav(){
-  const nav=document.getElementById("nav");nav.innerHTML="";
-  [["clients","◉","CLIENTS","22px"],["diagnose","⊘","DIAGNOSE","22px"],["states","◆","STATES","20px"],["reference","≡","REFERENCE","24px"]].forEach(([k,ic,lb,sz])=>{
-    const b=h("button",{className:"nav-btn"+(TAB===k?" on":""),onClick:()=>{TAB=k;if(k!=="clients"){VW="list";ED=null}render()}});
-    const icon=h("span",{},ic);icon.style.fontSize=sz;
-    b.appendChild(icon);b.appendChild(h("span",{},lb));nav.appendChild(b);
-  });
-}
-
-// ── LIST ──
-function renderList(app){
-  const hdr=h("div",{className:"hdr"});
-  hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
-  hdr.appendChild(h("div",{className:"ttl"},"ARC TRACKER"));
-  hdr.appendChild(h("div",{className:"sync"},"✓ CLOUD SYNCED"));
-  const gearBtn=h("button",{style:{fontSize:"16px",color:"#5a5a55",marginTop:"8px",padding:"4px",transition:"color .2s ease"},onClick:()=>{window._showBackup=!window._showBackup;render()}},"⚙ Backup");
-  gearBtn.style.fontFamily="'Raleway',sans-serif";gearBtn.style.fontSize="12px";gearBtn.style.letterSpacing="1px";
-  hdr.appendChild(gearBtn);
-  app.appendChild(hdr);
-  // Backup panel
-  if(window._showBackup){
-    const bp=h("div",{className:"backup-panel"});
-    bp.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"3px",color:"#6F745C",marginBottom:"12px",fontFamily:"'Cinzel',serif"}},"DATA BACKUP"));
-    
-    // Export button
-    const expBtn=h("button",{className:"backup-btn",onClick:()=>{
-      const blob=new Blob([JSON.stringify(DATA,null,2)],{type:"application/json"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      a.href=url;a.download="arc-tracker-backup-"+tdy()+".json";
-      document.body.appendChild(a);a.click();document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }});
-    const expIco=h("span",{className:"ico"},"↓");
-    const expInfo=h("div",{className:"lbl2"});
-    expInfo.appendChild(h("div",{},"Export Data"));
-    expInfo.appendChild(h("div",{className:"sub2"},DATA.c.length+" client"+(DATA.c.length!==1?"s":"")+" · Download JSON backup"));
-    expBtn.appendChild(expIco);expBtn.appendChild(expInfo);bp.appendChild(expBtn);
-    
-    // Import button
-    const impBtn=h("button",{className:"backup-btn",onClick:()=>{
-      const inp=document.createElement("input");inp.type="file";inp.accept=".json";
-      inp.addEventListener("change",async(e)=>{
-        const file=e.target.files[0];if(!file)return;
-        const text=await file.text();
-        try{
-          const imported=JSON.parse(text);
-          if(imported.c&&Array.isArray(imported.c)){
-            const count=imported.c.length;
-            if(confirm("Import "+count+" client"+(count!==1?"s":"")+"? This will replace your current data.")){
-              DATA=imported;
-              DATA.c.forEach(c=>{if(!c.comp)c.comp=[];if(!c.sess)c.sess=[];if(!c.hw)c.hw=[];if(!c.issues)c.issues=[];if(!c.exAssign)c.exAssign=[];if(!c.sig)c.sig={d:"",b:"",g:""}});
-              save();window._showBackup=false;render();
-            }
-          }else{alert("Invalid backup file.")}
-        }catch(err){alert("Could not read file: "+err.message)}
-      });
-      inp.click();
-    }});
-    const impIco=h("span",{className:"ico"},"↑");
-    const impInfo=h("div",{className:"lbl2"});
-    impInfo.appendChild(h("div",{},"Import Data"));
-    impInfo.appendChild(h("div",{className:"sub2"},"Restore from JSON backup"));
-    impBtn.appendChild(impIco);impBtn.appendChild(impInfo);bp.appendChild(impBtn);
-    
-    // Email backup
-    const emailBtn=h("button",{className:"backup-btn",onClick:()=>{
-      const data=JSON.stringify(DATA,null,2);
-      const subject="Arc Tracker Backup — "+tdy();
-      const body="Arc Tracker backup attached below.%0A%0A"+encodeURIComponent(data.substring(0,1000))+"...%0A%0AFull data: save the .json file from export.";
-      window.open("mailto:?subject="+encodeURIComponent(subject)+"&body="+body);
-    }});
-    const emailIco=h("span",{className:"ico"},"✉");
-    const emailInfo=h("div",{className:"lbl2"});
-    emailInfo.appendChild(h("div",{},"Email Backup"));
-    emailInfo.appendChild(h("div",{className:"sub2"},"Send data snapshot to yourself"));
-    emailBtn.appendChild(emailIco);emailBtn.appendChild(emailInfo);bp.appendChild(emailBtn);
-    
-    bp.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55",marginTop:"8px",lineHeight:"1.5"}},"Export before any app updates. Import restores everything — clients, sessions, compass scores, homework, exercises."));
-    app.appendChild(bp);
-  }
-  
-  const wrap=h("div",{style:{padding:"10px 16px"}});
-  if(DATA.c.length===0)wrap.appendChild(h("div",{style:{textAlign:"center",color:"#5a5a55",padding:"30px 0",fontSize:"17px"}},"No clients yet."));
-  DATA.c.forEach(c=>{
-    const card=h("button",{className:"card",onClick:()=>{AID=c.id;VW="detail";render()}});
-    const av=h("div",{className:"avatar"},(c.name||"?")[0]?.toUpperCase());
-    card.appendChild(av);
-    const info=h("div");info.appendChild(h("div",{style:{fontSize:"15px",fontWeight:"600",color:"#F6F4F1"}},c.name||"Unnamed"));
-    info.appendChild(h("div",{style:{fontSize:"12px",color:"#a09e96"}},`${c.dog} · ${c.prof||"No profile"}`));
-    card.appendChild(info);wrap.appendChild(card);
-  });
-  const center=h("div",{style:{textAlign:"center",marginTop:"14px"}});
-  center.appendChild(h("button",{className:"btn btn-f",style:{padding:"10px 18px"},onClick:()=>{ED=mkClient();AID=null;VW="clientEdit";render()}},"+ New Client"));
-  wrap.appendChild(center);app.appendChild(wrap);
-}
-
-// ── CLIENT EDIT ──
-function renderClientEdit(app){
-  const isNew=!DATA.c.find(x=>x.id===ED.id);
-  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW=AID?"detail":"list";render()}),isNew?"NEW CLIENT":"EDIT CLIENT",btnEl("Save",true,()=>{updCl(ED);AID=ED.id;ED=null;VW="detail";render()})));
-  const wrap=h("div",{style:{padding:"0 16px"}});
-  const grid=h("div",{className:"grid2",style:{gap:"14px",marginBottom:"22px"}});
-  grid.appendChild(field("Handler",ED.name,v=>{ED.name=v},{ph:"Name"}));
-  grid.appendChild(field("Dog",ED.dog,v=>{ED.dog=v},{ph:"Dog name"}));
-  grid.appendChild(field("Breed",ED.breed,v=>{ED.breed=v},{ph:"Breed"}));
-  grid.appendChild(field("Age",ED.age,v=>{ED.age=v},{ph:"Age"}));
-  wrap.appendChild(grid);
-  wrap.appendChild(field("Context",ED.ctx,v=>{ED.ctx=v},{ph:"Vet Clinic, Board & Train, Private",style:{marginBottom:"24px"}}));
-  // Signature
-  const sigKids=[];
-  [["d","DOMINANT","#6F745C"],["b","BLIND","#A09050"],["g","GHOST","#A05050"]].forEach(([k,label,color])=>{
-    const d=h("div",{style:{marginBottom:"16px"}});
-    d.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"2px",color,marginBottom:"4px",textTransform:"uppercase"}},label));
-    d.appendChild(badges(CH,ED.sig[k],v=>{ED.sig[k]=v;render()},color));sigKids.push(d);
-  });
-  wrap.appendChild(sec("HANDLER SIGNATURE","#6F745C",sigKids));
-  wrap.appendChild(sec("PROFILE","#6F745C",[profileSelect(ED.prof,v=>{ED.prof=v;render()})]));
-  wrap.appendChild(sec("NOTES","#a09e96",[tarea(ED.notes,v=>{ED.notes=v},"Anything worth remembering...")]));
-  if(!isNew){const del=h("div",{style:{textAlign:"center",marginTop:"12px"}});del.appendChild(h("button",{style:{padding:"6px 12px",borderRadius:"4px",border:"1px solid #A0505033",background:"transparent",color:"#A05050",fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",letterSpacing:"1.5px",fontFamily:"inherit",cursor:"pointer"},onClick:()=>{if(confirm("Delete?")){delCl(ED.id);AID=null;ED=null;VW="list";render()}}},"Delete Client"));wrap.appendChild(del)}
-  app.appendChild(wrap);
-}
-
-// ── DETAIL ──
-function renderDetail(app){
-  const cl=getCl();
-  app.appendChild(topBar(backBtn("← All",()=>{AID=null;VW="list";render()}),"",btnEl("Edit",false,()=>{ED={...cl,sig:{...cl.sig}};VW="clientEdit";render()})));
-  // Header
-  const hd=h("div",{style:{textAlign:"center",padding:"18px 16px 24px"}});
-  hd.appendChild(h("div",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif"}},cl.name||"Unnamed"));
-  hd.appendChild(h("div",{style:{fontSize:"13px",color:"#a09e96",marginTop:"2px"}},cl.dog));
-  if(cl.prof){const pb=h("div",{style:{marginTop:"6px"}});pb.appendChild(h("span",{style:{fontSize:"12px",padding:"4px 12px",borderRadius:"4px",border:"1px solid #3a3a35",color:"#a09e96"}},cl.prof));hd.appendChild(pb)}
-  if(cl.ctx)hd.appendChild(h("div",{style:{fontSize:"12px",color:"#7EAEC4",marginTop:"5px"}},cl.ctx));
-  app.appendChild(hd);
-
-  // Action cards
-  const acts=h("div",{style:{padding:"0 16px",marginBottom:"24px"}});
-  const sl=h("div",{className:"action-card"});
-  const slL=h("div");slL.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#6F745C",fontWeight:"700",fontFamily:"'Cinzel',serif"}},"SESSION LOG"));slL.appendChild(h("div",{style:{fontSize:"11px",color:"#a09e96"}},"Feeds Arc + Compass"));
-  sl.appendChild(slL);sl.appendChild(h("button",{className:"btn btn-f",onClick:()=>{ED=mkSess();VW="sessionEdit";render()}},"+ Log"));acts.appendChild(sl);
-
-  const ev=h("div",{className:"action-card",style:{borderColor:"#7EAEC444"}});
-  const evL=h("div");evL.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#7EAEC4",fontWeight:"700",fontFamily:"'Cinzel',serif"}},"HANDLER INDEX™ EVAL"));evL.appendChild(h("div",{style:{fontSize:"11px",color:"#a09e96"}},"Full diagnostic walkthrough"));
-  ev.appendChild(evL);ev.appendChild(h("button",{className:"btn btn-bl",onClick:()=>{TAB="diagnose";ED=mkEval();VW="eval";render()}},"+ Eval"));acts.appendChild(ev);
-
-  // Dossier button
-  const dos=h("div",{className:"action-card",style:{borderColor:"#6F745C44",cursor:"pointer"},onClick:()=>{VW="dossier";render()}});
-  const dosL=h("div");dosL.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#6F745C",fontWeight:"700",fontFamily:"'Cinzel',serif"}},"CLIENT DOSSIER"));dosL.appendChild(h("div",{style:{fontSize:"11px",color:"#a09e96"}},"All notes, sessions, history"));
-  dos.appendChild(dosL);dos.appendChild(h("span",{style:{fontSize:"12px",color:"#a09e96"}},"→"));acts.appendChild(dos);
-
-  // Exercise Bank button
-  const exb=h("div",{className:"action-card",style:{borderColor:"#6F745C44",cursor:"pointer"},onClick:()=>{VW="exercises";render()}});
-  const exbL=h("div");exbL.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#6F745C",fontWeight:"700",fontFamily:"'Cinzel',serif"}},"EXERCISE BANK"));exbL.appendChild(h("div",{style:{fontSize:"11px",color:"#a09e96"}},"Protocols · Assign · Track"));
-  exb.appendChild(exbL);exb.appendChild(h("span",{style:{fontSize:"12px",color:"#a09e96"}},"→"));acts.appendChild(exb);
-  app.appendChild(acts);
-
-  // Homework
-  const hwKids=[];
-  if(!cl.hw||cl.hw.length===0)hwKids.push(h("div",{style:{fontSize:"13px",color:"#5a5a55"}},"No homework assigned."));
-  (cl.hw||[]).forEach((hw,i)=>{
-    const r=h("div",{className:"row"});r.appendChild(h("span",{style:{fontSize:"13px",color:"#a09e96",flex:"1"}},hw.text));
-    r.appendChild(h("span",{style:{fontSize:"10px",color:"#5a5a55",marginRight:"6px"}},hw.date));
-    r.appendChild(h("button",{className:"x-btn",onClick:()=>{cl.hw.splice(i,1);updCl(cl);render()}},"×"));hwKids.push(r);
-  });
-  const hwInp=h("div",{style:{display:"flex",gap:"8px",marginTop:"14px"}});
-  const hwI=h("input",{className:"inp",style:{flex:"1",padding:"6px 8px",fontSize:"14px"},placeholder:"Assign homework…"});
-  const hwAdd=()=>{if(hwI.value.trim()){if(!cl.hw)cl.hw=[];cl.hw.push({text:hwI.value.trim(),date:tdy()});updCl(cl);render()}};
-  hwI.addEventListener("keydown",e=>{if(e.key==="Enter")hwAdd()});
-  hwInp.appendChild(hwI);hwInp.appendChild(h("button",{className:"btn",onClick:hwAdd},"+"));hwKids.push(hwInp);
-  app.appendChild(sec("HOMEWORK · "+(cl.hw||[]).length,"#6F745C",hwKids));
-
-  // Recurring Issues
-  const riKids=[];
-  (cl.issues||[]).forEach((ri,i)=>{
-    const r=h("div",{className:"row"});r.appendChild(h("span",{style:{fontSize:"13px",color:"#a09e96",flex:"1"}},ri.text));
-    r.appendChild(h("span",{style:{fontSize:"10px",color:"#5a5a55",marginRight:"6px"}},ri.date));
-    r.appendChild(h("button",{className:"x-btn",onClick:()=>{cl.issues.splice(i,1);updCl(cl);render()}},"×"));riKids.push(r);
-  });
-  const riInp=h("div",{style:{display:"flex",gap:"8px",marginTop:"14px"}});
-  const riI=h("input",{className:"inp",style:{flex:"1",padding:"6px 8px",fontSize:"14px"},placeholder:"Pattern you keep seeing…"});
-  const riAdd=()=>{if(riI.value.trim()){if(!cl.issues)cl.issues=[];cl.issues.push({text:riI.value.trim(),date:tdy()});updCl(cl);render()}};
-  riI.addEventListener("keydown",e=>{if(e.key==="Enter")riAdd()});
-  riInp.appendChild(riI);riInp.appendChild(h("button",{className:"btn",onClick:riAdd},"+"));riKids.push(riInp);
-  app.appendChild(sec("RECURRING ISSUES · "+(cl.issues||[]).length,"#A09050",riKids));
-
-  // Signature
-  if(cl.sig.d||cl.sig.b||cl.sig.g){
-    const sigW=h("div",{style:{display:"flex",gap:"12px",alignItems:"center"}});
-    sigW.appendChild(radarSVG(cl.sig));
-    const sigInfo=h("div",{style:{display:"flex",flexDirection:"column",gap:"5px"}});
-    [["d","DOMINANT","#6F745C"],["b","BLIND","#A09050"],["g","GHOST","#A05050"]].forEach(([k,lb,c])=>{
-      if(!cl.sig[k])return;
-      const r=h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}});
-      r.appendChild(h("div",{className:"dot",style:{background:c}}));
-      r.appendChild(h("span",{style:{fontSize:"10px",letterSpacing:"1.5px",color:"#5a5a55",textTransform:"uppercase",width:"50px"}},lb));
-      r.appendChild(h("span",{style:{fontSize:"14px",color:c,fontWeight:"600"}},cl.sig[k]));sigInfo.appendChild(r);
-    });
-    sigW.appendChild(sigInfo);
-    app.appendChild(sec("HANDLER SIGNATURE","#6F745C",[sigW]));
-  }
-
-  // Compass
-  const lc=cl.comp.length>0?cl.comp[cl.comp.length-1]:null;
-  const tot=lc?cTotal(lc):null;
-  const compKids=[];
-  if(lc){
-    const hdr=h("div",{style:{display:"flex",alignItems:"center",gap:"12px",marginBottom:"6px"}});
-    const tv=h("div",{style:{fontSize:"26px",fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",color:sc(tot,25)}});tv.innerHTML=`${tot}<span style="font-size:15px;color:#5a5a55">/25</span>`;
-    hdr.appendChild(tv);hdr.appendChild(h("div",{style:{fontSize:"14px",color:"#a09e96"}},`${lc.cp} · ${lc.dt}`));compKids.push(hdr);
-    const cats=h("div",{style:{display:"flex",gap:"5px",flexWrap:"wrap",marginBottom:"6px"}});
-    CK.forEach(k=>{const d=h("div",{style:{background:"#232321",borderRadius:"4px",padding:"3px 7px",textAlign:"center"}});d.appendChild(h("div",{style:{fontSize:"7px",color:"#5a5a55"}},k));d.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"700",color:sc(lc[k],5)}},String(lc[k])));cats.appendChild(d)});
-    compKids.push(cats);
-    const sp=sparkSVG(cl.comp);if(sp)compKids.push(sp);
-    cl.comp.forEach(ch=>{
-      const t=cTotal(ch);const r=h("div",{className:"row"});
-      r.appendChild(h("span",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:sc(t,25),width:"24px"}},String(t)));
-      r.appendChild(h("span",{style:{fontSize:"14px",color:"#a09e96",flex:"1"}},`${ch.cp} · ${ch.dt}`));
-      r.appendChild(h("button",{style:{background:"none",border:"none",color:"#5a5a55",fontSize:"14px",fontFamily:"inherit",cursor:"pointer"},onClick:()=>{ED={...ch};VW="compassEdit";render()}},"edit"));
-      r.appendChild(h("button",{className:"x-btn",style:{color:"#A0505066"},onClick:()=>{cl.comp=cl.comp.filter(x=>x.id!==ch.id);updCl(cl);render()}},"×"));
-      compKids.push(r);
-    });
-  }else{compKids.push(h("div",{style:{fontSize:"13px",color:"#5a5a55"}},"No compass scores yet."))}
-  compKids.push(h("button",{className:"btn",style:{marginTop:"8px",width:"100%"},onClick:()=>{ED=mkComp(CPT[Math.min(cl.comp.length,3)]);VW="compassEdit";render()}},"+ Score Compass"));
-  app.appendChild(sec("COMPASS",tot?sc(tot,25):"#6F745C",compKids));
-
-  // Recent Sessions
-  const rs=[...(cl.sess||[])].sort((a,b)=>b.dt.localeCompare(a.dt)).slice(0,5);
-  if(rs.length>0){
-    const sKids=rs.map(s=>{
-      const r=h("div",{style:{display:"flex",gap:"6px",alignItems:"flex-start",padding:"5px 0",borderBottom:"1px solid #232321"}});
-      r.appendChild(h("div",{className:"dot",style:{marginTop:"4px",background:s.q===1?"#A05050":s.q===3?"#6F745C":"#A09050"}}));
-      const info=h("div",{style:{flex:"1",minWidth:"0"}});
-      info.appendChild(h("div",{style:{fontSize:"13px",color:"#F6F4F1",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},s.focus||"No focus noted"));
-      info.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55"}},`${s.dt}${s.ch?" · "+s.ch:""}${s.stage?" · "+s.stage:""}`));
-      r.appendChild(info);
-      r.appendChild(h("button",{style:{background:"none",border:"none",color:"#5a5a55",fontSize:"14px",fontFamily:"inherit",cursor:"pointer"},onClick:()=>{ED={...s};VW="sessionEdit";render()}},"edit"));
-      r.appendChild(h("button",{className:"x-btn",style:{color:"#A0505066"},onClick:()=>{cl.sess=cl.sess.filter(x=>x.id!==s.id);updCl(cl);render()}},"×"));
-      return r;
-    });
-    app.appendChild(sec("RECENT SESSIONS","#a09e96",sKids));
-  }
-  if(cl.notes)app.appendChild(sec("NOTES","#5a5a55",[h("div",{style:{fontSize:"13px",color:"#a09e96",whiteSpace:"pre-wrap",lineHeight:"1.5"}},cl.notes)]));
-}
-
-// ── SESSION EDIT ──
-function renderSessionEdit(app){
-  const cl=getCl();
-  const isNew=!cl.sess.find(x=>x.id===ED.id);
-  const sessNum=isNew?(cl.sess.length+1):(cl.sess.sort((a,b)=>a.dt.localeCompare(b.dt)).findIndex(x=>x.id===ED.id)+1);
-  const totalSess=isNew?cl.sess.length+1:cl.sess.length;
-
-  // Profile-specific homework suggestions
-  const HW_SUGGEST={
-    "Reactive":["Count to three before correcting","Loosen the grip — check every 30 seconds","One correction per rep, no stacking","Internal reading before session: score 1–5","3-4-5 breathing before leash goes on"],
-    "Rigid":["Clarity is kindness — correction landed, don't take it back","Watch for shutdown vs. calm — name the difference","Score timing on each correction: early/on time/late","Read dog's face after every correction","Pause 3 seconds between reps"],
-    "Avoidant":["Don't undo the correction — let it land","One clean correction is kinder than three soft ones","Hold the boundary for the full rep","Score your correction confidence 1–5 after each set","Walk the route you've been avoiding — structured"],
-    "Passive":["Eyes on your dog the entire rep","Tell me what your dog just did — build observation","One thing to watch this rep (ears, weight, breathing)","Initiate one interaction per hour — don't wait for the dog","Score your engagement 1–5 after each session"],
-    "Imp. Reactive":["Internal reading before AND after each rep","Catch the spike at State 2 — name it out loud","Breathing reset between exercises","Track recovery time: how fast do YOU come down?"],
-    "Imp. Rigid":["Read the dog's internal state before correcting","Score timing accuracy across a full session","Notice when compliance is actually shutdown"],
-    "Imp. Avoidant":["Hold one uncomfortable boundary per session","Track which corrections you want to soften — and don't","Score correction confidence trend across sessions"],
-    "Imp. Passive":["Choose training location deliberately — name why","Track check-ins per 10 minutes","Score your intentionality before and after"],
-    "Attuned":["Maintain the standard — no drift","Teach one element to someone else this week","Run self-diagnostic: which channel slipped?"]
-  };
-
-  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="detail";render()}),"SESSION LOG",btnEl("Save",true,()=>{
-    // Save session
-    const i=cl.sess.findIndex(x=>x.id===ED.id);if(i>=0)cl.sess[i]=ED;else cl.sess.push(ED);
-    // Save any assigned homework
-    if(ED._hw&&ED._hw.length>0){if(!cl.hw)cl.hw=[];ED._hw.forEach(t=>{cl.hw.push({text:t,date:ED.dt})});}
-    updCl(cl);ED=null;VW="detail";render();
-  })));
-
-  const w=h("div",{style:{padding:"0 16px"}});
-
-  // Session number header
-  const numHdr=h("div",{style:{textAlign:"center",marginBottom:"22px",padding:"14px 0"}});
-  numHdr.appendChild(h("div",{style:{fontSize:"22px",fontWeight:"700",color:"#6F745C"}},"SESSION #"+sessNum));
-  numHdr.appendChild(h("div",{style:{fontSize:"14px",color:"#5a5a55",marginTop:"2px"}},`of ${totalSess} total`));
-  w.appendChild(numHdr);
-
-  w.appendChild(field("Date",ED.dt,v=>{ED.dt=v;},{type:"date",style:{marginBottom:"10px"}}));
-  const pDiv=h("div",{style:{marginBottom:"20px"}});pDiv.appendChild(h("label",{className:"lbl"},"Handler Profile"));pDiv.appendChild(profileSelect(ED.prof,v=>{ED.prof=v;render()}));w.appendChild(pDiv);
-  const chDiv=h("div",{style:{marginBottom:"20px"}});chDiv.appendChild(h("label",{className:"lbl"},"Dominant Channel"));chDiv.appendChild(badges(CH,ED.ch,v=>{ED.ch=v;render()}));w.appendChild(chDiv);
-  w.appendChild(field("Session Focus",ED.focus,v=>{ED.focus=v},{ph:"One sentence — what did you work on?",style:{marginBottom:"20px"}}));
-  const qDiv=h("div",{style:{marginBottom:"20px"}});qDiv.appendChild(h("label",{className:"lbl"},"Quality"));
-  const qBadges=h("div",{className:"badges"});
-  QL.forEach(q=>{const b=h("button",{className:"badge"+(ED.q===q.v?" on":""),onClick:()=>{ED.q=q.v;render()}},q.l);if(ED.q===q.v){b.style.borderColor=q.c;b.style.background=q.c+"20";b.style.color=q.c}qBadges.appendChild(b)});
-  qDiv.appendChild(qBadges);w.appendChild(qDiv);
-  const jDiv=h("div",{style:{marginBottom:"20px"}});jDiv.appendChild(h("label",{className:"lbl"},"Journey Stage"));jDiv.appendChild(badges(JS,ED.stage,v=>{ED.stage=v;render()}));w.appendChild(jDiv);
-  w.appendChild(h("label",{className:"lbl"},"Notes"));w.appendChild(tarea(ED.notes,v=>{ED.notes=v},"Anything worth remembering"));
-
-  // ── Homework Assignment ──
-  if(!ED._hw)ED._hw=[];
-  const activeProf=ED.prof||cl.prof||"";
-  const hwKids=[];
-  // Show profile-specific suggestions if profile selected
-  if(activeProf&&HW_SUGGEST[activeProf]){
-    const sugDiv=h("div",{style:{marginBottom:"16px"}});
-    sugDiv.appendChild(h("div",{style:{fontSize:"14px",color:"#6F745C",marginBottom:"6px"}},activeProf.toUpperCase()+" — TAP TO ASSIGN"));
-    HW_SUGGEST[activeProf].forEach(sug=>{
-      const isAdded=ED._hw.includes(sug);
-      const b=h("button",{style:{display:"block",width:"100%",textAlign:"left",padding:"8px 10px",marginBottom:"4px",borderRadius:"4px",border:`1px solid ${isAdded?"#6F745C":"#3a3a35"}`,background:isAdded?"#6F745C15":"#232321",color:isAdded?"#6F745C":"#a09e96",fontSize:"12px",fontFamily:"inherit",cursor:"pointer",lineHeight:"1.4"},onClick:()=>{
-        if(isAdded)ED._hw=ED._hw.filter(x=>x!==sug);else ED._hw.push(sug);render();
-      }});
-      b.textContent=(isAdded?"✓ ":"  ")+sug;sugDiv.appendChild(b);
-    });
-    hwKids.push(sugDiv);
-  }else{
-    hwKids.push(h("div",{style:{fontSize:"12px",color:"#5a5a55",marginBottom:"6px"}},"Select a profile above to see homework suggestions."));
-  }
-  // Custom homework input
-  const hwInp=h("div",{style:{display:"flex",gap:"6px",marginTop:"8px"}});
-  const hwI=h("input",{className:"inp",style:{flex:"1",padding:"6px 8px",fontSize:"14px"},placeholder:"Custom homework…"});
-  const hwAddCustom=()=>{if(hwI.value.trim()){ED._hw.push(hwI.value.trim());hwI.value="";render()}};
-  hwI.addEventListener("keydown",e=>{if(e.key==="Enter")hwAddCustom()});
-  hwInp.appendChild(hwI);hwInp.appendChild(h("button",{className:"btn",onClick:hwAddCustom},"+"));hwKids.push(hwInp);
-  // Show assigned list
-  if(ED._hw.length>0){
-    const assigned=h("div",{style:{marginTop:"8px"}});
-    assigned.appendChild(h("div",{style:{fontSize:"14px",color:"#6F745C",marginBottom:"4px"}},"ASSIGNED THIS SESSION · "+ED._hw.length));
-    ED._hw.forEach((hw,i)=>{
-      const r=h("div",{className:"row"});r.appendChild(h("span",{style:{fontSize:"13px",color:"#6F745C",flex:"1"}},"✓ "+hw));
-      r.appendChild(h("button",{className:"x-btn",onClick:()=>{ED._hw.splice(i,1);render()}},"×"));assigned.appendChild(r);
-    });
-    hwKids.push(assigned);
-  }
-  w.appendChild(sec("ASSIGN HOMEWORK","#6F745C",hwKids));
-
-  // ── Previous Sessions ──
-  const prev=[...(cl.sess||[])].filter(x=>x.id!==ED.id).sort((a,b)=>b.dt.localeCompare(a.dt)).slice(0,5);
-  if(prev.length>0){
-    const prevKids=prev.map(s=>{
-      const r=h("div",{style:{display:"flex",gap:"6px",alignItems:"center",padding:"5px 0",borderBottom:"1px solid #232321"}});
-      const num=cl.sess.sort((a,b)=>a.dt.localeCompare(b.dt)).findIndex(x=>x.id===s.id)+1;
-      r.appendChild(h("span",{style:{fontSize:"14px",fontWeight:"700",color:"#6F745C",width:"24px"}},"#"+num));
-      r.appendChild(h("div",{className:"dot",style:{background:s.q===1?"#A05050":s.q===3?"#6F745C":"#A09050"}}));
-      const info=h("div",{style:{flex:"1",minWidth:"0"}});
-      info.appendChild(h("div",{style:{fontSize:"13px",color:"#F6F4F1",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},s.focus||"No focus noted"));
-      info.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55"}},s.dt+(s.ch?" · "+s.ch:"")+(s.stage?" · "+s.stage:"")));
-      r.appendChild(info);return r;
-    });
-    w.appendChild(sec("PREVIOUS SESSIONS","#a09e96",prevKids));
-  }
-
-  app.appendChild(w);
-}
-
-// ── COMPASS EDIT ──
-function renderCompassEdit(app){
-  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="detail";render()}),"COMPASS",btnEl("Save",true,()=>{const cl=getCl();const i=cl.comp.findIndex(x=>x.id===ED.id);if(i>=0)cl.comp[i]=ED;else cl.comp.push(ED);updCl(cl);ED=null;VW="detail";render()})));
-  const w=h("div",{style:{padding:"0 16px"}});
-  const row=h("div",{style:{display:"flex",gap:"10px",marginBottom:"18px"}});
-  row.appendChild(field("Date",ED.dt,v=>{ED.dt=v},{type:"date",style:{flex:"1"}}));
-  const cpDiv=h("div",{style:{flex:"1"}});cpDiv.appendChild(h("label",{className:"lbl"},"Checkpoint"));cpDiv.appendChild(badges(CPT,ED.cp,v=>{ED.cp=v;render()}));
-  row.appendChild(cpDiv);w.appendChild(row);
-  const scores=h("div",{style:{display:"flex",flexDirection:"column",gap:"14px",marginBottom:"22px"}});
-  CK.forEach(k=>{scores.appendChild(scoreRow(k,ED[k],v=>{ED[k]=v;render()}))});w.appendChild(scores);
-  const tot=cTotal(ED);
-  const tv=h("div",{style:{textAlign:"center"}});tv.innerHTML=`<span style="font-size:30px;font-weight:700;color:${sc(tot,25)}">${tot}</span><span style="font-size:15px;color:#5a5a55">/25</span>`;
-  w.appendChild(tv);app.appendChild(w);
-}
-
-// ── DIAGNOSE ──
-function renderDiagnose(app){
-  if(VW==="eval"&&ED&&getCl())return renderEval(app);
-  const hdr=h("div",{className:"hdr"});
-  hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
-  const t=h("div",{className:"ttl"});t.style.color="#7EAEC4";t.textContent="HANDLER INDEX™ EVAL";hdr.appendChild(t);
-  hdr.appendChild(h("div",{style:{fontSize:"14px",color:"#5a5a55",marginTop:"4px"}},"Select client for diagnostic walkthrough"));
-  app.appendChild(hdr);
-  const wrap=h("div",{style:{padding:"8px 16px"}});
-
-  // ── Pre-Flight Card ──
-  const pf=h("div",{style:{background:"#282825",border:"1px solid #3a3a35",borderLeft:"3px solid #7EAEC4",borderRadius:"8px",padding:"12px 14px",marginBottom:"14px"}});
-  pf.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"3px",color:"#7EAEC4",fontWeight:"700",marginBottom:"8px",fontFamily:"'Cinzel',serif"}},"PRE-FLIGHT — OBSERVATION SEQUENCE"));
-  ["1. Feet first — do they lead or follow?","2. Mouth second — how many commands before response?","3. Leash third — tight because dog pulled or handler didn't move?","4. Dog's face — where are they looking? Arousal at baseline?","5. What did they do FIRST when the dog broke?"].forEach((step,i)=>{
-    pf.appendChild(h("div",{style:{fontSize:"13px",color:i===4?"#7EAEC4":"#a09e96",lineHeight:"1.6",marginBottom:"2px"}},step));
-  });
-  pf.appendChild(h("div",{style:{fontSize:"14px",color:"#5a5a55",marginTop:"6px",fontStyle:"italic"}},'"Show me what a normal moment looks like for you two." Two minutes. No coaching. No correction.'));
-  wrap.appendChild(pf);
-
-  // ── Clients Needing Attention ──
-  const flags=[];
-  const now=new Date();
-  DATA.c.forEach(c=>{
-    const reasons=[];
-    // Compass drop 2+
-    if(c.comp.length>=2){const last=cTotal(c.comp[c.comp.length-1]),prev=cTotal(c.comp[c.comp.length-2]);if(prev-last>=2)reasons.push("Compass dropped "+(prev-last)+" pts")}
-    // No session in 14+ days
-    if(c.sess.length>0){const lastDt=new Date([...c.sess].sort((a,b)=>b.dt.localeCompare(a.dt))[0].dt);const days=Math.floor((now-lastDt)/(1000*60*60*24));if(days>=14)reasons.push(days+" days since last session")}
-    else if(c.sess.length===0&&c.comp.length>0)reasons.push("No sessions logged yet");
-    // Recurring issues stacking
-    if(c.issues&&c.issues.length>=3)reasons.push(c.issues.length+" recurring issues");
-    // Struggling exercises
-    if(c.exAssign){const struggling=c.exAssign.filter(a=>a.status==="Struggling");if(struggling.length>0)reasons.push(struggling.length+" exercise"+(struggling.length>1?"s":"")+" struggling")}
-    if(reasons.length>0)flags.push({client:c,reasons});
-  });
-  if(flags.length>0){
-    const attn=h("div",{style:{background:"#282825",border:"1px solid #3a3a35",borderLeft:"3px solid #A05050",borderRadius:"8px",padding:"12px 14px",marginBottom:"14px"}});
-    attn.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"3px",color:"#A05050",fontWeight:"700",marginBottom:"8px",fontFamily:"'Cinzel',serif"}},"NEEDS ATTENTION · "+flags.length));
-    flags.forEach(f=>{
-      const row=h("div",{style:{padding:"6px 0",borderBottom:"1px solid #232321"}});
-      row.appendChild(h("div",{style:{fontSize:"15px",fontWeight:"600",color:"#F6F4F1"}},f.client.name||"Unnamed"));
-      f.reasons.forEach(r=>{row.appendChild(h("div",{style:{fontSize:"14px",color:"#A05050",marginTop:"1px"}},"⚠ "+r))});
-      attn.appendChild(row);
-    });
-    wrap.appendChild(attn);
-  }
-
-  // ── Profile Distribution ──
-  if(DATA.c.length>0){
-    const dist=h("div",{style:{background:"#282825",border:"1px solid #3a3a35",borderLeft:"3px solid #6F745C",borderRadius:"8px",padding:"12px 14px",marginBottom:"14px"}});
-    dist.appendChild(h("div",{style:{fontSize:"12px",letterSpacing:"3px",color:"#6F745C",fontWeight:"700",marginBottom:"8px",fontFamily:"'Cinzel',serif"}},"CASELOAD · "+DATA.c.length));
-    const tiers={entry:0,improved:0,attuned:0,unset:0};
-    const profCounts={};
-    DATA.c.forEach(c=>{
-      const p=c.prof||"";
-      if(p==="Attuned"){tiers.attuned++}
-      else if(p.startsWith("Imp.")){tiers.improved++}
-      else if(["Reactive","Rigid","Avoidant","Passive"].includes(p)){tiers.entry++}
-      else{tiers.unset++}
-      if(p){profCounts[p]=(profCounts[p]||0)+1}
-    });
-    const tierRow=h("div",{style:{display:"flex",gap:"6px",marginBottom:"8px"}});
-    [["Entry",tiers.entry,"#A09050"],["Improved",tiers.improved,"#6F745C"],["Attuned",tiers.attuned,"#6F745C"]].forEach(([lb,n,c])=>{
-      if(n===0)return;
-      const d=h("div",{style:{background:"#232321",borderRadius:"6px",padding:"6px 10px",textAlign:"center",flex:"1"}});
-      d.appendChild(h("div",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:c}},String(n)));
-      d.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55"}},lb));tierRow.appendChild(d);
-    });
-    if(tiers.unset>0){const d=h("div",{style:{background:"#232321",borderRadius:"6px",padding:"6px 10px",textAlign:"center",flex:"1"}});d.appendChild(h("div",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:"#5a5a55"}},String(tiers.unset)));d.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55"}},"Unset"));tierRow.appendChild(d)}
-    dist.appendChild(tierRow);
-    // Profile breakdown
-    const profList=Object.entries(profCounts).sort((a,b)=>b[1]-a[1]);
-    if(profList.length>0){
-      const pl=h("div",{style:{display:"flex",gap:"4px",flexWrap:"wrap"}});
-      profList.forEach(([p,n])=>{pl.appendChild(h("span",{style:{fontSize:"14px",color:"#a09e96",background:"#232321",borderRadius:"4px",padding:"2px 6px"}},p+" ×"+n))});
-      dist.appendChild(pl);
-    }
-    wrap.appendChild(dist);
-  }
-
-  // ── Client Cards (enhanced) ──
-  if(DATA.c.length===0)wrap.appendChild(h("div",{style:{textAlign:"center",color:"#5a5a55",padding:"30px 0",fontSize:"17px"}},"Add a client first."));
-  DATA.c.forEach(c=>{
-    const card=h("button",{style:{background:"#282825",border:"1px solid #3a3a35",borderRadius:"8px",padding:"12px 14px",marginBottom:"8px",cursor:"pointer",display:"flex",alignItems:"center",gap:"12px",width:"100%",textAlign:"left",fontFamily:"inherit"},onClick:()=>{AID=c.id;ED=mkEval();VW="eval";render()}});
-    const av=h("div",{className:"avatar",style:{width:"36px",height:"36px",fontSize:"14px"}},(c.name||"?")[0]?.toUpperCase());
-    card.appendChild(av);
-    const info=h("div",{style:{flex:"1",minWidth:"0"}});
-    info.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"600",color:"#F6F4F1"}},c.name||"Unnamed"));
-    // Second line: dog · profile
-    info.appendChild(h("div",{style:{fontSize:"12px",color:"#a09e96"}},`${c.dog||"—"} · ${c.prof||"No profile"}`));
-    // Third line: compass + trend + last session
-    const meta=[];
-    if(c.comp.length>0){
-      const lc=c.comp[c.comp.length-1],t=cTotal(lc);
-      let trend="";
-      if(c.comp.length>=2){const prev=cTotal(c.comp[c.comp.length-2]);trend=t>prev?" ↑":t<prev?" ↓":" →"}
-      meta.push(t+"/25"+trend);
-    }
-    if(c.sess.length>0){
-      const lastS=[...c.sess].sort((a,b)=>b.dt.localeCompare(a.dt))[0];
-      meta.push("Last: "+lastS.dt);
-    }else{meta.push("No sessions")}
-    if(meta.length>0)info.appendChild(h("div",{style:{fontSize:"14px",color:"#5a5a55",marginTop:"2px"}},meta.join(" · ")));
-    card.appendChild(info);
-    // Compass score badge on right
-    if(c.comp.length>0){
-      const t=cTotal(c.comp[c.comp.length-1]);
-      const badge=h("div",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:sc(t,25),flexShrink:"0"}});
-      badge.textContent=t;card.appendChild(badge);
-    }
-    wrap.appendChild(card);
-  });
-  app.appendChild(wrap);
-}
-
-function renderEval(app){
-  const cl=getCl();
-  app.appendChild(topBar(backBtn("← Back",()=>{ED=null;VW="list";render()}),"HANDLER INDEX™ EVAL",btnEl("Save",true,()=>{
-    if(ED.sig.d)cl.sig=ED.sig;if(ED.prof)cl.prof=ED.prof;
-    cl.comp.push({id:uid(),cp:"Intake",dt:ED.dt,...ED.comp});
-    updCl(cl);ED=null;TAB="clients";VW="detail";render();
-  })));
-  const w=h("div",{style:{padding:"0 16px"}});
-  w.appendChild(field("Date",ED.dt,v=>{ED.dt=v},{type:"date",style:{marginBottom:"22px"}}));
-
-  // Phase 1
-  const p1=[];
-  p1.push(h("div",{style:{fontSize:"14px",color:"#a09e96",marginBottom:"10px",fontStyle:"italic"}},'"Show me what a normal moment looks like for you two."'));
-  [["SPATIAL — Feet: lead or follow?","feet"],["VERBAL — Commands before response?","mouth"],["LEASH — Tight from dog or handler?","leash"],["DOG — Where looking? Baseline arousal?","face"],["First thing when dog broke?","brk"]].forEach(([lb,k])=>{
-    const d=h("div",{style:{marginBottom:"16px"}});d.appendChild(h("label",{style:{fontSize:"14px",letterSpacing:"1px",color:"#a09e96"}},lb));
-    d.appendChild(tarea(ED.p1[k],v=>{ED.p1[k]=v}));p1.push(d);
-  });
-  const bfDiv=h("div",{style:{display:"flex",gap:"4px",alignItems:"center",flexWrap:"wrap",marginBottom:"8px"}});
-  bfDiv.appendChild(h("span",{style:{fontSize:"14px",color:"#a09e96"}},"Body before mouth?"));
-  ["Yes","No","Simul."].forEach(o=>{const b=h("button",{className:"badge"+(ED.p1.bodyFirst===o?" on":""),onClick:()=>{ED.p1.bodyFirst=o;render()}},o);if(ED.p1.bodyFirst===o){b.style.borderColor="#7EAEC4";b.style.background="#7EAEC420";b.style.color="#7EAEC4"}bfDiv.appendChild(b)});
-  p1.push(bfDiv);
-  p1.push(scoreRow("Arous.",ED.p1.arousal,v=>{ED.p1.arousal=v;render()}));
-  const hypD=h("div",{style:{marginTop:"8px"}});hypD.appendChild(h("label",{style:{fontSize:"14px",letterSpacing:"1px",color:"#a09e96"}},"Signature hypothesis"));hypD.appendChild(tarea(ED.p1.hyp,v=>{ED.p1.hyp=v},"What are you seeing?"));p1.push(hypD);
-  w.appendChild(sec("PHASE 1 — DEMONSTRATION","#7EAEC4",p1));
-
-  // Phase 2
-  const p2=[];
-  p2.push(h("div",{style:{fontSize:"14px",color:"#a09e96",marginBottom:"8px",fontStyle:"italic"}},'"Tell me about your dog."'));
-  p2.push(badges(["Stats","Emotional","Problem"],ED.p2.dir,v=>{ED.p2.dir=v;render()},"#7EAEC4"));
-  const p2n=h("div",{style:{marginTop:"8px"}});p2n.appendChild(tarea(ED.p2.notes,v=>{ED.p2.notes=v},"Notes"));p2.push(p2n);
-  w.appendChild(sec("PHASE 2 — CONVERSATION","#7EAEC4",p2));
-
-  // Signature Result
-  const sigKids=[];
-  [["d","DOMINANT","#6F745C"],["b","BLIND","#A09050"],["g","GHOST","#A05050"]].forEach(([k,lb,c])=>{
-    const d=h("div",{style:{marginBottom:"16px"}});d.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"2px",color:c,marginBottom:"4px",textTransform:"uppercase"}},lb));
-    d.appendChild(badges(CH,ED.sig[k],v=>{ED.sig[k]=v;render()},c));sigKids.push(d);
-  });
-  w.appendChild(sec("SIGNATURE RESULT","#6F745C",sigKids));
-
-  // Compass Projection
-  const tot=cTotal(ED.comp);
-  const compKids=[];const scores=h("div",{style:{display:"flex",flexDirection:"column",gap:"8px"}});
-  CK.forEach(k=>{scores.appendChild(scoreRow(k,ED.comp[k],v=>{ED.comp[k]=v;render()}))});compKids.push(scores);
-  w.appendChild(sec(`COMPASS — ${tot}/25`,sc(tot,25),compKids));
-
-  // Profile
-  w.appendChild(sec("PROFILE","#6F745C",[profileSelect(ED.prof,v=>{ED.prof=v;render()})]));
-  app.appendChild(w);
-}
-
-// ── EXERCISE BANK ──
-function renderExerciseBank(app){
-  const cl=getCl();
-  if(!cl.exAssign)cl.exAssign=[];
-  app.appendChild(topBar(backBtn("← Back",()=>{VW="detail";render()}),"EXERCISE BANK",h("div")));
-  const w=h("div",{style:{padding:"0 16px"}});
-
-  // Determine which channels to highlight based on client signature
-  const blindCh=cl.sig.b||"";const ghostCh=cl.sig.g||"";
-
-  // Group exercises by category
-  const cats=["Single-Channel","Progressive","Integration"];
-  cats.forEach(cat=>{
-    const exInCat=EXERCISES.filter(ex=>ex.cat===cat);
-    if(exInCat.length===0)return;
-    const catLabel=cat==="Single-Channel"?"SINGLE-CHANNEL FOUNDATIONS":cat==="Progressive"?"PROGRESSIVE":"INTEGRATION";
-    w.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#6F745C",marginTop:"16px",marginBottom:"8px",fontFamily:"'Cinzel',serif"}},catLabel));
-
-    exInCat.forEach(ex=>{
-      // Check if exercise matches client's blind/ghost channel
-      const matchesBlind=blindCh&&(ex.dom.includes(blindCh)||ex.removed.includes(blindCh));
-      const matchesGhost=ghostCh&&(ex.dom.includes(ghostCh)||ex.removed.includes(ghostCh));
-      const highlighted=matchesBlind||matchesGhost;
-
-      // Check if already assigned
-      const existing=cl.exAssign.find(a=>a.exId===ex.id);
-      const card=h("div",{style:{background:"#282825",border:`1px solid ${highlighted?"#6F745C":"#3a3a35"}`,borderLeft:`3px solid ${highlighted?"#6F745C":"#3a3a35"}`,borderRadius:"8px",padding:"12px 14px",marginBottom:"8px"}});
-
-      // Header row
-      const hdr=h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"6px",cursor:"pointer"}});
-      const nameCol=h("div");
-      nameCol.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"600",color:"#F6F4F1"}},ex.name));
-      const tags=h("div",{style:{display:"flex",gap:"4px",marginTop:"3px",flexWrap:"wrap"}});
-      tags.appendChild(h("span",{style:{fontSize:"9px",padding:"2px 6px",borderRadius:"3px",background:"#232321",color:"#6F745C"}},ex.cat));
-      ex.compass.split(" · ").forEach(c=>{tags.appendChild(h("span",{style:{fontSize:"9px",padding:"2px 6px",borderRadius:"3px",background:"#232321",color:"#A09050"}},c))});
-      if(highlighted)tags.appendChild(h("span",{style:{fontSize:"9px",padding:"2px 6px",borderRadius:"3px",background:"rgba(111,116,92,.2)",color:"#8a8f74"}},matchesBlind?"Blind match":"Ghost match"));
-      nameCol.appendChild(tags);hdr.appendChild(nameCol);
-
-      // Status or assign button
-      if(existing){
-        const stDiv=h("div",{style:{textAlign:"right",flexShrink:"0"}});
-        const stColor=existing.status==="Struggling"?"#A05050":existing.status==="Consistent"?"#6F745C":existing.status==="In Progress"?"#A09050":"#a09e96";
-        stDiv.appendChild(h("div",{style:{fontSize:"10px",fontWeight:"600",color:stColor}},existing.status));
-        stDiv.appendChild(h("div",{style:{fontSize:"9px",color:"#5a5a55"}},existing.date));
-        hdr.appendChild(stDiv);
-      }
-      card.appendChild(hdr);
-
-      // Expandable detail — use a toggle
-      const detailId="exdet-"+ex.id;
-      const toggle=h("button",{style:{fontSize:"12px",color:"#a09e96",marginBottom:"6px",padding:"0",transition:"color .2s ease"},onClick:()=>{
-        const det=document.getElementById(detailId);
-        if(det){
-          if(det.style.maxHeight==="0px"||!det.style.maxHeight){
-            det.style.maxHeight=det.scrollHeight+"px";det.style.opacity="1";toggle.textContent="▾ Details";toggle.style.color="#6F745C";
-          }else{
-            det.style.maxHeight="0px";det.style.opacity="0";toggle.textContent="▸ Details";toggle.style.color="#a09e96";
-          }
-        }
-      }},"▸ Details");
-      card.appendChild(toggle);
-
-      const detail=h("div",{id:detailId,style:{maxHeight:"0px",opacity:"0",overflow:"hidden",transition:"max-height .3s ease,opacity .25s ease"}});
-      // Channel info
-      const chInfo=h("div",{style:{marginBottom:"16px"}});
-      [["Dominant",ex.dom],["Channel Removed",ex.removed]].forEach(([lb,val])=>{
-        const r=h("div",{style:{display:"flex",gap:"6px",marginBottom:"2px"}});
-        r.appendChild(h("span",{style:{fontSize:"10px",color:"#5a5a55",width:"90px",flexShrink:"0"}},lb));
-        r.appendChild(h("span",{style:{fontSize:"10px",color:lb==="Channel Removed"?"#A05050":"#a09e96"}},val));
-        chInfo.appendChild(r);
-      });
-      detail.appendChild(chInfo);
-
-      // Teaching content
-      detail.appendChild(h("div",{style:{fontSize:"12px",color:"#a09e96",lineHeight:"1.5",marginBottom:"8px",borderLeft:"2px solid #3a3a35",paddingLeft:"10px"}},ex.teach));
-
-      // Mechanic, Failure, Grows
-      [["PRIMARY MECHANIC",ex.mechanic,"#6F745C"],["FAILURE POINT",ex.failure,"#A05050"],["WHAT GROWS",ex.grows,"#7EAEC4"]].forEach(([lb,val,c])=>{
-        const d=h("div",{style:{marginBottom:"6px"}});
-        d.appendChild(h("div",{style:{fontSize:"9px",letterSpacing:"1px",color:c,fontFamily:"'Cinzel',serif"}},lb));
-        d.appendChild(h("div",{style:{fontSize:"11px",color:"#a09e96",lineHeight:"1.4"}},val));
-        detail.appendChild(d);
-      });
-
-      // Assignment section
-      const assignSec=h("div",{style:{borderTop:"1px solid #3a3a35",paddingTop:"8px",marginTop:"8px"}});
-      if(existing){
-        // Status dropdown
-        assignSec.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55",marginBottom:"4px"}},"UPDATE STATUS"));
-        const stWrap=h("div",{style:{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:"6px"}});
-        HW_STATUS.forEach(st=>{
-          const stColor=st==="Struggling"?"#A05050":st==="Consistent"?"#6F745C":st==="In Progress"?"#A09050":"#a09e96";
-          const b=h("button",{className:"badge"+(existing.status===st?" on":""),onClick:()=>{
-            existing.status=st;existing.lastUpdated=tdy();
-            // Struggling trigger
-            if(st==="Struggling"){
-              if(!cl.issues)cl.issues=[];
-              const issueText="Struggling: "+ex.name+" — "+ex.failure;
-              if(!cl.issues.find(x=>x.text===issueText)){cl.issues.push({text:issueText,date:tdy()})}
-            }
-            updCl(cl);render();
-          }},st);
-          if(existing.status===st){b.style.borderColor=stColor;b.style.background=stColor+"20";b.style.color=stColor}
-          stWrap.appendChild(b);
-        });
-        assignSec.appendChild(stWrap);
-        // Client-specific failure note
-        assignSec.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55",marginBottom:"4px"}},"FAILURE NOTE (this client)"));
-        const noteTA=h("textarea",{className:"ta",style:{minHeight:"40px",fontSize:"11px"},placeholder:"What are you seeing with this handler on this exercise?"});
-        noteTA.value=existing.note||"";
-        noteTA.addEventListener("input",e=>{existing.note=e.target.value});
-        noteTA.addEventListener("blur",()=>{updCl(cl)});
-        assignSec.appendChild(noteTA);
-        // Remove
-        assignSec.appendChild(h("button",{style:{fontSize:"10px",color:"#A05050",marginTop:"6px",padding:"4px 0"},onClick:()=>{
-          cl.exAssign=cl.exAssign.filter(a=>a.exId!==ex.id);
-          // Also remove from homework
-          if(cl.hw)cl.hw=cl.hw.filter(x=>!x.text.startsWith(ex.name));
-          updCl(cl);render();
-        }},"Remove assignment"));
-      }else{
-        // Assign button
-        const assignBtn=h("button",{className:"btn btn-f",style:{width:"100%"},onClick:()=>{
-          cl.exAssign.push({exId:ex.id,status:"Assigned",date:tdy(),lastUpdated:tdy(),note:""});
-          if(!cl.hw)cl.hw=[];
-          cl.hw.push({text:ex.name+" — "+ex.mechanic.split(".")[0]+".",date:tdy()});
-          updCl(cl);render();
-        }},"Assign to "+cl.name);
-        assignSec.appendChild(assignBtn);
-      }
-      detail.appendChild(assignSec);
-      card.appendChild(detail);
-      w.appendChild(card);
-    });
-  });
-
-  // Struggling slowdown reminders based on profile
-  const struggling=cl.exAssign.filter(a=>a.status==="Struggling");
-  if(struggling.length>0){
-    const prof=cl.prof||"";
-    const reminders=[];
-    if(prof.includes("Reactive"))reminders.push("Reactive handler struggling — slow down. Count to three before every rep. 3-4-5 breathing between exercises. Check internal state before continuing.");
-    if(prof.includes("Rigid")||prof.includes("Aversive"))reminders.push("Rigid handler struggling — check if corrections are landing or suppressing. Read the dog's face after every correction. Shutdown is not calm.");
-    if(prof.includes("Avoidant"))reminders.push("Avoidant handler struggling — they may be softening the exercise to avoid discomfort. The standard is the standard. Clarity is kindness.");
-    if(prof.includes("Passive"))reminders.push("Passive handler struggling — check if they're actually doing the reps or going through the motions. Eyes on the dog. One thing to watch per rep.");
-    if(prof==="Attuned")reminders.push("Attuned handler struggling — check for drift. Which channel slipped? Run the self-diagnostic.");
-    if(reminders.length===0&&prof)reminders.push("Handler struggling — pull the profile, check the blind channel. Regression usually lives there.");
-
-    const remCard=h("div",{style:{background:"#282825",border:"1px solid #A0505044",borderLeft:"3px solid #A05050",borderRadius:"8px",padding:"12px 14px",marginTop:"16px"}});
-    remCard.appendChild(h("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#A05050",fontWeight:"700",marginBottom:"6px",fontFamily:"'Cinzel',serif"}},"SLOW DOWN — "+struggling.length+" STRUGGLING"));
-    struggling.forEach(s=>{const ex=EXERCISES.find(x=>x.id===s.exId);if(ex)remCard.appendChild(h("div",{style:{fontSize:"12px",color:"#F6F4F1",marginBottom:"2px"}},"• "+ex.name))});
-    reminders.forEach(r=>{remCard.appendChild(h("div",{style:{fontSize:"11px",color:"#a09e96",lineHeight:"1.5",marginTop:"6px"}},r))});
-    w.appendChild(remCard);
-  }
-
-  app.appendChild(w);
-}
-
-// ── DOSSIER ──
-function renderDossier(app){
-  const cl=getCl();
-  app.appendChild(topBar(backBtn("← Back",()=>{VW="detail";render()}),"CLIENT DOSSIER",h("div")));
-
-  const w=h("div",{style:{padding:"0 16px"}});
-
-  // Client header
-  const hd=h("div",{style:{textAlign:"center",padding:"6px 0 16px",borderBottom:"1px solid #3a3a35",marginBottom:"16px"}});
-  hd.appendChild(h("div",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif"}},cl.name||"Unnamed"));
-  const meta=[];if(cl.dog)meta.push(cl.dog);if(cl.breed)meta.push(cl.breed);if(cl.age)meta.push(cl.age);
-  if(meta.length)hd.appendChild(h("div",{style:{fontSize:"13px",color:"#a09e96",marginTop:"2px"}},meta.join(" · ")));
-  if(cl.prof)hd.appendChild(h("div",{style:{fontSize:"12px",color:"#6F745C",marginTop:"4px"}},cl.prof));
-  if(cl.ctx)hd.appendChild(h("div",{style:{fontSize:"14px",color:"#7EAEC4",marginTop:"2px"}},cl.ctx));
-  // Signature summary
-  if(cl.sig.d||cl.sig.b||cl.sig.g){
-    const sigLine=[];
-    if(cl.sig.d)sigLine.push("Dom: "+cl.sig.d);if(cl.sig.b)sigLine.push("Blind: "+cl.sig.b);if(cl.sig.g)sigLine.push("Ghost: "+cl.sig.g);
-    hd.appendChild(h("div",{style:{fontSize:"14px",color:"#a09e96",marginTop:"4px"}},sigLine.join(" · ")));
-  }
-  // Latest compass
-  if(cl.comp.length>0){const lc=cl.comp[cl.comp.length-1];const t=cTotal(lc);
-    hd.appendChild(h("div",{style:{fontSize:"14px",color:sc(t,25),marginTop:"4px"}},"Compass: "+t+"/25 ("+lc.cp+" · "+lc.dt+")"));
-  }
-  w.appendChild(hd);
-
-  // ── Client Notes ──
-  if(cl.notes){
-    w.appendChild(sec("CLIENT NOTES","#6F745C",[h("div",{style:{fontSize:"14px",color:"#F6F4F1",whiteSpace:"pre-wrap",lineHeight:"1.6"}},cl.notes)]));
-  }
-
-  // ── Homework ──
-  if(cl.hw&&cl.hw.length>0){
-    const hwKids=(cl.hw||[]).map(hw=>{
-      const r=h("div",{style:{padding:"4px 0",borderBottom:"1px solid #232321",display:"flex",justifyContent:"space-between"}});
-      r.appendChild(h("span",{style:{fontSize:"13px",color:"#6F745C"}},hw.text));
-      r.appendChild(h("span",{style:{fontSize:"10px",color:"#5a5a55"}},hw.date));return r;
-    });
-    w.appendChild(sec("HOMEWORK · "+cl.hw.length,"#6F745C",hwKids));
-  }
-
-  // ── Recurring Issues ──
-  if(cl.issues&&cl.issues.length>0){
-    const riKids=(cl.issues||[]).map(ri=>{
-      const r=h("div",{style:{padding:"4px 0",borderBottom:"1px solid #232321",display:"flex",justifyContent:"space-between"}});
-      r.appendChild(h("span",{style:{fontSize:"13px",color:"#A09050"}},ri.text));
-      r.appendChild(h("span",{style:{fontSize:"10px",color:"#5a5a55"}},ri.date));return r;
-    });
-    w.appendChild(sec("RECURRING ISSUES · "+cl.issues.length,"#A09050",riKids));
-  }
-
-  // ── Compass History ──
-  if(cl.comp.length>0){
-    const compKids=cl.comp.map(ch=>{
-      const t=cTotal(ch);
-      const r=h("div",{style:{padding:"6px 0",borderBottom:"1px solid #232321"}});
-      const top=h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}});
-      top.appendChild(h("span",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:sc(t,25)}},String(t)));
-      top.appendChild(h("span",{style:{fontSize:"12px",color:"#a09e96"}},ch.cp+" · "+ch.dt));r.appendChild(top);
-      const cats=h("div",{style:{fontSize:"14px",color:"#5a5a55",marginTop:"2px"}});
-      cats.textContent="ER "+ch.ER+" · T "+ch.T+" · CC "+ch.CC+" · CO "+ch.CO+" · IN "+ch.IN;
-      r.appendChild(cats);return r;
-    });
-    w.appendChild(sec("COMPASS HISTORY · "+cl.comp.length,"#6F745C",compKids));
-  }
-
-  // ── All Sessions (full detail) ──
-  const allSess=[...(cl.sess||[])].sort((a,b)=>b.dt.localeCompare(a.dt));
-  if(allSess.length>0){
-    const sessKids=allSess.map((s,idx)=>{
-      const num=cl.sess.sort((a,b)=>a.dt.localeCompare(b.dt)).findIndex(x=>x.id===s.id)+1;
-      const card=h("div",{style:{background:"#232321",borderRadius:"6px",padding:"10px 12px",marginBottom:"8px",borderLeft:"3px solid "+(s.q===1?"#A05050":s.q===3?"#6F745C":"#A09050")}});
-      // Header row
-      const hdr=h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}});
-      hdr.appendChild(h("span",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:"#6F745C"}},"SESSION #"+num));
-      const metaR=h("span",{style:{fontSize:"10px",color:"#5a5a55"}});
-      const qLabel=s.q===1?"Rough":s.q===3?"Locked In":"Okay";
-      metaR.textContent=s.dt+" · "+qLabel;
-      hdr.appendChild(metaR);card.appendChild(hdr);
-      // Focus
-      if(s.focus)card.appendChild(h("div",{style:{fontSize:"14px",color:"#F6F4F1",marginBottom:"4px"}},s.focus));
-      // Tags
-      const tags=[];if(s.prof)tags.push(s.prof);if(s.ch)tags.push(s.ch);if(s.stage)tags.push(s.stage);
-      if(tags.length)card.appendChild(h("div",{style:{fontSize:"14px",color:"#a09e96",marginBottom:"4px"}},tags.join(" · ")));
-      // Notes
-      if(s.notes)card.appendChild(h("div",{style:{fontSize:"13px",color:"#a09e96",whiteSpace:"pre-wrap",lineHeight:"1.5",borderTop:"1px solid #3a3a35",paddingTop:"6px",marginTop:"4px"}},s.notes));
-      return card;
-    });
-    w.appendChild(sec("ALL SESSIONS · "+allSess.length,"#a09e96",sessKids));
-  }else{
-    w.appendChild(sec("SESSIONS","#a09e96",[h("div",{style:{fontSize:"13px",color:"#5a5a55"}},"No sessions logged yet.")]));
-  }
-
-  app.appendChild(w);
-}
-
-// ── STATES ──
-function renderStates(app){
-  const hdr=h("div",{className:"hdr"});hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
-  const t=h("div",{className:"ttl"});t.textContent="FIVE-STATE MAP™";hdr.appendChild(t);app.appendChild(hdr);
-  const wrap=h("div",{style:{padding:"8px 16px"}});
-  STATES.forEach(s=>{
-    const card=h("div",{style:{background:"#282825",border:"1px solid #3a3a35",borderLeft:`3px solid ${s.c}`,borderRadius:"8px",padding:"10px 14px",marginBottom:"8px"}});
-    const top=h("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}});
-    top.appendChild(h("span",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:s.c}},String(s.n)));
-    const info=h("div");info.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"600"}},s.nm));info.appendChild(h("div",{style:{fontSize:"14px",color:s.c}},s.sh));
-    top.appendChild(info);card.appendChild(top);
-    card.appendChild(h("div",{style:{fontSize:"13px",color:"#a09e96",lineHeight:"1.5",marginBottom:"4px"}},s.desc));
-    card.appendChild(h("div",{style:{fontSize:"10px",color:"#5a5a55"}},s.mk));wrap.appendChild(card);
-  });
-  wrap.appendChild(h("div",{style:{fontSize:"14px",color:"#5a5a55",textAlign:"center",marginTop:"8px"}},"State 3 is the fulcrum. Everything before it is reading. Everything after it is recovery."));
-  app.appendChild(wrap);
-}
-
-// ── REFERENCE ──
-function renderReference(app){
-  const hdr=h("div",{className:"hdr"});hdr.appendChild(h("div",{className:"sub"},"STEADY HAND RaD™"));
-  hdr.appendChild(h("div",{className:"ttl"},"REFERENCE"));app.appendChild(hdr);
-  const wrap=h("div",{style:{padding:"8px 16px"}});
-  const rc=(title,color,children)=>{const c=h("div",{style:{background:"#282825",border:"1px solid #3a3a35",borderLeft:"3px solid "+color,borderRadius:"8px",padding:"12px 14px",marginBottom:"8px"}});const t=h("div",{style:{fontSize:"12px",letterSpacing:"3px",textTransform:"uppercase",color,marginBottom:"8px",fontWeight:"700",fontFamily:"'Cinzel',serif"}},title);c.appendChild(t);if(Array.isArray(children))children.forEach(x=>{if(x)c.appendChild(x)});else if(children)c.appendChild(children);return c};
-
-  // Compass
-  wrap.appendChild(rc("COMPASS","#6F745C",[
-    h("div",{style:{fontSize:"14px",color:"#F6F4F1",lineHeight:"1.5"}},"ER — Emotional Regulation\nT — Timing & Pacing\nCC — Correction Confidence\nCO — Consistency\nIN — Intentionality"),
-    h("div",{style:{fontSize:"14px",color:"#5a5a55",marginTop:"6px"}},"Each 1–5. Total /25. Tracked Intake → Day 25 → Day 60 → Day 84.")
-  ]));
-
-  // Profiles
-  const profCard=rc("PROFILES","#6F745C",[]);
-  [["Reactive","Dom: Verbal/Spatial · Blind: Internal · Ghost: Environmental","6–10"],["Rigid","Dom: Spatial · Blind: Timing · Ghost: Internal (attunement)","14–19"],["Avoidant","Dom: Verbal · Blind: Internal · Ghost: Spatial","8–13"],["Passive","Dom: Verbal · Blind: Spatial · Ghost: Environmental","7–11"]].forEach(([p,sig,r])=>{
-    const d=h("div",{style:{background:"#232321",borderRadius:"6px",padding:"8px 10px",marginBottom:"6px"}});
-    d.appendChild(h("div",{style:{fontSize:"15px",fontWeight:"600",color:"#F6F4F1"}},p+" ("+r+"/25)"));
-    d.appendChild(h("div",{style:{fontSize:"13px",color:"#a09e96",marginTop:"2px"}},sig));profCard.appendChild(d);
-  });
-  profCard.appendChild(h("div",{style:{fontSize:"14px",color:"#5a5a55",marginTop:"4px"}},"Entry → Improved → Attuned"));
-  wrap.appendChild(profCard);
-
-  // Channels
-  wrap.appendChild(rc("FOUR PRESSURE CHANNELS™","#6F745C",[
-    h("div",{style:{fontSize:"14px",color:"#F6F4F1",fontWeight:"600"}},"Spatial · Verbal · Environmental · Internal"),
-    h("div",{style:{fontSize:"13px",color:"#a09e96",marginTop:"6px",lineHeight:"1.5"}},"Pressure is not correction. Pressure is not force. Pressure is constant. You are adding to the load or stabilizing it. There is no neutral.")
-  ]));
-
-  // Diagnostics
-  wrap.appendChild(rc("DIAGNOSTICS","#A09050",[
-    h("div",{style:{fontSize:"14px",color:"#F6F4F1",lineHeight:"1.6"}},"Blind = friction when named.\nGhost = blankness when named.\nThe reaction is the diagnostic."),
-    h("div",{style:{fontSize:"13px",color:"#a09e96",marginTop:"8px",lineHeight:"1.5"}},"Do not introduce the ghost channel by correcting it. Introduce it. They need vocabulary before reps."),
-    h("div",{style:{fontSize:"13px",color:"#a09e96",marginTop:"6px",lineHeight:"1.5"}},"The client never sees the full diagnostic. The diagnostic belongs to the trainer. The direction belongs to both of them.")
-  ]));
-
-  // Arc Patterns
-  const patCard=rc("ARC PATTERNS","#6F745C",[]);
-  [["Recovery ↑ + Check-ins ↑","Stay the course. Depth is building."],["Recovery ↓ + High State ↑","Environment ahead of foundation. Pull back. Run the Reset."],["Compass ↓ + Profile shifting","Handler regression. Check Emotional Spillover. Breathing Reset."],["Flat 3+ sessions","Plateau. Week 5–8 territory. Normal. You're building depth. Hold."],["Recovery ↑ but Check-ins ↓","Compliance without connection. Add enrichment. Relationship work."],["Check-ins ↑ but Recovery ↓","Attention without commitment. Deepen commitment. More proofing."]].forEach(([p,m])=>{
-    const d=h("div",{style:{marginBottom:"6px"}});
-    d.appendChild(h("div",{style:{fontSize:"20px",fontWeight:"700",fontFamily:"'Cinzel',serif",fontFamily:"'Cinzel',serif",color:"#6F745C"}},p));
-    d.appendChild(h("div",{style:{fontSize:"14px",color:"#a09e96",marginTop:"1px"}},m));patCard.appendChild(d);
-  });
-  wrap.appendChild(patCard);
-
-  app.appendChild(wrap);
-}
-
-// ═══════ BOOT ═══════
-load();
+function toggleAcc(id,el){const body=document.getElementById(“body-”+id),chev=document.getElementById(“chev-”+id);if(!body||!chev)return;if(body.classList.contains(“open”)){body.classList.remove(“open”);chev.style.transform=””;el.classList.remove(“open”);openCards.delete(id);}else{body.classList.add(“open”);chev.style.transform=“rotate(180deg)”;el.classList.add(“open”);openCards.add(id);if(!activeTab[id])activeTab[id]=“overview”;renderTab(id,activeTab[id]);}}
+function switchTab(id,tab){activeTab[id]=tab;document.querySelectorAll(`[data-tg="${id}"]`).forEach(b=>b.classList.toggle(“active”,b.dataset.tab===tab));document.querySelectorAll(`[data-pg="${id}"]`).forEach(p=>p.classList.toggle(“active”,p.dataset.pane===tab));renderTab(id,tab);}
+function renderTab(id,tab){const pane=document.querySelector(`[data-pg="${id}"][data-pane="${tab}"]`);if(!pane)return;const c=gc(id);if(!c)return;if(tab===“overview”)pane.innerHTML=tOverview(c);if(tab===“compass”)pane.innerHTML=tCompass(c);if(tab===“sessions”)pane.innerHTML=tSessions(c);if(tab===“issues”)pane.innerHTML=tIssues(c);if(tab===“dossier”)pane.innerHTML=tDossier(c);}
+function buildAccCard(c){const sig=c.signature,latest=c.compass[c.compass.length-1],total=latest?ct(latest):null,p=total!==null?total/CMAX:null,bc=p===null?“var(–border)”:pcol(Math.round(p*100));const sigP=[[“D”,sig.dominant,“var(–gold)”],[“B”,sig.blind,“var(–red)”],[“G”,sig.ghost,“var(–muted)”]].map(([a,ch,c2])=>ch?`<span style="font-size:11px;padding:2px 8px;border-radius:8px;border:1px solid ${c2}33;color:${c2};background:${c2}11">${a}:${ch}</span>`:””).join(””);const cbar=total!==null?`<div class="row jb mb6" style="font-size:11px"><span style="color:var(--muted)">Compass · ${latest.checkpoint}</span><span style="font-family:var(--fm);color:${bc}">${total}/${CMAX}</span></div><div class="pbar"><div class="pbar-fill" style="width:${p*100}%;background:${bc}"></div></div>`:`<div style="font-size:11px;color:var(--border);font-style:italic">No compass scored yet</div>`;const profBadge=c.profile?`<span style="font-size:11px;background:var(--olive);color:var(--cream);padding:2px 9px;border-radius:10px">${c.profile}</span>`:””;const sessLine=c.sessions.length>0?`<div class="mt6" style="font-size:11px;color:var(--muted)">${c.sessions.length} session${c.sessions.length!==1?"s":""} · Last: ${c.sessions[c.sessions.length-1]?.date||"—"}</div>`:””;const TABS=[{k:“overview”,l:“Overview”},{k:“compass”,l:“Compass”},{k:“sessions”,l:“Sessions”},{k:“issues”,l:“Issues”},{k:“dossier”,l:“Dossier”}];return`<div class="acc-card fu" id="acc-${c.id}"><div class="acc-header" onclick="toggleAcc('${c.id}',document.getElementById('acc-${c.id}'))"><div class="row jb mb8"><div style="flex:1;min-width:0"><div class="row" style="gap:6px"><span style="font-family:var(--fd);font-size:15px;color:var(--cream);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)||"Unnamed Handler"}</span><span id="chev-${c.id}" class="acc-chev">▾</span></div><div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(c.dog)||"No dog"}${c.breed?" · "+esc(c.breed):""}</div></div><div class="row gap8" style="flex-shrink:0;margin-left:10px">${profBadge}<button onclick="event.stopPropagation();deleteClient('${c.id}')" style="color:var(--border);font-size:18px;line-height:1;padding:0 4px">×</button></div></div>${sigP?`<div class="row gap6 wrap mb8">${sigP}</div>`:""}${cbar}${sessLine}</div><div class="acc-body" id="body-${c.id}"><div class="tab-bar">${TABS.map(t=>`<button class=“tab-btn${t.k===“overview”?” active”:””}” data-tg=”${c.id}” data-tab=”${t.k}” onclick=“switchTab(’${c.id}’,’${t.k}’)”>${t.l}${t.k===“sessions”&&c.sessions.length>0?`<span class="badge">${c.sessions.length}</span>`:””}</button>`).join("")}</div>${TABS.map(t=>`<div class=“tab-pane${t.k===“overview”?” active”:””}” data-pg=”${c.id}” data-pane=”${t.k}”></div>`).join("")}</div></div>`;}
+function tOverview(c){const profOpts=PROFILES.map(p=>`<option value="${p}"${c.profile===p?" selected":""}>${p}</option>`).join(””);const latest=c.compass[c.compass.length-1];let snap=””;if(latest){const tot=ct(latest),p=tot/CMAX,cl=pcol(Math.round(p*100));snap=`<div class="card mt10"><div class="st">Latest Compass — ${latest.checkpoint}</div><div class="row gap10 mb10">${ring(tot,CMAX,54)}<div><div class="lbl">Score</div><div style="font-family:var(--fm);font-size:19px;color:var(--gold)">${tot}<span style="font-size:11px;color:var(--muted)">/${CMAX}</span></div></div>${c.compass.length>1?`<div style="margin-left:auto">${spark(c.compass)}</div>`:""}</div>${COMPASS.map(({key,label})=>`<div class="mb8"><div class="row jb"><span style="font-family:var(--fm);font-size:10px;color:var(--gold);width:24px">${key}</span><span style="font-size:11px;color:var(--muted);flex:1;padding:0 8px">${label}</span><span style="font-family:var(--fm);font-size:10px;color:var(--muted)">${latest[key]}</span></div><div class="pbar mt6"><div class="pbar-fill" style="width:${latest[key]/5*100}%;background:var(--olive)"></div></div></div>`).join("")}</div>`;}return`<div class="card mb10"><div class="st">Handler & Dog</div><div class="g2"><div><div class="lbl">Handler Name</div><input value="${esc(c.name)}" oninput="pf('${c.id}','name',this.value)"></div><div><div class="lbl">Dog Name</div><input value="${esc(c.dog)}" oninput="pf('${c.id}','dog',this.value)"></div><div><div class="lbl">Breed</div><input value="${esc(c.breed)}" oninput="pf('${c.id}','breed',this.value)"></div><div><div class="lbl">Handler Age</div><input value="${esc(c.age)}" oninput="pf('${c.id}','age',this.value)"></div></div></div><div class="card mb10 mt10"><div class="st">Handler Signature™</div>${chPills(c.id,"dominant",c.signature.dominant,"Dominant")}${chPills(c.id,"blind",c.signature.blind,"Blind")}${chPills(c.id,"ghost",c.signature.ghost,"Ghost")}</div><div class="card mb10"><div class="st">Handler Profile</div><div class="lbl">Profile Assignment</div><select onchange="pf('${c.id}','profile',this.value)" style="margin-bottom:${c.profile?10:0}px"><option value="">— Unassigned —</option>${profOpts}</select>${c.profile?`<div style="font-size:12px;color:var(--muted);font-style:italic;line-height:1.65;border-top:1px solid var(--border);padding-top:10px;margin-top:2px">${PNOTES[c.profile]}</div>`:""}</div>${snap}<div class="card mt10"><div class="st">Field Notes</div><textarea oninput="pf('${c.id}','notes',this.value)" placeholder="Observations, patterns, context…" rows="4">${esc(c.notes)}</textarea></div>`;}
+function chPills(id,field,val,label){return`<div class="mb10"><div class="lbl">${label}</div><div class="row gap6 wrap">${["","Spatial","Verbal","Environmental","Internal"].map(ch=>`<button class=“pill${val===ch?” active”:””}” onclick=“pSig(’${id}’,’${field}’,’${ch}’)”>${ch||”—”}</button>`).join("")}</div></div>`;}
+function pf(id,field,value){const c=gc(id);if(!c)return;c[field]=value;sc(c);refreshHdr(c);}
+function pSig(id,field,value){const c=gc(id);if(!c)return;c.signature[field]=value;sc(c);renderTab(id,“overview”);refreshHdr(c);}
+function refreshHdr(c){const card=document.getElementById(“acc-”+c.id);if(!card)return;const sig=c.signature,latest=c.compass[c.compass.length-1],total=latest?ct(latest):null,p=total!==null?total/CMAX:null,bc=p===null?“var(–border)”:pcol(Math.round(p*100));const sigP=[[“D”,sig.dominant,“var(–gold)”],[“B”,sig.blind,“var(–red)”],[“G”,sig.ghost,“var(–muted)”]].map(([a,ch,c2])=>ch?`<span style="font-size:11px;padding:2px 8px;border-radius:8px;border:1px solid ${c2}33;color:${c2};background:${c2}11">${a}:${ch}</span>`:””).join(””);const cbar=total!==null?`<div class="row jb mb6" style="font-size:11px"><span style="color:var(--muted)">Compass · ${latest.checkpoint}</span><span style="font-family:var(--fm);color:${bc}">${total}/${CMAX}</span></div><div class="pbar"><div class="pbar-fill" style="width:${p*100}%;background:${bc}"></div></div>`:`<div style="font-size:11px;color:var(--border);font-style:italic">No compass scored yet</div>`;const profBadge=c.profile?`<span style="font-size:11px;background:var(--olive);color:var(--cream);padding:2px 9px;border-radius:10px">${c.profile}</span>`:””;const sessLine=c.sessions.length>0?`<div class="mt6" style="font-size:11px;color:var(--muted)">${c.sessions.length} session${c.sessions.length!==1?"s":""} · Last: ${c.sessions[c.sessions.length-1]?.date||"—"}</div>`:””;const isOpen=document.getElementById(“body-”+c.id)?.classList.contains(“open”);const h=card.querySelector(”.acc-header”);if(!h)return;h.innerHTML=`<div class="row jb mb8"><div style="flex:1;min-width:0"><div class="row" style="gap:6px"><span style="font-family:var(--fd);font-size:15px;color:var(--cream);letter-spacing:.04em">${esc(c.name)||"Unnamed Handler"}</span><span id="chev-${c.id}" class="acc-chev" style="transform:${isOpen?"rotate(180deg)":""}">▾</span></div><div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(c.dog)||"No dog"}${c.breed?" · "+esc(c.breed):""}</div></div><div class="row gap8" style="flex-shrink:0;margin-left:10px">${profBadge}<button onclick="event.stopPropagation();deleteClient('${c.id}')" style="color:var(--border);font-size:18px;line-height:1;padding:0 4px">×</button></div></div>${sigP?`<div class="row gap6 wrap mb8">${sigP}</div>`:""}${cbar}${sessLine}`;}
+function tCompass(c){const hist=[…c.compass].reverse().map(e=>{const tot=ct(e),p=tot/CMAX,cl=pcol(Math.round(p*100));return`<div class="row gap10" style="padding:10px 0;border-bottom:1px solid var(--border)">${ring(tot,CMAX,44)}<div style="flex:1"><div style="font-family:var(--fd);font-size:12px;color:var(--gold)">${e.checkpoint}</div><div style="font-size:10px;color:var(--muted)">${e.date}</div></div><div class="row gap8">${COMPASS.map(({key})=>`<div style="text-align:center"><div style="font-size:8px;color:var(--muted)">${key}</div><div style=“font-family:var(–fm);font-size:11px;color:${e[key]>=4?“var(–green)”:e[key]>=2?“var(–gold)”:“var(–red)”}”>${e[key]}</div></div>`).join("")}</div><button class="btn btn-danger btn-sm" onclick="delCompass('${c.id}','${e.id}')">×</button></div>`;}).join(””);return`<div class="card mb10"><div class="st">New Entry</div><div class="row gap6 wrap">${CHECKPOINTS.map(cp=>`<button class="btn btn-ghost btn-sm" onclick="openCF('${c.id}','${cp}')">${cp}</button>`).join("")}</div></div><div id="cf-${c.id}"></div>${c.compass.length>0?`<div class="card">${c.compass.length>1?`<div class="row jb mb10"><div class="st" style="margin:0">Arc</div>${spark(c.compass)}</div>`:`<div class="st">History</div>`}${hist}</div>`:""}`;};
+function openCF(cid,cp){document.getElementById(“cf-”+cid).innerHTML=`<div class="card glow mb10 fi"><div class="st">Scoring — ${cp}</div><div class="mb10"><div class="lbl">Date</div><input type="date" id="cfd-${cid}" value="${now()}"></div>${COMPASS.map(({key,label,low,high})=>`<div class="mb12"><div class="row jb"><span class="lbl" style="margin:0">${label}</span><span style="font-family:var(--fm);font-size:11px;color:var(--gold)" id="cfv-${cid}-${key}">1/5</span></div><input type="range" min="1" max="5" value="1" oninput="cfU('${cid}');document.getElementById('cfv-${cid}-${key}').textContent=this.value+'/5'" id="cf-${cid}-${key}"><div class="row jb mt6" style="font-size:10px;color:var(--muted)"><span>${low}</span><span>${high}</span></div></div>`).join("")}<div class="row jb mt8"><span style="font-family:var(--fm);font-size:12px;color:var(--muted)">Total: <span style="color:var(--gold)" id="cft-${cid}">${COMPASS.length}/${CMAX}</span></span><div class="row gap8"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('cf-${cid}').innerHTML=''">Cancel</button><button class="btn btn-gold btn-sm" onclick="saveCF('${cid}','${cp}')">Save</button></div></div></div>`;}
+function cfU(cid){const tot=COMPASS.reduce((a,{key})=>a+parseInt(document.getElementById(“cf-”+cid+”-”+key).value||1),0);document.getElementById(“cft-”+cid).textContent=tot+”/”+CMAX;}
+function saveCF(cid,cp){const c=gc(cid);const e={id:uid(),checkpoint:cp,date:document.getElementById(“cfd-”+cid).value};COMPASS.forEach(({key})=>{e[key]=parseInt(document.getElementById(“cf-”+cid+”-”+key).value||1);});c.compass.push(e);sc(c);renderTab(cid,“compass”);refreshHdr(c);}
+function delCompass(cid,eid){if(!confirm(“Delete?”))return;const c=gc(cid);c.compass=c.compass.filter(e=>e.id!==eid);sc(c);renderTab(cid,“compass”);}
+function tSessions(c){const rows=[…c.sessions].reverse().map(s=>{const stars=[1,2,3,4,5].map(n=>`<span style="color:${n<=s.quality?"var(--gold)":"var(--border)"}">★</span>`).join(””);return`<div class="card mb10 fi"><div class="row jb mb8"><div class="row wrap gap6"><span style="font-family:var(--fd);font-size:12px;color:var(--gold)">Session #${s.num}</span><span style="font-size:10px;color:var(--muted)">${s.date}</span>${s.channel?`<span style="font-size:10px;background:var(--border);color:var(--olive);padding:2px 7px;border-radius:10px">${s.channel}</span>`:""}</div><div class="row gap6"><span style="font-size:14px">${stars}</span><button class="btn btn-danger btn-sm" onclick="delSess('${c.id}','${s.id}')">×</button></div></div>${s.focus?`<div style="font-size:13px;margin-bottom:8px">${esc(s.focus)}</div>`:""}${s.notes?`<div class="lbl">Notes</div><div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:8px">${esc(s.notes)}</div>`:""}${s.homework?`<div style="background:var(--bg);border-radius:4px;padding:8px 12px;border-left:2px solid var(--gold)"><div class="lbl">Homework</div><div style="font-size:12px;line-height:1.7">${esc(s.homework)}</div></div>`:""}</div>`;}).join(””);return`<div class="row jb mb10"><div class="st" style="margin:0">Session Log</div><button class="btn btn-gold btn-sm" onclick="openSF('${c.id}')">+ New Session</button></div><div id="sf-${c.id}"></div>${rows||`<div style="text-align:center;color:var(--muted);font-size:12px;padding:30px 0">No sessions logged yet.</div>`}`;}
+function openSF(cid){const c=gc(cid);const num=c.sessions.length+1;document.getElementById(“sf-”+cid).innerHTML=`<div class="card glow mb10 fi"><div class="st">Session #${num}</div><div class="g2 mb10"><div><div class="lbl">Date</div><input type="date" id="sfd-${cid}" value="${now()}"></div><div><div class="lbl">Quality</div><div class="row gap4 mt8" id="sfst-${cid}">${[1,2,3,4,5].map(n=>`<span class=“star${n<=3?” on”:””}” data-n=”${n}” onclick=“rateSess(${n},’${cid}’)”>★</span>`).join("")}</div></div></div><div class="mb10"><div class="lbl">Focus</div><input id="sff-${cid}" placeholder="What was the primary focus?"></div><div class="mb10"><div class="lbl">Channel This Session</div><div class="row gap6 wrap" id="sfch-${cid}">${["","Spatial","Verbal","Environmental","Internal"].map(ch=>`<button class="pill" data-ch="${ch}" onclick="selCh(this,'${cid}')">${ch||”—”}</button>`).join("")}</div></div><div class="mb10"><div class="lbl">Session Notes</div><textarea id="sfn-${cid}" placeholder="What did you see? What fired first?"></textarea></div><div class="mb10"><div class="lbl">Homework Assigned</div><textarea id="sfh-${cid}" rows="2" placeholder="What are they doing before next session?"></textarea></div><div class="row gap8" style="justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('sf-${cid}').innerHTML=''">Cancel</button><button class="btn btn-gold btn-sm" onclick="saveSess('${cid}',${num})">Save Session</button></div></div>`;}
+function rateSess(n,cid){document.querySelectorAll(`#sfst-${cid} .star`).forEach(s=>s.classList.toggle(“on”,+s.dataset.n<=n));}
+function selCh(btn,cid){document.querySelectorAll(`#sfch-${cid} .pill`).forEach(p=>p.classList.remove(“active”));btn.classList.add(“active”);}
+function saveSess(cid,num){const c=gc(cid);const q=[…document.querySelectorAll(`#sfst-${cid} .star.on`)].length||3;const ch=(document.querySelector(`#sfch-${cid} .pill.active`)||{dataset:{ch:””}}).dataset.ch;c.sessions.push({id:uid(),date:document.getElementById(“sfd-”+cid).value,num,focus:document.getElementById(“sff-”+cid).value,quality:q,channel:ch,notes:document.getElementById(“sfn-”+cid).value,homework:document.getElementById(“sfh-”+cid).value});sc(c);renderTab(cid,“sessions”);refreshHdr(c);}
+function delSess(cid,sid){if(!confirm(“Delete?”))return;const c=gc(cid);c.sessions=c.sessions.filter(s=>s.id!==sid);sc(c);renderTab(cid,“sessions”);refreshHdr(c);}
+function tIssues(c){const rows=[…c.issues].reverse().map(i=>`<div class="card mb10"><div class="row jb gap10" style="align-items:flex-start"><div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">${i.date}</div><div style="font-size:13px;line-height:1.65">${esc(i.text)}</div></div><button class="btn btn-danger btn-sm" onclick="delIssue('${c.id}','${i.id}')">×</button></div></div>`).join(””);return`<div class="card mb10"><div class="st">Log Recurring Issue</div><textarea id="ii-${c.id}" placeholder="Pattern you're tracking…" rows="2" style="margin-bottom:10px"></textarea><button class="btn btn-olive btn-sm" onclick="addIssue('${c.id}')">Add Issue</button></div>${rows||`<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">No issues logged yet.</div>`}`;}
+function addIssue(cid){const inp=document.getElementById(“ii-”+cid);const text=inp.value.trim();if(!text)return;const c=gc(cid);c.issues.push({id:uid(),date:now(),text});sc(c);renderTab(cid,“issues”);}
+function delIssue(cid,iid){if(!confirm(“Delete?”))return;const c=gc(cid);c.issues=c.issues.filter(i=>i.id!==iid);sc(c);renderTab(cid,“issues”);}
+function tDossier(c){const sig=c.signature,latest=c.compass[c.compass.length-1],lastS=c.sessions[c.sessions.length-1];const flags=[];if(!sig.dominant)flags.push(“Dominant channel unset”);if(!sig.blind)flags.push(“Blind channel unset”);if(!sig.ghost)flags.push(“Ghost channel unset”);if(c.compass.length===0)flags.push(“No compass scored”);if(!c.profile)flags.push(“Profile unassigned”);return`<div class="card mb10"><div class="st">Client Dossier</div><div class="row jb mb12"><div><div style="font-family:var(--fd);font-size:18px;color:var(--cream)">${esc(c.name)||"Unnamed Handler"}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${esc(c.dog)||"—"}${c.breed?" · "+esc(c.breed):""}${c.age?" · Age "+esc(c.age):""}</div></div>${c.profile?`<span style="font-size:12px;background:var(--olive);color:var(--cream);padding:4px 12px;border-radius:12px;align-self:flex-start">${c.profile}</span>`:""}</div>${latest?`<div class="row gap10 mb12">${ring(ct(latest),CMAX,50)}<div><div class="lbl">Compass · ${latest.checkpoint}</div><div style="font-family:var(--fm);font-size:18px;color:var(--gold)">${ct(latest)}<span style="font-size:11px;color:var(--muted)">/${CMAX}</span></div></div>${c.compass.length>1?spark(c.compass):””}</div>`:""}</div><div class="card mb10"><div class="st">Signature</div>${[["Dominant",sig.dominant,"var(--gold)"],["Blind",sig.blind,"var(--red)"],["Ghost",sig.ghost,"var(--muted)"]].map(([l,v,c2])=>`<div class="row jb mb8"><span class="lbl" style="margin:0;width:80px">${l}</span><span style=“font-size:13px;color:${v?c2:“var(–border)”};”>${v||“Not set”}</span></div>`).join("")}</div>${c.sessions.length>0?`<div class="card mb10"><div class="st">Session History</div><div class="row jb mb10"><span style="font-size:12px;color:var(--muted)">${c.sessions.length} sessions total</span>${lastS?`<span style="font-size:12px;color:var(--muted)">Last: ${lastS.date}</span>`:””}</div>${[…c.sessions].reverse().slice(0,5).map(s=>`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><div class="row jb"><span style="color:var(--gold);font-family:var(--fd);font-size:11px">Session #${s.num}</span><span style="color:var(--muted)">${s.date}</span></div>${s.focus?`<div style="color:var(--muted);margin-top:3px">${esc(s.focus)}</div>`:""}</div>`).join(””)}</div>`:""}${flags.length>0?`<div class="card mb10" style="border-color:rgba(194,92,58,.3)"><div class="st" style="color:var(--red)">Attention Flags</div>${flags.map(f=>`<div style="font-size:12px;color:var(--red);margin-bottom:5px">· ${f}</div>`).join(””)}</div>`:`<div class="card mb10" style="border-color:rgba(122,170,114,.3)"><div style="font-size:12px;color:var(--green)">✓ Client fully assessed.</div></div>`}${c.notes?`<div class="card"><div class="st">Field Notes</div><div style="font-size:13px;color:var(--muted);line-height:1.7">${esc(c.notes)}</div></div>`:""}`;}
+let evalAns={},evalCid=””;
+function buildEvalPage(){const p=document.getElementById(“page-eval”);const opts=DB.clients.map(c=>`<option value="${c.id}">${esc(c.name)||"Unnamed"} / ${esc(c.dog)||"No dog"}</option>`).join(””);p.innerHTML=`<div style="font-family:var(--fd);font-size:13px;color:var(--gold);letter-spacing:.16em;text-transform:uppercase;padding:16px 0 14px">Handler Index™ Eval</div>${DB.clients.length>0?`<div class="card mb12"><div class="lbl">Attach to Client (optional)</div><select id="eval-sel" onchange="evalCid=this.value"><option value="">— Standalone eval —</option>${opts}</select></div>`:""}<div id="eval-body"></div>`;resetEval();}
+function resetEval(){evalAns={};document.getElementById(“eval-body”).innerHTML=buildEvalBody();}
+function buildEvalBody(){const p1=EVAL_Q.filter(q=>q.phase===1),p2=EVAL_Q.filter(q=>q.phase===2);return`<div class="card mb10"><div class="st">Phase 1 — Channel Identification</div><div style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">Select the response that most accurately reflects your first instinct. Not what you know you should do — what you actually do.</div>${p1.map(bEvalQ).join("")}</div><div class="card mb10"><div class="st">Phase 2 — Blind & Ghost Detection</div><div style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">These questions reveal which channels operate below your awareness threshold.</div>${p2.map(bEvalQ).join("")}</div><div class="row gap8" style="justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="resetEval()">Reset</button><button class="btn btn-gold" onclick="scoreEval()">Score Eval</button></div><div id="eval-result" class="mt12"></div>`;}
+function bEvalQ(q){return`<div class="mb14"><div class="eval-q"><span style="font-family:var(--fm);font-size:10px;color:var(--gold)">Q${q.id.slice(1)}</span> ${q.q}</div>${q.opts.map((opt,i)=>`<button class="eval-opt" id="eo-${q.id}-${i}" onclick="selEval('${q.id}',${i})">${opt}</button>`).join("")}</div>`;}
+function selEval(qid,idx){document.querySelectorAll(`[id^="eo-${qid}-"]`).forEach(b=>b.classList.remove(“sel”));document.getElementById(`eo-${qid}-${idx}`).classList.add(“sel”);evalAns[qid]=idx;}
+function scoreEval(){if(Object.keys(evalAns).length<EVAL_Q.length){alert(`Please answer all ${EVAL_Q.length} questions.`);return;}const chC={Spatial:0,Verbal:0,Environmental:0,Internal:0},bF={Spatial:0,Verbal:0,Environmental:0,Internal:0};EVAL_Q.forEach(q=>{const idx=evalAns[q.id],ch=q.ch[idx];if(ch)chC[ch]=(chC[ch]||0)+1;if(q.blind&&q.blind[idx])bF[ch]=(bF[ch]||0)+1;});const sorted=Object.entries(chC).sort((a,b)=>b[1]-a[1]);const dominant=sorted[0][0];const blindEntry=Object.entries(bF).sort((a,b)=>b[1]-a[1])[0];const blind=blindEntry&&blindEntry[1]>0?blindEntry[0]:sorted[sorted.length-1][0];const ghost=sorted.map(([c])=>c).filter(c=>c!==dominant&&c!==blind).pop()||sorted[sorted.length-1][0];document.getElementById(“eval-result”).innerHTML=`<div class="eval-result fi"><div class="st">Eval Result</div><div class="row gap10 wrap mb12">${[["Dominant",dominant,"var(--gold)"],["Blind",blind,"var(--red)"],["Ghost",ghost,"var(--muted)"]].map(([l,v,c2])=>`<div style="flex:1;min-width:80px"><div class="lbl">${l}</div><div style="font-size:15px;font-family:var(--fd);color:${c2}">${v}</div></div>`).join("")}</div><div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px"><strong style="color:var(--text)">Dominant — ${dominant}:</strong> Your strongest channel. Load-bearing whether you intend it or not.<br><br><strong style="color:var(--text)">Blind — ${blind}:</strong> Active but outside your awareness. The dog is responding to it. You're not reading that response yet.<br><br><strong style="color:var(--text)">Ghost — ${ghost}:</strong> Present in the environment but invisible to you. Introduce vocabulary before reps.</div>${evalCid?`<button class="btn btn-gold btn-sm" onclick="applyEval('${dominant}','${blind}','${ghost}')">Apply to Client</button>`:""}</div>`;}
+function applyEval(d,b,g){const sel=document.getElementById(“eval-sel”);const cid=sel?sel.value:evalCid;if(!cid){alert(“Select a client first.”);return;}const c=gc(cid);if(!c)return;c.signature={dominant:d,blind:b,ghost:g};sc(c);renderClients();alert(`Signature applied to ${c.name||"client"}.`);}
+function buildDiagnosePage(){const p=document.getElementById(“page-diagnose”);const flagged=DB.clients.filter(c=>!c.signature.dominant||!c.signature.blind||!c.signature.ghost||c.compass.length===0||!c.profile);const byP={};PROFILES.forEach(pr=>byP[pr]=DB.clients.filter(c=>c.profile===pr).length);const totalS=DB.clients.reduce((a,c)=>a+c.sessions.length,0);const scores=DB.clients.filter(c=>c.compass.length>0).map(c=>ct(c.compass[c.compass.length-1]));const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;p.innerHTML=`<div style="font-family:var(--fd);font-size:13px;color:var(--gold);letter-spacing:.16em;text-transform:uppercase;padding:16px 0 14px">Diagnostics</div><div class="g3 mb12">${[["Sessions",totalS,"var(--gold)"],["Avg Score",avg!==null?avg:"—","var(--olive)"],["Flags",flagged.length,flagged.length>0?"var(--red)":"var(--green)"]].map(([l,v,c])=>`<div class="card" style="text-align:center;padding:11px 8px"><div style="font-family:var(--fm);font-size:20px;color:${c}">${v}</div><div class="lbl" style="margin:3px 0 0">${l}</div></div>`).join("")}</div><div class="card mb12"><div class="st">Profile Distribution</div>${PROFILES.map(pr=>{const n=byP[pr];if(!n)return"";const pt=n/Math.max(DB.clients.length,1);return`<div class="mb10"><div class="row jb mb6" style="font-size:12px"><span style=“color:${pr===“Attuned”?“var(–green)”:“var(–gold)”}”>${pr}</span><span style="font-family:var(--fm);color:var(--muted)">${n}</span></div><div class="pbar"><div class=“pbar-fill” style=“width:${pt*100}%;background:${pr===“Attuned”?“var(–green)”:“var(–olive)”}”></div></div></div>`;}).join("")||`<div style="font-size:12px;color:var(--muted)">No profiles assigned yet.</div>`}</div><div class="card mb12"><div class="st">Five-State Map™</div>${FIVE_STATES.map(({s,c:color,d})=>`<div class="row gap10 mb10"><div class="state-dot" style="background:${color};margin-top:3px"></div><div><div style="font-family:var(--fd);font-size:12px;color:var(--cream);margin-bottom:3px">${s}</div><div style="font-size:12px;color:var(--muted);line-height:1.6">${d}</div></div></div>`).join("")}</div>${flagged.length>0?`<div class="card"><div class="st">Attention Flags</div>${flagged.map(c=>{const miss=[];if(!c.signature.dominant)miss.push(“Dominant”);if(!c.signature.blind)miss.push(“Blind”);if(!c.signature.ghost)miss.push(“Ghost”);if(c.compass.length===0)miss.push(“No compass”);if(!c.profile)miss.push(“No profile”);return`<div class="card mb10" style="background:var(--bg)"><div class="row jb mb6"><span style="font-family:var(--fd);font-size:13px;color:var(--cream)">${esc(c.name)||"Unnamed"}</span><span style="font-size:11px;color:var(--muted)">${esc(c.dog)||"—"}</span></div><div style="font-size:11px;color:var(--red)">${miss.join(" · ")}</div></div>`;}).join(””)}</div>`:`<div class="card" style="border-color:rgba(122,170,114,.3)"><div style="font-size:13px;color:var(--green)">✓ All clients fully assessed.</div></div>`}`;}
+let refSec=“channels”;
+function buildReferencePage(){const p=document.getElementById(“page-reference”);const secs=[“channels”,“compass”,“profiles”,“exercises”,“states”,“axioms”];p.innerHTML=`<div style="font-family:var(--fd);font-size:13px;color:var(--gold);letter-spacing:.16em;text-transform:uppercase;padding:16px 0 14px">Reference</div><div class="row gap6 wrap mb12" id="ref-nav">${secs.map(s=>`<button class=“pill${s===refSec?” active”:””}” onclick=“switchRef(’${s}’,this)”>${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join("")}</div><div id="ref-body"></div>`;buildRef(refSec);}
+function switchRef(key,btn){refSec=key;document.querySelectorAll(”#ref-nav .pill”).forEach(p=>p.classList.remove(“active”));btn.classList.add(“active”);buildRef(key);}
+function buildRef(key){const b=document.getElementById(“ref-body”);if(!b)return;if(key===“channels”)b.innerHTML=CH.map(ch=>`<div class="card mb10"><div style="font-family:var(--fd);font-size:13px;color:var(--gold);margin-bottom:8px">${ch}</div><div style="font-size:12px;color:var(--muted);line-height:1.7">${CH_DESC[ch]}</div></div>`).join(””);if(key===“compass”)b.innerHTML=COMPASS.map(({key:k,label,low,high})=>`<div class="card mb10"><div class="row gap8 mb8"><span style="font-family:var(--fm);color:var(--gold);width:26px">${k}</span><span style="font-family:var(--fd);font-size:13px;color:var(--cream)">${label}</span></div><div class="row jb" style="font-size:11px;color:var(--muted)"><span>1 → ${low}</span><span>${high} ← 5</span></div></div>`).join(””);if(key===“profiles”)b.innerHTML=PROFILES.map(pr=>`<div class="card mb10"><div style="font-family:var(--fd);font-size:13px;color:${pr==="Attuned"?"var(--green)":"var(--gold)"};margin-bottom:7px">${pr}</div><div style="font-size:12px;color:var(--muted);line-height:1.7">${PNOTES[pr]}</div></div>`).join(””);if(key===“exercises”)b.innerHTML=EXERCISES.map(e=>`<div class="card mb10"><div class="row jb mb8"><span style="font-family:var(--fd);font-size:13px;color:var(--cream)">${e.name}</span><span style="font-size:11px;background:rgba(111,116,92,.2);color:var(--olive);padding:2px 8px;border-radius:10px">${e.ch}</span></div><div style="font-size:12px;color:var(--muted);line-height:1.7">${e.desc}</div></div>`).join(””);if(key===“states”)b.innerHTML=FIVE_STATES.map(({s,c:color,d})=>`<div class="card mb10"><div class="row gap10 mb6"><div class="state-dot" style="background:${color};margin-top:2px"></div><span style="font-family:var(--fd);font-size:13px;color:var(--cream)">${s}</span></div><div style="font-size:12px;color:var(--muted);line-height:1.7">${d}</div></div>`).join(””);if(key===“axioms”)b.innerHTML=AXIOMS.map(a=>`<div class="card mb10"><div style="font-size:12px;color:var(--text);line-height:1.85;font-style:italic">"${a}"</div></div>`).join(””);}
+function exportData(){const a=document.createElement(“a”);a.setAttribute(“href”,“data:application/json;charset=utf-8,”+encodeURIComponent(JSON.stringify(DB,null,2)));a.setAttribute(“download”,“shdt-arc-”+now()+”.json”);document.body.appendChild(a);a.click();document.body.removeChild(a);}
+function importData(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{try{DB=JSON.parse(ev.target.result);scheduleSave();renderClients();alert(“Import successful.”);}catch{alert(“Invalid file.”);}};r.readAsText(file);e.target.value=””;}
+
+// BOOT
+loadDB();
 </script>
+
 </body>
 </html>
