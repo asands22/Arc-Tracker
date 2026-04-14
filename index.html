@@ -83,7 +83,35 @@ const mkEval=()=>({id:uid(),dt:tdy(),p1:{feet:"",mouth:"",leash:"",face:"",brk:"
 // ═══════ STATE ═══════
 let DATA={c:[]},TAB="clients",AID=null,VW="list",ED=null;
 
-async function load(){try{const r=await window.storage.get(SK);if(r)DATA=JSON.parse(r.value)}catch{} render()}
+async function load(){
+  // Try current key first, then fall back to previous keys
+  const keys=["shdt-v5","shdt-arc-v2","shdt-arc-v3","shdt-v4"];
+  for(const k of keys){
+    try{
+      const r=await window.storage.get(k);
+      if(r){
+        const parsed=JSON.parse(r.value);
+        if(parsed&&parsed.c&&parsed.c.length>0){DATA=parsed;break}
+        // Check for old React schema (clients instead of c)
+        if(parsed&&parsed.clients&&parsed.clients.length>0){
+          // Migrate from React schema
+          DATA={c:parsed.clients.map(cl=>({
+            id:cl.id,name:cl.name||"",dog:cl.dog||"",breed:cl.breed||"",age:cl.age||"",ctx:cl.context||"",
+            sig:{d:(cl.signature&&cl.signature.dominant)||"",b:(cl.signature&&cl.signature.blind)||"",g:(cl.signature&&cl.signature.ghost)||""},
+            prof:cl.profile||"",comp:(cl.compassHistory||[]).map(ch=>({id:ch.id,cp:ch.checkpoint||"Intake",dt:ch.date||tdy(),ER:ch.ER||1,T:ch.T||1,CC:ch.CC||1,CO:ch.CO||1,IN:ch.IN||1})),
+            sess:(cl.sessions||[]).map(s=>({id:s.id,dt:s.date||tdy(),prof:s.profile||"",ch:s.dominantChannel||"",focus:s.focus||"",q:s.quality||2,stage:s.journeyStage||"",notes:s.notes||""})),
+            hw:(cl.homework||[]),issues:(cl.recurringIssues||[]),notes:cl.notes||""
+          }))};
+          // Save migrated data to current key
+          await save();break;
+        }
+      }
+    }catch{}
+  }
+  // Ensure all clients have required arrays
+  DATA.c.forEach(c=>{if(!c.comp)c.comp=[];if(!c.sess)c.sess=[];if(!c.hw)c.hw=[];if(!c.issues)c.issues=[];if(!c.sig)c.sig={d:"",b:"",g:""}});
+  render();
+}
 async function save(){try{await window.storage.set(SK,JSON.stringify(DATA))}catch{}}
 function getCl(){return DATA.c.find(x=>x.id===AID)}
 function updCl(c){const i=DATA.c.findIndex(x=>x.id===c.id);if(i>=0)DATA.c[i]=c;else DATA.c.push(c);save()}
