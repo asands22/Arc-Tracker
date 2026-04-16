@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHDT — Arc Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Raleway:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: #1E1E1E; }
+body { background: #1E1E1E; color: #F6F4F1; font-family: ‘Raleway’, Georgia, sans-serif; font-size: 15px; min-height: 100vh; overflow-x: hidden; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1E1E1E; }
+::-webkit-scrollbar-thumb { background: #6F745C; border-radius: 3px; }
+
+/* ── NAV ── */
+header {
+background: #1E1E1E;
+border-bottom: 1px solid rgba(111,116,92,0.35);
+padding: 0 24px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+position: sticky; top: 0; z-index: 100;
+height: 58px;
+}
+.logo-block { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.logo-title { font-family: ‘Cinzel Decorative’,‘Cinzel’,Georgia,serif; font-size: 15px; color: #C8A96E; letter-spacing: 0.05em; line-height: 1; }
+.logo-sub   { font-family: ‘Cinzel’,Georgia,serif; font-size: 10px; color: #6F745C; letter-spacing: 0.22em; text-transform: uppercase; }
+
+.nav-tabs { display: flex; gap: 0; height: 100%; }
+.nav-tab {
+font-family: ‘Cinzel’,Georgia,serif;
+font-size: 11px;
+letter-spacing: 0.14em;
+text-transform: uppercase;
+color: #6F745C;
+background: transparent;
+border: none;
+border-bottom: 2px solid transparent;
+padding: 0 18px;
+cursor: pointer;
+height: 100%;
+transition: color 0.2s, border-color 0.2s;
+white-space: nowrap;
+}
+.nav-tab:hover { color: #F6F4F1; }
+.nav-tab.active { color: #C8A96E; border-bottom-color: #C8A96E; }
+
+.header-right { display: flex; gap: 8px; align-items: center; }
+
+/* ── MAIN ── */
+main { padding: 28px; max-width: 1200px; width: 100%; margin: 0 auto; }
+.tab-view { display: none; animation: fadeUp 0.35s ease both; }
+.tab-view.active { display: block; }
+
+/* ── STAT TILES ── */
+.stat-row {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+gap: 14px;
+margin-bottom: 28px;
+}
+.stat-tile {
+background: rgba(111,116,92,0.07);
+border: 1px solid rgba(111,116,92,0.3);
+border-radius: 6px;
+padding: 16px 18px;
+position: relative; overflow: hidden;
+transition: border-color 0.25s, box-shadow 0.25s;
+}
+.stat-tile::after { content:’’; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#C8A96E,transparent); opacity:0; transition:opacity 0.3s; }
+.stat-tile:hover { border-color: #C8A96E; }
+.stat-tile:hover::after { opacity: 1; }
+.stat-label { font-family:‘Cinzel’,Georgia,serif; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:#6F745C; margin-bottom:8px; }
+.stat-val   { font-family:‘Cinzel’,Georgia,serif; font-size:28px; font-weight:700; color:#C8A96E; line-height:1; }
+.stat-sub   { font-size:12px; color:#6F745C; margin-top:5px; }
+
+/* ── CLIENT CARDS ── */
+.client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.client-card {
+background: rgba(111,116,92,0.07);
+border: 1px solid rgba(111,116,92,0.3);
+border-radius: 6px;
+padding: 18px;
+cursor: pointer;
+position: relative; overflow: hidden;
+transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.client-card::after { content:’’; position:absolute; top:0; left:0; right:0; height:2px; background:#C8A96E; transform:scaleX(0); transform-origin:left; transition:transform 0.3s; }
+.client-card:hover { border-color: #C8A96E; transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.4); }
+.client-card:hover::after { transform: scaleX(1); }
+.card-name { font-family:‘Cinzel’,Georgia,serif; font-size:16px; color:#F6F4F1; margin-bottom:3px; }
+.card-dog  { font-size:13px; color:#6F745C; font-style:italic; margin-bottom:10px; }
+.card-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.tag { font-size:11px; padding:3px 9px; border-radius:3px; font-family:‘Cinzel’,Georgia,serif; letter-spacing:0.05em; }
+.tag-ch   { background:rgba(111,116,92,0.15); color:#6F745C; border:1px solid rgba(111,116,92,0.35); }
+.tag-prof { background:rgba(200,169,110,0.1); color:#C8A96E; border:1px solid rgba(200,169,110,0.35); }
+.tag-cp   { background:rgba(246,244,241,0.05); color:rgba(246,244,241,0.5); border:1px solid rgba(246,244,241,0.12); }
+.card-day { font-size:12px; color:#6F745C; border-top:1px solid rgba(111,116,92,0.2); padding-top:8px; }
+
+/* ── PANELS ── */
+.panel { background:rgba(111,116,92,0.05); border:1px solid rgba(111,116,92,0.3); border-radius:6px; margin-bottom:16px; overflow:hidden; }
+.panel-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; cursor:pointer; user-select:none; border-bottom:1px solid transparent; transition:background 0.2s; }
+.panel-hdr:hover { background:rgba(111,116,92,0.05); }
+.panel-hdr.open { border-bottom-color:rgba(111,116,92,0.3); }
+.panel-hdr-title { font-family:‘Cinzel’,Georgia,serif; font-size:13px; letter-spacing:0.12em; color:#F6F4F1; }
+.chevron { width:16px; height:16px; color:#6F745C; transition:transform 0.3s; flex-shrink:0; }
+.chevron.open { transform:rotate(180deg); }
+.panel-body { max-height:0; overflow:hidden; transition:max-height 0.4s cubic-bezier(0.4,0,0.2,1); }
+.panel-body.open { max-height:4000px; }
+.panel-inner { padding:20px; }
+
+/* ── COMPASS ── */
+.compass-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
+.compass-item { }
+.compass-label { font-family:‘Cinzel’,Georgia,serif; font-size:11px; letter-spacing:0.15em; color:#6F745C; text-transform:uppercase; margin-bottom:6px; }
+.compass-row { display:flex; align-items:center; gap:10px; }
+.slider { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px; background:rgba(111,116,92,0.2); outline:none; cursor:pointer; }
+.slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:#C8A96E; cursor:pointer; border:2px solid #1E1E1E; }
+.slider::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:#C8A96E; cursor:pointer; border:2px solid #1E1E1E; }
+.compass-val { font-family:‘Cinzel’,Georgia,serif; font-size:14px; color:#C8A96E; min-width:24px; text-align:right; }
+
+/* ── SCORE BARS ── */
+.score-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.score-lbl { font-family:‘Cinzel’,Georgia,serif; font-size:11px; color:#6F745C; min-width:90px; letter-spacing:0.08em; }
+.score-track { flex:1; height:8px; background:rgba(111,116,92,0.15); border-radius:4px; overflow:hidden; }
+.score-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#6F745C,#C8A96E); transition:width 0.5s ease; }
+.score-num { font-family:‘Cinzel’,Georgia,serif; font-size:13px; color:#C8A96E; min-width:28px; text-align:right; }
+
+/* ── SPARK CHART ── */
+.spark-wrap { display:flex; gap:6px; align-items:flex-end; height:48px; margin-top:12px; }
+.spark-bar { flex:1; border-radius:2px 2px 0 0; transition:height 0.5s ease; min-width:8px; }
+
+/* ── CHECKPOINTS ── */
+.checkpoint-tabs { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+.cp-tab { font-family:‘Cinzel’,Georgia,serif; font-size:11px; letter-spacing:0.1em; padding:7px 16px; border:1px solid rgba(111,116,92,0.35); border-radius:4px; color:#6F745C; cursor:pointer; transition:all 0.2s; background:transparent; }
+.cp-tab:hover { border-color:#C8A96E; color:#F6F4F1; }
+.cp-tab.active { border-color:#C8A96E; color:#C8A96E; background:rgba(200,169,110,0.08); }
+
+/* ── SIGNATURE ── */
+.sig-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+.sig-pill { padding:5px 14px; border-radius:3px; font-family:‘Cinzel’,Georgia,serif; font-size:11px; letter-spacing:0.08em; }
+.sig-dom   { background:rgba(200,169,110,0.12); color:#C8A96E; border:1px solid rgba(200,169,110,0.35); }
+.sig-blind { background:rgba(111,116,92,0.12); color:#6F745C; border:1px solid rgba(111,116,92,0.35); }
+.sig-ghost { background:rgba(246,244,241,0.05); color:rgba(246,244,241,0.5); border:1px solid rgba(246,244,241,0.12); }
+
+/* ── SESSIONS ── */
+.session-entry { background:rgba(111,116,92,0.07); border:1px solid rgba(111,116,92,0.25); border-radius:5px; padding:14px 16px; margin-bottom:10px; }
+.session-date  { font-family:‘Cinzel’,Georgia,serif; font-size:11px; color:#6F745C; letter-spacing:0.1em; margin-bottom:5px; }
+.session-text  { font-size:14px; color:#F6F4F1; line-height:1.65; }
+
+/* ── HOMEWORK ── */
+.hw-item { display:flex; align-items:flex-start; gap:10px; padding:10px 14px; background:rgba(111,116,92,0.07); border:1px solid rgba(111,116,92,0.25); border-radius:4px; margin-bottom:8px; }
+.hw-check { flex-shrink:0; width:18px; height:18px; border:1px solid rgba(111,116,92,0.4); border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; margin-top:1px; }
+.hw-check.done { background:rgba(200,169,110,0.2); border-color:#C8A96E; }
+.hw-text { font-size:14px; color:#F6F4F1; line-height:1.6; flex:1; }
+.hw-text.done { text-decoration:line-through; color:#6F745C; }
+
+/* ── EXERCISE BANK ── */
+.ex-card { background:rgba(111,116,92,0.07); border:1px solid rgba(111,116,92,0.25); border-radius:5px; padding:14px 16px; margin-bottom:10px; }
+.ex-name { font-family:‘Cinzel’,Georgia,serif; font-size:13px; color:#F6F4F1; margin-bottom:4px; }
+.ex-desc { font-size:13px; color:#6F745C; line-height:1.65; }
+
+/* ── FIVE STATES ── */
+.state-card { display:flex; align-items:flex-start; gap:14px; padding:14px 16px; background:rgba(111,116,92,0.07); border:1px solid rgba(111,116,92,0.25); border-radius:5px; margin-bottom:10px; }
+.state-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.state-name { font-family:‘Cinzel’,Georgia,serif; font-size:13px; color:#F6F4F1; margin-bottom:4px; }
+.state-desc { font-size:13px; color:#6F745C; line-height:1.65; }
+
+/* ── ISSUE TAGS ── */
+.issue-tag { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; background:rgba(200,169,110,0.08); border:1px solid rgba(200,169,110,0.25); border-radius:3px; font-size:13px; color:#C8A96E; margin:4px; font-family:‘Cinzel’,Georgia,serif; font-size:12px; }
+.issue-x { cursor:pointer; color:#6F745C; font-size:14px; line-height:1; }
+.issue-x:hover { color:#C8A96E; }
+
+/* ── MODAL ── */
+.overlay { position:fixed; inset:0; background:rgba(14,14,10,0.9); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+.overlay.open { opacity:1; pointer-events:all; }
+.modal { background:#1E1E1E; border:1px solid rgba(200,169,110,0.35); border-radius:8px; width:100%; max-width:640px; max-height:90vh; overflow-y:auto; transform:translateY(20px); transition:transform 0.3s ease; box-shadow:0 24px 80px rgba(0,0,0,0.7); }
+.overlay.open .modal { transform:translateY(0); }
+.modal-hdr { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid rgba(111,116,92,0.3); position:sticky; top:0; background:#1E1E1E; z-index:1; }
+.modal-title { font-family:‘Cinzel’,Georgia,serif; font-size:15px; color:#C8A96E; letter-spacing:0.1em; }
+.modal-body { padding:22px; }
+
+/* ── FORMS ── */
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-group { display:flex; flex-direction:column; gap:6px; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-family:‘Cinzel’,Georgia,serif; font-size:10px; letter-spacing:0.18em; color:#6F745C; text-transform:uppercase; }
+.form-input, .form-select, .form-textarea { background:rgba(111,116,92,0.08); border:1px solid rgba(111,116,92,0.3); border-radius:4px; padding:9px 12px; font-family:‘Raleway’,Georgia,sans-serif; font-size:14px; color:#F6F4F1; outline:none; transition:border-color 0.2s; width:100%; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color:#C8A96E; }
+.form-textarea { resize:vertical; min-height:80px; }
+.form-select option { background:#1E1E1E; }
+.form-section { margin-top:20px; padding-top:16px; border-top:1px solid rgba(111,116,92,0.25); }
+.form-section-title { font-family:‘Cinzel’,Georgia,serif; font-size:11px; letter-spacing:0.15em; color:#C8A96E; text-transform:uppercase; margin-bottom:12px; }
+
+/* ── RADIO ── */
+.radio-group { display:flex; flex-wrap:wrap; gap:7px; }
+.radio-btn { padding:6px 13px; border:1px solid rgba(111,116,92,0.3); border-radius:4px; font-family:‘Cinzel’,Georgia,serif; font-size:11px; color:#6F745C; cursor:pointer; transition:all 0.2s; user-select:none; background:rgba(111,116,92,0.06); }
+.radio-btn:hover { border-color:#C8A96E; color:#F6F4F1; }
+.radio-btn.active { border-color:#C8A96E; color:#C8A96E; background:rgba(200,169,110,0.1); }
+
+/* ── BUTTONS ── */
+.btn { font-family:‘Cinzel’,Georgia,serif; font-size:12px; letter-spacing:0.1em; padding:9px 18px; border:1px solid rgba(111,116,92,0.35); border-radius:4px; cursor:pointer; transition:all 0.2s; background:transparent; color:#F6F4F1; display:inline-flex; align-items:center; gap:7px; }
+.btn:hover { border-color:#C8A96E; color:#C8A96E; }
+.btn-primary { background:rgba(200,169,110,0.1); border-color:rgba(200,169,110,0.5); color:#C8A96E; }
+.btn-primary:hover { background:rgba(200,169,110,0.2); border-color:#C8A96E; }
+.btn-danger { border-color:rgba(200,100,80,0.25); color:#A06050; }
+.btn-danger:hover { background:rgba(200,100,80,0.08); }
+.btn-sm { padding:6px 13px; font-size:11px; }
+.btn-icon { padding:7px; border:none; background:transparent; color:#6F745C; cursor:pointer; border-radius:4px; transition:color 0.2s; font-size:15px; line-height:1; }
+.btn-icon:hover { color:#C8A96E; }
+
+/* ── DETAIL NAV ── */
+.back-btn { display:inline-flex; align-items:center; gap:7px; font-family:‘Cinzel’,Georgia,serif; font-size:11px; letter-spacing:0.12em; color:#6F745C; cursor:pointer; margin-bottom:22px; padding:6px 0; border:none; background:transparent; transition:color 0.2s; text-transform:uppercase; }
+.back-btn:hover { color:#C8A96E; }
+
+.dtab-row { display:flex; gap:0; border-bottom:1px solid rgba(111,116,92,0.3); margin-bottom:22px; overflow-x:auto; }
+.dtab { font-family:‘Cinzel’,Georgia,serif; font-size:11px; letter-spacing:0.12em; color:#6F745C; background:transparent; border:none; padding:10px 16px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:color 0.2s,border-color 0.2s; text-transform:uppercase; white-space:nowrap; }
+.dtab:hover { color:#F6F4F1; }
+.dtab.active { color:#C8A96E; border-bottom-color:#C8A96E; }
+
+/* ── DIAGNOSTICS ── */
+.diag-card { background:rgba(111,116,92,0.07); border:1px solid rgba(111,116,92,0.3); border-radius:6px; padding:16px 18px; margin-bottom:12px; }
+.diag-flag { background:rgba(200,169,110,0.08); border:1px solid rgba(200,169,110,0.25); border-left:3px solid #C8A96E; border-radius:4px; padding:12px 16px; margin-bottom:10px; font-size:14px; color:#F6F4F1; line-height:1.65; }
+.diag-ok   { background:rgba(111,116,92,0.08); border:1px solid rgba(111,116,92,0.25); border-left:3px solid #6F745C; border-radius:4px; padding:12px 16px; margin-bottom:10px; font-size:14px; color:#F6F4F1; line-height:1.65; }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:48px 20px; color:#6F745C; }
+.empty-icon { font-size:36px; margin-bottom:12px; opacity:0.3; }
+.empty-title { font-family:‘Cinzel’,Georgia,serif; font-size:14px; color:#6F745C; margin-bottom:5px; }
+.empty-sub { font-size:13px; }
+
+/* ── TOAST ── */
+.toast { position:fixed; bottom:24px; right:24px; background:#1E1E1E; border:1px solid rgba(200,169,110,0.4); border-radius:5px; padding:11px 18px; font-family:‘Cinzel’,Georgia,serif; font-size:12px; color:#C8A96E; z-index:999; transform:translateY(80px); opacity:0; transition:transform 0.3s ease,opacity 0.3s; }
+.toast.show { transform:translateY(0); opacity:1; }
+
+/* ── DIVIDER ── */
+hr.div { border:none; border-top:1px solid rgba(111,116,92,0.25); margin:18px 0; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+@media(max-width:640px){
+.form-grid{grid-template-columns:1fr;}
+main{padding:16px;}
+header{padding:0 14px;}
+.stat-row{grid-template-columns:repeat(2,1fr);}
+.nav-tab{padding:0 10px;font-size:10px;}
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="logo-block">
+    <div class="logo-title">Steady Hand</div>
+    <div class="logo-sub">Arc Tracker</div>
+  </div>
+  <nav class="nav-tabs" id="nav-tabs">
+    <button class="nav-tab active" onclick="showView('diagnose')">Diagnose</button>
+    <button class="nav-tab" onclick="showView('clients')">Clients</button>
+    <button class="nav-tab" onclick="showView('exercises')">Exercises</button>
+    <button class="nav-tab" onclick="showView('reference')">Reference</button>
+  </nav>
+  <div class="header-right">
+    <button class="btn btn-sm" onclick="exportData()">&#8595; Export</button>
+    <label class="btn btn-sm" style="cursor:pointer">&#8593; Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+    <button class="btn btn-primary btn-sm" onclick="openAddClient()">+ Client</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════
+     VIEW: DIAGNOSE
+═══════════════════════════════════════════════ -->
+
+<main id="view-diagnose" class="tab-view active">
+
+  <div style="margin-bottom:28px">
+    <div class="stat-row">
+      <div class="stat-tile"><div class="stat-label">Active Clients</div><div class="stat-val" id="d-stat-active">0</div><div class="stat-sub">in program</div></div>
+      <div class="stat-tile"><div class="stat-label">Avg Compass</div><div class="stat-val" id="d-stat-compass">—</div><div class="stat-sub">across caseload</div></div>
+      <div class="stat-tile"><div class="stat-label">Top Profile</div><div class="stat-val" id="d-stat-profile" style="font-size:16px;line-height:1.4">—</div><div class="stat-sub">most seen</div></div>
+      <div class="stat-tile"><div class="stat-label">Top Dom. Channel</div><div class="stat-val" id="d-stat-channel" style="font-size:16px;line-height:1.4">—</div><div class="stat-sub">across caseload</div></div>
+    </div>
+  </div>
+
+  <!-- ATTENTION FLAGS -->
+
+  <div class="panel">
+    <div class="panel-hdr open" onclick="togglePanel(this,'pb-flags')">
+      <span class="panel-hdr-title">ATTENTION FLAGS</span>
+      <svg class="chevron open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body open" id="pb-flags">
+      <div class="panel-inner" id="flags-inner">
+        <div class="empty"><div class="empty-title">No flags yet</div><div class="empty-sub">Flags surface as you log compass scores and sessions</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CASELOAD -->
+
+  <div class="panel">
+    <div class="panel-hdr open" onclick="togglePanel(this,'pb-caseload')">
+      <span class="panel-hdr-title">CASELOAD OVERVIEW</span>
+      <svg class="chevron open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body open" id="pb-caseload">
+      <div class="panel-inner" id="caseload-inner">
+        <div class="empty"><div class="empty-title">No clients yet</div></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════════════════════
+     VIEW: CLIENTS (list)
+═══════════════════════════════════════════════ -->
+
+<main id="view-clients" class="tab-view">
+  <div id="client-grid-wrap">
+    <div class="empty"><div class="empty-icon">&#9670;</div><div class="empty-title">No clients logged yet</div><div class="empty-sub">Hit "+ Client" to start</div></div>
+  </div>
+</main>
+
+<!-- ══════════════════════════════════════════════
+     VIEW: CLIENT DETAIL
+═══════════════════════════════════════════════ -->
+
+<main id="view-detail" class="tab-view">
+  <button class="back-btn" onclick="backToClients()">&#8592; &nbsp;Clients</button>
+  <div id="detail-content"></div>
+</main>
+
+<!-- ══════════════════════════════════════════════
+     VIEW: EXERCISES
+═══════════════════════════════════════════════ -->
+
+<main id="view-exercises" class="tab-view">
+
+  <div class="panel">
+    <div class="panel-hdr open" onclick="togglePanel(this,'pb-ex-spatial')">
+      <span class="panel-hdr-title">SPATIAL CHANNEL</span>
+      <svg class="chevron open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body open" id="pb-ex-spatial">
+      <div class="panel-inner" id="ex-spatial-inner"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr" onclick="togglePanel(this,'pb-ex-verbal')">
+      <span class="panel-hdr-title">VERBAL CHANNEL</span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body" id="pb-ex-verbal">
+      <div class="panel-inner" id="ex-verbal-inner"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr" onclick="togglePanel(this,'pb-ex-env')">
+      <span class="panel-hdr-title">ENVIRONMENTAL CHANNEL</span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body" id="pb-ex-env">
+      <div class="panel-inner" id="ex-env-inner"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr" onclick="togglePanel(this,'pb-ex-internal')">
+      <span class="panel-hdr-title">INTERNAL CHANNEL</span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body" id="pb-ex-internal">
+      <div class="panel-inner" id="ex-internal-inner"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════════════════════
+     VIEW: REFERENCE
+═══════════════════════════════════════════════ -->
+
+<main id="view-reference" class="tab-view">
+
+  <div class="panel">
+    <div class="panel-hdr open" onclick="togglePanel(this,'pb-ref-axioms')">
+      <span class="panel-hdr-title">CORE AXIOMS</span>
+      <svg class="chevron open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body open" id="pb-ref-axioms">
+      <div class="panel-inner" id="ref-axioms-inner"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr" onclick="togglePanel(this,'pb-ref-channels')">
+      <span class="panel-hdr-title">THE FOUR PRESSURE CHANNELS</span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body" id="pb-ref-channels">
+      <div class="panel-inner" id="ref-channels-inner"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr" onclick="togglePanel(this,'pb-ref-profiles')">
+      <span class="panel-hdr-title">HANDLER PROFILES</span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body" id="pb-ref-profiles">
+      <div class="panel-inner" id="ref-profiles-inner"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr" onclick="togglePanel(this,'pb-ref-states')">
+      <span class="panel-hdr-title">FIVE-STATE AWARENESS MAP</span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+    <div class="panel-body" id="pb-ref-states">
+      <div class="panel-inner" id="ref-states-inner"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════════════════════
+     ADD/EDIT CLIENT MODAL
+═══════════════════════════════════════════════ -->
+
+<div class="overlay" id="client-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">NEW CLIENT</div>
+      <button class="btn-icon" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Handler Name</label><input class="form-input" id="f-handler" placeholder="Full name"></div>
+        <div class="form-group"><label class="form-label">Dog Name</label><input class="form-input" id="f-dog" placeholder="Dog's name"></div>
+        <div class="form-group"><label class="form-label">Breed</label><input class="form-input" id="f-breed" placeholder="Breed"></div>
+        <div class="form-group"><label class="form-label">Program</label>
+          <select class="form-select" id="f-program">
+            <option value="">—</option>
+            <option>Board &amp; Train</option><option>Day Training</option>
+            <option>Private Lessons</option><option>Group Class</option><option>Eval Only</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Start Date</label><input class="form-input" id="f-start" type="date"></div>
+        <div class="form-group"><label class="form-label">Handler Profile</label>
+          <select class="form-select" id="f-profile">
+            <option value="">— Select —</option>
+            <option>Reactive</option><option>Rigid</option><option>Avoidant</option><option>Passive</option>
+            <option>Imp. Reactive</option><option>Imp. Rigid</option><option>Imp. Avoidant</option><option>Imp. Passive</option>
+            <option>Attuned</option>
+          </select>
+        </div>
+      </div>
+
+```
+  <div class="form-section">
+    <div class="form-section-title">Handler Signature</div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Dominant</label><div class="radio-group" id="rg-dom"></div></div>
+      <div class="form-group"><label class="form-label">Blind</label><div class="radio-group" id="rg-blind"></div></div>
+      <div class="form-group full"><label class="form-label">Ghost</label><div class="radio-group" id="rg-ghost"></div></div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Intake Notes</div>
+    <textarea class="form-textarea" id="f-notes" style="min-height:90px;width:100%" placeholder="First impressions, presenting issues, what the handler said..."></textarea>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid rgba(111,116,92,0.25)">
+    <button class="btn btn-danger btn-sm" id="btn-del" onclick="deleteClient()" style="display:none">Delete Client</button>
+    <div style="display:flex;gap:10px;margin-left:auto">
+      <button class="btn btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- SESSION MODAL -->
+
+<div class="overlay" id="sess-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hdr">
+      <div class="modal-title">LOG SESSION</div>
+      <button class="btn-icon" onclick="closeSessModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="s-date" type="date"></div>
+        <div class="form-group"><label class="form-label">Focus</label><input class="form-input" id="s-focus" placeholder="e.g. Spatial intro"></div>
+        <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-textarea" id="s-notes" style="min-height:110px" placeholder="What happened, what the dog showed, what the handler did..."></textarea></div>
+        <div class="form-group full"><label class="form-label">Active Channel</label><div class="radio-group" id="s-ch-rg"></div></div>
+        <div class="form-group full"><label class="form-label">Homework Assigned</label><input class="form-input" id="s-hw" placeholder="Homework for this week..."></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(111,116,92,0.25)">
+        <button class="btn btn-sm" onclick="closeSessModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSession()">Save Session</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPASS MODAL -->
+
+<div class="overlay" id="compass-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="compass-modal-title">COMPASS SCORE</div>
+      <button class="btn-icon" onclick="closeCompassModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="checkpoint-tabs" id="cp-tabs-modal"></div>
+      <div id="compass-sliders"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(111,116,92,0.25)">
+        <button class="btn btn-sm" onclick="closeCompassModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCompass()">Save Scores</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var CHANNELS   = ["Spatial","Verbal","Environmental","Internal"];
+var CHECKPOINTS = ["Intake","Day 25","Day 60","Day 84"];
+var COMPASS_CATS = [
+  {k:"ER",  label:"Emotional Regulation",   lo:"Frustration leaking",     hi:"Neutral regardless"},
+  {k:"T",   label:"Timing & Pacing",         lo:"Late or early",           hi:"Pre-decision tension"},
+  {k:"CC",  label:"Correction Confidence",   lo:"Hesitating / apologizing",hi:"Clean, proportionate"},
+  {k:"CO",  label:"Consistency",             lo:"Rules shift with state",  hi:"Same boundary, every time"},
+  {k:"IN",  label:"Intentionality",          lo:"Going through motions",   hi:"Every action has purpose"}
+];
+var PROFILES = ["Reactive","Rigid","Avoidant","Passive","Imp. Reactive","Imp. Rigid","Imp. Avoidant","Imp. Passive","Attuned"];
+var PROFILE_NOTES = {
+  "Reactive":     "Lead with Spatial channel stability before verbal work. ER is the first compass target.",
+  "Rigid":        "Introduce Environmental variation carefully. Don't disrupt structure — redirect it.",
+  "Avoidant":     "Ghost channel likely Internal. Don't introduce by correcting. Vocabulary before reps.",
+  "Passive":      "Timing is the core issue. Dog has been filling the gap. Handler needs to move first.",
+  "Imp. Reactive":"Same volatility as Reactive, now with some awareness. Don't rush to Attuned framing.",
+  "Imp. Rigid":   "Progress is fragile. Consistency is highest compass priority.",
+  "Imp. Avoidant":"Named the ghost. Now build reps without making it precious.",
+  "Imp. Passive": "Handler is moving earlier. Protect the timing gains. Don't over-correct the over-correction.",
+  "Attuned":      "The signature runs clean. Maintain intentionality. The dog is the proof."
+};
+var AXIOMS = [
+  "You are adding to the pressure load or stabilizing it. There is no neutral.",
+  "The Signature is the map. The Compass is the proof of movement.",
+  "Pressure is not correction. Pressure is not force. Pressure is constant.",
+  "The dog was always the mirror.",
+  "Blind = friction when named. Ghost = blankness when named. The reaction is the diagnostic.",
+  "Do not introduce the ghost channel by correcting it. Introduce it. They need vocabulary before reps.",
+  "Handler profiles are diagnostic snapshots, not permanent labels.",
+  "The Four Pressure Channels are not a reframe of the four quadrants."
+];
+var FIVE_STATES = [
+  {s:"State 1 — Grounded",       c:"#6F745C", d:"Handler is present, regulated, and reading accurately. Pressure load is stable. Dog is tracking."},
+  {s:"State 2 — Loaded",         c:"#C8A96E", d:"Handler carrying elevated pressure but still functional. Watch for leakage into Dominant channel."},
+  {s:"State 3 — Reactive",       c:"#B07840", d:"Handler responding to the dog instead of leading. Signature is running hot. Timing breaks."},
+  {s:"State 4 — Collapsed",      c:"#8A5040", d:"Handler has exited the training loop. Avoidance or shutdown. Ghost channel has taken over."},
+  {s:"State 5 — Escalated",      c:"#A04030", d:"Handler has crossed into correction without intention. Pressure load is now destabilizing the dog."}
+];
+var EXERCISES = {
+  "Spatial": [
+    {n:"Threshold Hold",  d:"Handler stops at every threshold — doorways, gates, car doors. Dog must wait for release. Builds spatial authority without a word."},
+    {n:"Pressure Walk",   d:"Handler changes direction every 8–12 steps with no verbal cue. Dog must track handler's body. Reveals ghost channel in handlers who narrate every turn."},
+    {n:"The Statue",      d:"Handler stands completely still in a distracting environment. No commands, no coaxing. Measures handler's capacity to hold spatial presence without filling silence."}
+  ],
+  "Verbal": [
+    {n:"One Cue Rule",    d:"Every command is given once. No repeating, no escalating tone. Handler must follow through or not issue the command. Diagnostic: watch what happens when the dog doesn't respond."},
+    {n:"Silence Protocol",d:"15-minute session with zero verbal output from handler. Leash work only. Reveals verbal-dominant handlers within 90 seconds."},
+    {n:"Tone Calibration",d:"Handler rates their own emotional state 1–10 before issuing each command. Builds self-monitoring for verbal tone escalation."}
+  ],
+  "Environmental": [
+    {n:"Threshold Variation",d:"Train in 3 different locations in one session. Measures whether handler's consistency travels with them or stays at the familiar venue."},
+    {n:"Distraction Ladder",  d:"Introduce environmental pressure incrementally. Start empty, add one dog, then people, then both. Maps where the handler's channel starts leaking."},
+    {n:"Novel Object Protocol",d:"Place a novel object in the training area. No commands. Watch whether handler tightens leash (spatial), talks (verbal), or freezes (internal)."}
+  ],
+  "Internal": [
+    {n:"Pre-Session State Check",d:"Handler writes one sentence about their state before each session. Not for sharing — for self-awareness. Tracks correlation between handler state and dog behavior."},
+    {n:"Recovery Window",        d:"After a failed rep, handler must pause for 10 full seconds before the next cue. Measures whether they can interrupt the spiral."},
+    {n:"Expectation Audit",      d:"Handler describes what they expected vs what happened in a session. Reveals where Internal channel is running the training instead of the handler."}
+  ]
+};
+
+var DB = { clients: [] };
+var editId = null;
+var detailId = null;
+var sessTargetId = null;
+var compassTargetId = null;
+var activeCP = "Intake";
+
+/* ── STORAGE ── */
+function saveDB() {
+  var s = JSON.stringify(DB);
+  try { localStorage.setItem("shdt-arc-tracker", s); } catch(e){}
+  if (window.storage && window.storage.set) { try { window.storage.set("shdt-arc-tracker", s); } catch(e){} }
+}
+
+async function loadDB() {
+  var loaded = false;
+  if (window.storage && window.storage.get) {
+    try { var r = await window.storage.get("shdt-arc-tracker"); if (r&&r.value){DB=JSON.parse(r.value);loaded=true;} } catch(e){}
+  }
+  if (!loaded) { try { var raw=localStorage.getItem("shdt-arc-tracker"); if(raw){DB=JSON.parse(raw);loaded=true;} } catch(e){} }
+  if (!DB.clients) DB.clients=[];
+  buildReference();
+  buildExercises();
+  renderAll();
+}
+
+/* ── VIEWS ── */
+function showView(name) {
+  document.querySelectorAll(".tab-view").forEach(function(v){v.classList.remove("active");});
+  document.querySelectorAll(".nav-tab").forEach(function(t){t.classList.remove("active");});
+  document.getElementById("view-"+name).classList.add("active");
+  var tabs = document.querySelectorAll(".nav-tab");
+  var names = ["diagnose","clients","exercises","reference"];
+  var idx = names.indexOf(name);
+  if (idx >= 0) tabs[idx].classList.add("active");
+}
+
+function backToClients() {
+  detailId = null;
+  showView("clients");
+  renderClients();
+}
+
+/* ── PANEL ── */
+function togglePanel(hdr, bodyId) {
+  var open = hdr.classList.contains("open");
+  var body = document.getElementById(bodyId);
+  var chev = hdr.querySelector(".chevron");
+  if (open) { hdr.classList.remove("open"); body.classList.remove("open"); chev.classList.remove("open"); }
+  else       { hdr.classList.add("open");    body.classList.add("open");    chev.classList.add("open"); }
+}
+
+/* ── RENDER ALL ── */
+function renderAll() {
+  renderDiagnose();
+  renderClients();
+}
+
+/* ── DIAGNOSE ── */
+function renderDiagnose() {
+  var cl = DB.clients;
+  document.getElementById("d-stat-active").textContent = cl.length;
+
+  // avg compass
+  var totals = [], count = 0;
+  cl.forEach(function(c){
+    var hist = c.compassHistory||[];
+    if (!hist.length) return;
+    var latest = hist[hist.length-1];
+    var cats = COMPASS_CATS.map(function(cat){return latest[cat.k]||0;});
+    var sum = cats.reduce(function(a,b){return a+b;},0);
+    totals.push(sum); count++;
+  });
+  document.getElementById("d-stat-compass").textContent = count ? (totals.reduce(function(a,b){return a+b;},0)/count).toFixed(0) : "—";
+
+  // top profile
+  var profs = {};
+  cl.forEach(function(c){ if(c.profile) profs[c.profile]=(profs[c.profile]||0)+1; });
+  var tp = Object.keys(profs).sort(function(a,b){return profs[b]-profs[a];})[0]||"—";
+  document.getElementById("d-stat-profile").textContent = tp;
+
+  // top channel
+  var chs = {};
+  cl.forEach(function(c){ if(c.dominant) chs[c.dominant]=(chs[c.dominant]||0)+1; });
+  var tc = Object.keys(chs).sort(function(a,b){return chs[b]-chs[a];})[0]||"—";
+  document.getElementById("d-stat-channel").textContent = tc;
+
+  // flags
+  var flagsEl = document.getElementById("flags-inner");
+  var flags = [];
+  cl.forEach(function(c){
+    var sessions = c.sessions||[];
+    var lastSession = sessions[sessions.length-1];
+    var daysSince = lastSession ? Math.floor((Date.now()-new Date(lastSession.date))/(1000*60*60*24)) : null;
+    if (daysSince !== null && daysSince > 14) flags.push('<div class="diag-flag"><strong style="color:#C8A96E;font-family:Cinzel,serif">'+esc(c.handler)+'</strong> — no session logged in '+daysSince+' days</div>');
+    var hist = c.compassHistory||[];
+    if (hist.length >= 2) {
+      var prev = hist[hist.length-2], curr = hist[hist.length-1];
+      var prevSum = COMPASS_CATS.reduce(function(a,cat){return a+(prev[cat.k]||0);},0);
+      var currSum = COMPASS_CATS.reduce(function(a,cat){return a+(curr[cat.k]||0);},0);
+      if (currSum < prevSum - 4) flags.push('<div class="diag-flag"><strong style="color:#C8A96E;font-family:Cinzel,serif">'+esc(c.handler)+'</strong> — compass score dropped from '+prevSum+' to '+currSum+'</div>');
+    }
+  });
+  flagsEl.innerHTML = flags.length ? flags.join("") : '<div class="empty"><div class="empty-title">No flags</div><div class="empty-sub">All clear</div></div>';
+
+  // caseload
+  var caseEl = document.getElementById("caseload-inner");
+  if (!cl.length) { caseEl.innerHTML = '<div class="empty"><div class="empty-title">No clients yet</div></div>'; return; }
+  var h = '<div class="client-grid">';
+  cl.forEach(function(c){
+    var hist = c.compassHistory||[];
+    var latest = hist.length ? hist[hist.length-1] : null;
+    var score = latest ? COMPASS_CATS.reduce(function(a,cat){return a+(latest[cat.k]||0);},0) : null;
+    h += '<div class="client-card" onclick="showDetail(\''+c.id+'\')">';
+    h += '<div class="card-name">'+esc(c.handler||"Handler")+'</div>';
+    h += '<div class="card-dog">'+(c.dog?esc(c.dog)+(c.breed?' &middot; '+esc(c.breed):''):'No dog listed')+'</div>';
+    h += '<div class="card-tags">';
+    if (c.dominant) h += '<span class="tag tag-ch">'+esc(c.dominant)+'</span>';
+    if (c.profile)  h += '<span class="tag tag-prof">'+esc(c.profile)+'</span>';
+    if (score !== null) h += '<span class="tag tag-cp">Compass '+score+'</span>';
+    h += '</div>';
+    if (c.startDate) h += '<div class="card-day">Started '+esc(c.startDate)+'</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+  caseEl.innerHTML = h;
+}
+
+/* ── CLIENTS ── */
+function renderClients() {
+  var wrap = document.getElementById("client-grid-wrap");
+  if (!DB.clients.length) { wrap.innerHTML = '<div class="empty"><div class="empty-icon">&#9670;</div><div class="empty-title">No clients logged yet</div><div class="empty-sub">Hit "+ Client" to start</div></div>'; return; }
+  var h = '<div class="client-grid">';
+  DB.clients.forEach(function(c){
+    var hist = c.compassHistory||[];
+    var latest = hist.length ? hist[hist.length-1] : null;
+    var score = latest ? COMPASS_CATS.reduce(function(a,cat){return a+(latest[cat.k]||0);},0) : null;
+    h += '<div class="client-card" onclick="showDetail(\''+c.id+'\')">';
+    h += '<div class="card-name">'+esc(c.handler||"Handler")+'</div>';
+    h += '<div class="card-dog">'+(c.dog?esc(c.dog)+(c.breed?' &middot; '+esc(c.breed):''):'No dog listed')+'</div>';
+    h += '<div class="card-tags">';
+    if (c.dominant) h += '<span class="tag tag-ch">'+esc(c.dominant)+'</span>';
+    if (c.profile)  h += '<span class="tag tag-prof">'+esc(c.profile)+'</span>';
+    if (score !== null) h += '<span class="tag tag-cp">Compass '+score+'</span>';
+    h += '</div>';
+    if (c.program) h += '<div class="card-day">'+esc(c.program)+(c.startDate?' &middot; '+esc(c.startDate):'')+'</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+  wrap.innerHTML = h;
+}
+
+/* ── DETAIL ── */
+function showDetail(id) {
+  detailId = id;
+  showView("detail");
+  renderDetail(id);
+  window.scrollTo(0,0);
+}
+
+function renderDetail(id) {
+  var c = DB.clients.find(function(x){return x.id===id;}); if (!c) { backToClients(); return; }
+  var el = document.getElementById("detail-content");
+  var h = "";
+
+  // header
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid rgba(111,116,92,0.3)">';
+  h += '<div><div style="font-family:Cinzel,Georgia,serif;font-size:22px;color:#F6F4F1;margin-bottom:3px">'+esc(c.handler||"Handler")+'</div>';
+  if (c.dog) h += '<div style="font-size:14px;color:#6F745C">'+esc(c.dog)+(c.breed?' &middot; '+esc(c.breed):'')+'</div>';
+  h += '</div>';
+  h += '<div style="display:flex;gap:8px">';
+  h += '<button class="btn btn-sm" onclick="openEditClient(\''+id+'\')">Edit</button>';
+  h += '<button class="btn btn-sm" onclick="openSessModal(\''+id+'\')">+ Session</button>';
+  h += '<button class="btn btn-primary btn-sm" onclick="openCompassModal(\''+id+'\')">+ Compass</button>';
+  h += '</div></div>';
+
+  // detail tabs
+  h += '<div class="dtab-row">';
+  h += '<button class="dtab active" id="dtab-overview" onclick="switchDTab(\'overview\')">Overview</button>';
+  h += '<button class="dtab" id="dtab-compass" onclick="switchDTab(\'compass\')">Compass</button>';
+  h += '<button class="dtab" id="dtab-sessions" onclick="switchDTab(\'sessions\')">Sessions ('+(c.sessions||[]).length+')</button>';
+  h += '<button class="dtab" id="dtab-homework" onclick="switchDTab(\'homework\')">Homework</button>';
+  h += '<button class="dtab" id="dtab-issues" onclick="switchDTab(\'issues\')">Issues</button>';
+  h += '</div>';
+
+  // OVERVIEW
+  h += '<div id="dtab-overview-c">';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px">';
+  h += mkBlock("Profile", c.profile ? '<span class="tag tag-prof">'+esc(c.profile)+'</span>' : '—');
+  h += mkBlock("Program", c.program||"—");
+  h += mkBlock("Start Date", c.startDate||"—");
+  h += mkBlock("Checkpoints", (c.compassHistory||[]).length+" scored");
+  h += '</div>';
+  h += '<div style="margin-bottom:22px"><div style="font-family:Cinzel,Georgia,serif;font-size:11px;letter-spacing:0.18em;color:#C8A96E;text-transform:uppercase;margin-bottom:8px">Handler Signature</div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  if (c.dominant) h += '<span class="sig-pill sig-dom">Dominant: '+esc(c.dominant)+'</span>';
+  if (c.blind)    h += '<span class="sig-pill sig-blind">Blind: '+esc(c.blind)+'</span>';
+  if (c.ghost)    h += '<span class="sig-pill sig-ghost">Ghost: '+esc(c.ghost)+'</span>';
+  if (!c.dominant && !c.blind && !c.ghost) h += '<span style="color:#6F745C;font-size:14px">No signature recorded</span>';
+  h += '</div></div>';
+  if (c.profile && PROFILE_NOTES[c.profile]) {
+    h += '<div style="background:rgba(200,169,110,0.06);border:1px solid rgba(200,169,110,0.2);border-left:3px solid #C8A96E;border-radius:4px;padding:12px 16px;margin-bottom:18px;font-size:14px;color:#F6F4F1;line-height:1.7"><strong style="color:#C8A96E;font-family:Cinzel,serif">Profile Note:</strong> '+PROFILE_NOTES[c.profile]+'</div>';
+  }
+  if (c.notes) h += '<div><div style="font-family:Cinzel,Georgia,serif;font-size:11px;letter-spacing:0.18em;color:#C8A96E;text-transform:uppercase;margin-bottom:8px">Intake Notes</div><div style="font-size:14px;color:#F6F4F1;line-height:1.75">'+esc(c.notes)+'</div></div>';
+  h += '</div>';
+
+  // COMPASS
+  h += '<div id="dtab-compass-c" style="display:none">';
+  var hist = c.compassHistory||[];
+  if (!hist.length) {
+    h += '<div class="empty"><div class="empty-title">No compass scores yet</div><div class="empty-sub">Tap "+ Compass" to score</div></div>';
+  } else {
+    h += '<div class="checkpoint-tabs" style="margin-bottom:16px">';
+    hist.forEach(function(cp,i){
+      h += '<button class="cp-tab'+(i===hist.length-1?' active':'')+'" onclick="switchCP(this,\'cpv-'+i+'\')">'+esc(cp.checkpoint||"Score "+i)+'</button>';
+    });
+    h += '</div>';
+    hist.forEach(function(cp,i){
+      var sum = COMPASS_CATS.reduce(function(a,cat){return a+(cp[cat.k]||0);},0);
+      h += '<div id="cpv-'+i+'" style="'+(i===hist.length-1?'':'display:none')+'">';
+      h += '<div style="font-family:Cinzel,Georgia,serif;font-size:24px;color:#C8A96E;margin-bottom:4px">'+sum+'<span style="font-size:14px;color:#6F745C"> / 50</span></div>';
+      h += '<div style="font-size:12px;color:#6F745C;margin-bottom:18px">'+(cp.date||"")+'</div>';
+      COMPASS_CATS.forEach(function(cat){
+        var v = cp[cat.k]||0;
+        h += '<div class="score-row"><span class="score-lbl">'+cat.label.split(' ')[0]+'</span><div class="score-track"><div class="score-fill" style="width:'+(v/10*100)+'%"></div></div><span class="score-num">'+v+'</span></div>';
+      });
+      h += '</div>';
+    });
+    // spark
+    if (hist.length > 1) {
+      h += '<div style="margin-top:20px"><div style="font-family:Cinzel,Georgia,serif;font-size:11px;letter-spacing:0.15em;color:#6F745C;text-transform:uppercase;margin-bottom:8px">Arc Movement</div>';
+      h += '<div class="spark-wrap">';
+      var max = Math.max.apply(null, hist.map(function(cp){ return COMPASS_CATS.reduce(function(a,cat){return a+(cp[cat.k]||0);},0); }));
+      hist.forEach(function(cp,i){
+        var s = COMPASS_CATS.reduce(function(a,cat){return a+(cp[cat.k]||0);},0);
+        var pct = max ? (s/max*100) : 0;
+        var col = i===hist.length-1 ? "#C8A96E" : "#6F745C";
+        h += '<div class="spark-bar" style="height:'+pct+'%;background:'+col+'" title="'+esc(cp.checkpoint)+': '+s+'"></div>';
+      });
+      h += '</div></div>';
+    }
+  }
+  h += '</div>';
+
+  // SESSIONS
+  h += '<div id="dtab-sessions-c" style="display:none">';
+  var sessions = c.sessions||[];
+  if (!sessions.length) {
+    h += '<div class="empty"><div class="empty-title">No sessions logged yet</div><div class="empty-sub">Tap "+ Session" to log</div></div>';
+  } else {
+    sessions.slice().reverse().forEach(function(s){
+      h += '<div class="session-entry">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      h += '<div class="session-date">'+(s.date||'')+(s.focus?' &mdash; '+esc(s.focus):'')+'</div>';
+      h += '<button class="btn-icon" style="color:#A06050" onclick="deleteSession(\''+id+'\',\''+s.id+'\')">&#10005;</button>';
+      h += '</div>';
+      if (s.channel) h += '<span class="tag tag-ch" style="margin-bottom:8px;display:inline-block">'+esc(s.channel)+'</span>';
+      h += '<div class="session-text">'+esc(s.notes||"")+'</div></div>';
+    });
+  }
+  h += '</div>';
+
+  // HOMEWORK
+  h += '<div id="dtab-homework-c" style="display:none">';
+  var hw = c.homework||[];
+  if (!hw.length) {
+    h += '<div class="empty"><div class="empty-title">No homework assigned</div><div class="empty-sub">Homework is added when logging sessions</div></div>';
+  } else {
+    hw.forEach(function(item,i){
+      h += '<div class="hw-item">';
+      h += '<div class="hw-check'+(item.done?' done':'')+'" onclick="toggleHW(\''+id+'\','+i+')">'+( item.done?'<span style="color:#C8A96E;font-size:12px">&#10003;</span>':'')+'</div>';
+      h += '<div class="hw-text'+(item.done?' done':'')+'">'+esc(item.text)+'</div>';
+      h += '<button class="btn-icon" style="color:#A06050" onclick="deleteHW(\''+id+'\','+i+')">&#10005;</button>';
+      h += '</div>';
+    });
+  }
+  h += '</div>';
+
+  // ISSUES
+  h += '<div id="dtab-issues-c" style="display:none">';
+  var issues = c.issues||[];
+  h += '<div style="margin-bottom:14px;display:flex;gap:8px">';
+  h += '<input class="form-input" id="issue-input-'+id+'" placeholder="Add recurring issue..." style="flex:1">';
+  h += '<button class="btn btn-primary btn-sm" onclick="addIssue(\''+id+'\')">Add</button>';
+  h += '</div>';
+  if (!issues.length) {
+    h += '<div class="empty"><div class="empty-title">No recurring issues logged</div></div>';
+  } else {
+    h += '<div>';
+    issues.forEach(function(issue,i){
+      h += '<span class="issue-tag">'+esc(issue)+'<span class="issue-x" onclick="deleteIssue(\''+id+'\','+i+')">&#10005;</span></span>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+
+  el.innerHTML = h;
+}
+
+function mkBlock(title, val) {
+  return '<div><div style="font-family:Cinzel,Georgia,serif;font-size:11px;letter-spacing:0.18em;color:#C8A96E;text-transform:uppercase;margin-bottom:6px">'+title+'</div><div style="font-size:14px;color:#F6F4F1">'+val+'</div></div>';
+}
+
+function switchDTab(name) {
+  ["overview","compass","sessions","homework","issues"].forEach(function(t){
+    var btn=document.getElementById("dtab-"+t), cont=document.getElementById("dtab-"+t+"-c");
+    if (!btn||!cont) return;
+    if (t===name) { btn.classList.add("active"); cont.style.display="block"; }
+    else           { btn.classList.remove("active"); cont.style.display="none"; }
+  });
+}
+
+function switchCP(btn, targetId) {
+  btn.parentElement.querySelectorAll(".cp-tab").forEach(function(b){b.classList.remove("active");});
+  btn.classList.add("active");
+  var parent = document.getElementById(targetId).parentElement;
+  parent.querySelectorAll("[id^='cpv-']").forEach(function(el){el.style.display="none";});
+  document.getElementById(targetId).style.display="block";
+}
+
+/* ── CLIENT MODAL ── */
+function openAddClient() {
+  editId = null;
+  document.getElementById("modal-title").textContent = "NEW CLIENT";
+  document.getElementById("btn-del").style.display = "none";
+  ["f-handler","f-dog","f-breed","f-notes"].forEach(function(id){document.getElementById(id).value="";});
+  document.getElementById("f-program").value="";
+  document.getElementById("f-profile").value="";
+  document.getElementById("f-start").value = new Date().toISOString().split("T")[0];
+  buildRG("rg-dom",""); buildRG("rg-blind",""); buildRG("rg-ghost","");
+  document.getElementById("client-modal").classList.add("open");
+}
+
+function openEditClient(id) {
+  var c=DB.clients.find(function(x){return x.id===id;}); if(!c) return;
+  editId=id;
+  document.getElementById("modal-title").textContent="EDIT — "+esc(c.handler||"Client");
+  document.getElementById("btn-del").style.display="inline-flex";
+  document.getElementById("f-handler").value  = c.handler||"";
+  document.getElementById("f-dog").value      = c.dog||"";
+  document.getElementById("f-breed").value    = c.breed||"";
+  document.getElementById("f-program").value  = c.program||"";
+  document.getElementById("f-start").value    = c.startDate||"";
+  document.getElementById("f-profile").value  = c.profile||"";
+  document.getElementById("f-notes").value    = c.notes||"";
+  buildRG("rg-dom",c.dominant||""); buildRG("rg-blind",c.blind||""); buildRG("rg-ghost",c.ghost||"");
+  document.getElementById("client-modal").classList.add("open");
+}
+
+function closeModal() { document.getElementById("client-modal").classList.remove("open"); editId=null; }
+
+function saveClient() {
+  var name = document.getElementById("f-handler").value.trim();
+  if (!name) { toast("Handler name required"); return; }
+  var client = {
+    id: editId||Date.now().toString(),
+    handler:   name,
+    dog:       document.getElementById("f-dog").value.trim(),
+    breed:     document.getElementById("f-breed").value.trim(),
+    program:   document.getElementById("f-program").value,
+    startDate: document.getElementById("f-start").value,
+    profile:   document.getElementById("f-profile").value,
+    dominant:  getRG("rg-dom"),
+    blind:     getRG("rg-blind"),
+    ghost:     getRG("rg-ghost"),
+    notes:     document.getElementById("f-notes").value.trim(),
+    compassHistory: [],
+    sessions: [],
+    homework: [],
+    issues: [],
+    created: new Date().toISOString()
+  };
+  if (editId) {
+    var ex=DB.clients.find(function(x){return x.id===editId;});
+    if (ex) { client.compassHistory=ex.compassHistory||[]; client.sessions=ex.sessions||[]; client.homework=ex.homework||[]; client.issues=ex.issues||[]; client.created=ex.created; }
+    DB.clients=DB.clients.map(function(x){return x.id===editId?client:x;});
+    toast("Client updated");
+  } else { DB.clients.push(client); toast("Client added"); }
+  saveDB(); closeModal(); renderAll();
+  if (detailId===client.id) renderDetail(client.id);
+}
+
+function deleteClient() {
+  if (!editId) return;
+  var c=DB.clients.find(function(x){return x.id===editId;});
+  if (!confirm("Delete "+(c?c.handler:"this client")+"? Cannot be undone.")) return;
+  DB.clients=DB.clients.filter(function(x){return x.id!==editId;});
+  saveDB(); closeModal(); backToClients(); renderAll(); toast("Client deleted");
+}
+
+/* ── SESSION MODAL ── */
+function openSessModal(id) {
+  sessTargetId=id;
+  document.getElementById("s-date").value=new Date().toISOString().split("T")[0];
+  document.getElementById("s-focus").value=""; document.getElementById("s-notes").value=""; document.getElementById("s-hw").value="";
+  buildRG("s-ch-rg","");
+  document.getElementById("sess-modal").classList.add("open");
+}
+function closeSessModal() { document.getElementById("sess-modal").classList.remove("open"); sessTargetId=null; }
+
+function saveSession() {
+  if (!sessTargetId) return;
+  var notes=document.getElementById("s-notes").value.trim();
+  if (!notes) { toast("Notes required"); return; }
+  var c=DB.clients.find(function(x){return x.id===sessTargetId;}); if(!c) return;
+  if (!c.sessions) c.sessions=[];
+  c.sessions.push({ id:Date.now().toString(), date:document.getElementById("s-date").value, focus:document.getElementById("s-focus").value.trim(), notes:notes, channel:getRG("s-ch-rg") });
+  var hw=document.getElementById("s-hw").value.trim();
+  if (hw) { if (!c.homework) c.homework=[]; c.homework.push({text:hw,done:false}); }
+  saveDB(); closeSessModal(); renderAll();
+  if (detailId===sessTargetId) renderDetail(sessTargetId);
+  toast("Session saved");
+}
+
+function deleteSession(clientId, sessId) {
+  if (!confirm("Delete this session?")) return;
+  var c=DB.clients.find(function(x){return x.id===clientId;}); if(!c) return;
+  c.sessions=(c.sessions||[]).filter(function(s){return s.id!==sessId;});
+  saveDB(); renderAll(); if(detailId===clientId) renderDetail(clientId); toast("Session deleted");
+}
+
+/* ── HOMEWORK ── */
+function toggleHW(clientId, idx) {
+  var c=DB.clients.find(function(x){return x.id===clientId;}); if(!c) return;
+  c.homework[idx].done = !c.homework[idx].done;
+  saveDB(); renderDetail(clientId);
+}
+function deleteHW(clientId, idx) {
+  var c=DB.clients.find(function(x){return x.id===clientId;}); if(!c) return;
+  c.homework.splice(idx,1);
+  saveDB(); renderDetail(clientId); toast("Homework removed");
+}
+
+/* ── ISSUES ── */
+function addIssue(clientId) {
+  var inp=document.getElementById("issue-input-"+clientId);
+  var val=inp.value.trim(); if(!val) return;
+  var c=DB.clients.find(function(x){return x.id===clientId;}); if(!c) return;
+  if (!c.issues) c.issues=[];
+  c.issues.push(val);
+  saveDB(); renderDetail(clientId); toast("Issue added");
+}
+function deleteIssue(clientId, idx) {
+  var c=DB.clients.find(function(x){return x.id===clientId;}); if(!c) return;
+  c.issues.splice(idx,1);
+  saveDB(); renderDetail(clientId);
+}
+
+/* ── COMPASS MODAL ── */
+function openCompassModal(id) {
+  compassTargetId=id;
+  var c=DB.clients.find(function(x){return x.id===id;}); if(!c) return;
+  document.getElementById("compass-modal-title").textContent="COMPASS — "+esc(c.handler||"Client");
+  activeCP="Intake";
+  buildCPTabs();
+  buildSliders();
+  document.getElementById("compass-modal").classList.add("open");
+}
+function closeCompassModal() { document.getElementById("compass-modal").classList.remove("open"); compassTargetId=null; }
+
+function buildCPTabs() {
+  var el=document.getElementById("cp-tabs-modal");
+  var h="";
+  CHECKPOINTS.forEach(function(cp){
+    h += '<button class="cp-tab'+(activeCP===cp?' active':'')+'" onclick="selectCP(\''+cp+'\',this)">'+cp+'</button>';
+  });
+  el.innerHTML=h;
+}
+function selectCP(cp, btn) {
+  activeCP=cp;
+  document.getElementById("cp-tabs-modal").querySelectorAll(".cp-tab").forEach(function(b){b.classList.remove("active");});
+  btn.classList.add("active");
+  buildSliders();
+}
+function buildSliders() {
+  var el=document.getElementById("compass-sliders");
+  var c=compassTargetId?DB.clients.find(function(x){return x.id===compassTargetId;}):null;
+  var existing = null;
+  if (c) { existing=(c.compassHistory||[]).find(function(h){return h.checkpoint===activeCP;})||null; }
+  var h="";
+  COMPASS_CATS.forEach(function(cat){
+    var val = existing ? (existing[cat.k]||5) : 5;
+    h += '<div class="compass-item" style="margin-bottom:18px">';
+    h += '<div class="compass-label">'+cat.label+'</div>';
+    h += '<div style="display:flex;justify-content:space-between;font-size:11px;color:#6F745C;margin-bottom:4px"><span>'+cat.lo+'</span><span>'+cat.hi+'</span></div>';
+    h += '<div class="compass-row"><input class="slider" type="range" min="1" max="10" value="'+val+'" id="sl-'+cat.k+'" oninput="document.getElementById(\'sv-'+cat.k+'\').textContent=this.value">';
+    h += '<span class="compass-val" id="sv-'+cat.k+'">'+val+'</span></div>';
+    h += '</div>';
+  });
+  el.innerHTML=h;
+}
+
+function saveCompass() {
+  if (!compassTargetId) return;
+  var c=DB.clients.find(function(x){return x.id===compassTargetId;}); if(!c) return;
+  if (!c.compassHistory) c.compassHistory=[];
+  var entry={checkpoint:activeCP,date:new Date().toISOString().split("T")[0]};
+  COMPASS_CATS.forEach(function(cat){ entry[cat.k]=parseInt(document.getElementById("sl-"+cat.k).value)||5; });
+  var idx=c.compassHistory.findIndex(function(h){return h.checkpoint===activeCP;});
+  if (idx>=0) c.compassHistory[idx]=entry; else c.compassHistory.push(entry);
+  c.compassHistory.sort(function(a,b){return CHECKPOINTS.indexOf(a.checkpoint)-CHECKPOINTS.indexOf(b.checkpoint);});
+  saveDB(); closeCompassModal(); renderAll();
+  if (detailId===compassTargetId) renderDetail(compassTargetId);
+  toast("Compass saved — "+activeCP);
+}
+
+/* ── RADIO ── */
+function buildRG(id, sel) {
+  var el=document.getElementById(id); if(!el) return;
+  var h='<span class="radio-btn'+((!sel||sel==='')?' active':'')+'" onclick="selRG(\''+id+'\',\'\',this)">—</span>';
+  CHANNELS.forEach(function(ch){ h+='<span class="radio-btn'+(sel===ch?' active':'')+'" onclick="selRG(\''+id+'\',\''+ch+'\',this)">'+ch+'</span>'; });
+  el.innerHTML=h;
+}
+function selRG(id,val,el) { document.getElementById(id).querySelectorAll(".radio-btn").forEach(function(b){b.classList.remove("active");}); el.classList.add("active"); }
+function getRG(id) { var a=document.getElementById(id).querySelector(".radio-btn.active"); return (a&&a.textContent!=="—")?a.textContent:""; }
+
+/* ── REFERENCE ── */
+function buildReference() {
+  // Axioms
+  var ax=document.getElementById("ref-axioms-inner");
+  ax.innerHTML = AXIOMS.map(function(a){ return '<div class="session-entry"><div style="font-size:15px;color:#F6F4F1;line-height:1.8;font-style:italic;font-family:EB Garamond,Georgia,serif">&ldquo;'+esc(a)+'&rdquo;</div></div>'; }).join("");
+
+  // Channels
+  var ch=document.getElementById("ref-channels-inner");
+  var chData=[
+    {n:"Spatial",       d:"The physical relationship between handler and dog — distance, direction, body angle, movement. The channel most handlers underestimate. Spatial pressure is constant. You are always inside it or outside of it."},
+    {n:"Verbal",        d:"Tone, volume, cadence, word choice, and frequency of speech. Verbal-dominant handlers narrate. They fill silence. The dog learns to wait for the words instead of reading the body."},
+    {n:"Environmental", d:"Everything in the training context that isn't the handler or the dog — location, distractions, surfaces, sounds, other animals, other people. Handlers who lose consistency across environments have a leaking Environmental channel."},
+    {n:"Internal",      d:"The handler's emotional state, anticipatory anxiety, belief system about the dog, and self-narrative. The hardest to see because the handler can't see it themselves. The ghost channel is almost always Internal."}
+  ];
+  ch.innerHTML = chData.map(function(x){ return '<div class="ex-card"><div class="ex-name">'+esc(x.n)+'</div><div class="ex-desc">'+esc(x.d)+'</div></div>'; }).join("");
+
+  // Profiles
+  var pr=document.getElementById("ref-profiles-inner");
+  pr.innerHTML = PROFILES.map(function(p){ return '<div class="ex-card"><div class="ex-name">'+esc(p)+'</div><div class="ex-desc">'+(PROFILE_NOTES[p]||"")+'</div></div>'; }).join("");
+
+  // Five States
+  var st=document.getElementById("ref-states-inner");
+  st.innerHTML = FIVE_STATES.map(function(x){ return '<div class="state-card"><div class="state-dot" style="background:'+x.c+'"></div><div><div class="state-name">'+esc(x.s)+'</div><div class="state-desc">'+esc(x.d)+'</div></div></div>'; }).join("");
+}
+
+/* ── EXERCISES ── */
+function buildExercises() {
+  ["Spatial","Verbal","Environmental","Internal"].forEach(function(ch){
+    var key = ch==="Environmental"?"env":ch.toLowerCase();
+    var el = document.getElementById("ex-"+key+"-inner");
+    if (!el) return;
+    var exList = EXERCISES[ch]||[];
+    el.innerHTML = exList.map(function(e){ return '<div class="ex-card"><div class="ex-name">'+esc(e.n)+'</div><div class="ex-desc">'+esc(e.d)+'</div></div>'; }).join("");
+  });
+}
+
+/* ── EXPORT/IMPORT ── */
+function exportData() {
+  var a=document.createElement("a");
+  a.setAttribute("href","data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(DB,null,2)));
+  a.setAttribute("download","shdt-arc-"+new Date().toISOString().split("T")[0]+".json");
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function importData(e) {
+  var file=e.target.files[0]; if(!file) return;
+  var r=new FileReader();
+  r.onload=function(ev){ try{DB=JSON.parse(ev.target.result);if(!DB.clients)DB.clients=[];saveDB();renderAll();toast("Imported — "+DB.clients.length+" clients");}catch(e){toast("Invalid file");} };
+  r.readAsText(file); e.target.value="";
+}
+
+/* ── UTILS ── */
+function esc(s) { if(!s) return ""; return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function toast(msg) { var el=document.getElementById("toast"); el.textContent=msg; el.classList.add("show"); setTimeout(function(){el.classList.remove("show");},2800); }
+
+loadDB();
+</script>
+
+</body>
+</html>
