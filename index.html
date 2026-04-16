@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Steady Hand — Training Tools</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;1,400&family=Raleway:wght@300;400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: #1E1E1E; }
+
+body {
+background: #1E1E1E;
+min-height: 100vh;
+font-family: ‘Raleway’, Georgia, sans-serif;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 40px 24px;
+}
+
+.container {
+width: 100%;
+max-width: 460px;
+display: flex;
+flex-direction: column;
+align-items: center;
+animation: fadeUp 0.6s ease both;
+}
+
+.brand {
+text-align: center;
+margin-bottom: 52px;
+}
+
+.brand-name {
+font-family: ‘Cinzel Decorative’, ‘Cinzel’, Georgia, serif;
+font-size: 26px;
+color: #C8A96E;
+letter-spacing: 0.06em;
+margin-bottom: 12px;
+}
+
+.brand-rule {
+width: 56px;
+height: 1px;
+background: linear-gradient(90deg, transparent, #C8A96E, transparent);
+margin: 0 auto 16px auto;
+}
+
+.brand-sub {
+font-family: ‘Cinzel’, Georgia, serif;
+font-size: 11px;
+letter-spacing: 0.28em;
+color: #6F745C;
+text-transform: uppercase;
+}
+
+.tool-card {
+display: block;
+width: 100%;
+text-decoration: none;
+background: #1E1E1E;
+border: 1px solid rgba(111,116,92,0.4);
+border-radius: 6px;
+padding: 28px;
+margin-bottom: 16px;
+position: relative;
+overflow: hidden;
+transition: border-color 0.3s, transform 0.25s, box-shadow 0.3s;
+}
+
+.tool-card:nth-child(1) { animation: fadeUp 0.5s 0.05s ease both; }
+.tool-card:nth-child(2) { animation: fadeUp 0.5s 0.15s ease both; }
+
+.tool-card::before {
+content: ‘’;
+position: absolute;
+top: 0; left: 0; right: 0;
+height: 2px;
+background: linear-gradient(90deg, transparent, #C8A96E, transparent);
+transform: scaleX(0);
+transform-origin: center;
+transition: transform 0.4s ease;
+}
+
+.tool-card::after {
+content: ‘’;
+position: absolute;
+inset: 0;
+background: rgba(111,116,92,0.04);
+opacity: 0;
+transition: opacity 0.3s;
+}
+
+.tool-card:hover {
+border-color: #C8A96E;
+transform: translateY(-3px);
+box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 24px rgba(200,169,110,0.08);
+}
+.tool-card:hover::before { transform: scaleX(1); }
+.tool-card:hover::after  { opacity: 1; }
+
+.tool-eyebrow {
+font-family: ‘Cinzel’, Georgia, serif;
+font-size: 10px;
+letter-spacing: 0.28em;
+color: #6F745C;
+text-transform: uppercase;
+margin-bottom: 8px;
+position: relative; z-index: 1;
+}
+
+.tool-name {
+font-family: ‘Cinzel’, Georgia, serif;
+font-size: 21px;
+color: #F6F4F1;
+margin-bottom: 10px;
+padding-right: 36px;
+position: relative; z-index: 1;
+}
+
+.tool-desc {
+font-family: ‘EB Garamond’, Georgia, serif;
+font-size: 16px;
+color: #6F745C;
+line-height: 1.65;
+font-style: italic;
+padding-right: 36px;
+position: relative; z-index: 1;
+}
+
+.tool-arrow {
+position: absolute;
+right: 24px; top: 50%;
+transform: translateY(-50%);
+color: #6F745C;
+font-size: 22px;
+transition: color 0.25s, right 0.25s;
+z-index: 1;
+}
+
+.tool-card:hover .tool-arrow { color: #C8A96E; right: 19px; }
+
+.hub-footer {
+margin-top: 44px;
+font-family: ‘Cinzel’, Georgia, serif;
+font-size: 10px;
+letter-spacing: 0.22em;
+color: rgba(111,116,92,0.5);
+text-transform: uppercase;
+}
+
+@keyframes fadeUp {
+from { opacity: 0; transform: translateY(16px); }
+to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+</head>
+<body>
+<div class="container">
+
+  <div class="brand">
+    <div class="brand-name">Steady Hand</div>
+    <div class="brand-rule"></div>
+    <div class="brand-sub">Dog Training &mdash; Internal Tools</div>
+  </div>
+
+  <a class="tool-card" href="arc-tracker.html">
+    <div class="tool-eyebrow">Handler Index&trade;</div>
+    <div class="tool-name">Arc Tracker</div>
+    <div class="tool-desc">Client diagnostic tracking across the 90-Day Arc. Signature, Compass, Profile.</div>
+    <span class="tool-arrow">&#8594;</span>
+  </a>
+
+  <a class="tool-card" href="dog-tracker.html">
+    <div class="tool-eyebrow">Companion Intelligence</div>
+    <div class="tool-name">Dog Intelligence Log</div>
+    <div class="tool-desc">Handler-dog pair logging. Match ratio, breed patterns, signature trends.</div>
+    <span class="tool-arrow">&#8594;</span>
+  </a>
+
+  <div class="hub-footer">Steady Hand Dog Training &mdash; Surprise, AZ</div>
+
+</div>
+</body>
+</html>
