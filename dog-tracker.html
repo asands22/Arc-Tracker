@@ -316,7 +316,7 @@ header { padding: 14px 16px; }
   </div>
   <div class="header-actions">
     <button class="btn btn-sm" onclick="exportData()">&#8595; Export</button>
-    <label class="btn btn-sm" style="cursor:pointer">&#8593; Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+    <label class="btn btn-sm" style="cursor:pointer">&#8593; Import<input type="file" id="import-input" onchange="importData(event)" style="display:none"></label>
     <button class="btn btn-primary" onclick="openAddDog()">+ New Dog</button>
   </div>
 </header>
@@ -999,18 +999,26 @@ a.setAttribute(“download”,“shdt-dog-log-”+new Date().toISOString().split
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 function importData(e) {
-var file = e.target.files[0]; if (!file) return;
+var file = e.target.files[0];
+if (!file) { toast(“No file selected”); return; }
 var r = new FileReader();
+r.onerror = function() { toast(“Read failed — try again”); };
 r.onload = function(ev) {
-try {
-DB = JSON.parse(ev.target.result);
-if (!DB.dogs) DB.dogs = [];
-migrateDB();
-saveDB(); render();
+var text = ev.target.result;
+if (!text) { toast(“File is empty”); return; }
+var parsed;
+try { parsed = JSON.parse(text); }
+catch(err) { toast(“Not valid JSON”); return; }
+if (!parsed || typeof parsed !== “object”) { toast(“Unexpected format”); return; }
+if (!parsed.dogs) parsed.dogs = [];
+DB = parsed;
+try { migrateDB(); } catch(err) { toast(“Migration error”); return; }
+try { saveDB(); } catch(err) { toast(“Save failed”); return; }
+render();
 toast(“Imported — “ + DB.dogs.length + “ dogs”);
-} catch(e) { toast(“Invalid file”); }
 };
-r.readAsText(file); e.target.value = “”;
+r.readAsText(file);
+e.target.value = “”;
 }
 
 /* ── UTILS ── */
