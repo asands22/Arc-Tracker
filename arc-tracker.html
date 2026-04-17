@@ -1,0 +1,28 @@
+-- ============================================================================
+-- SHDT APP STATE TABLE
+-- One blob per trainer per app. Holds the whole DB object as jsonb.
+-- RLS protects it. Multi-device sync works automatically via upsert.
+-- Safe to re-run.
+-- ============================================================================
+
+drop table if exists public.app_state cascade;
+
+create table public.app_state (
+  trainer_id  uuid not null references public.trainers(id) on delete cascade,
+  app_key     text not null check (app_key in ('arc_tracker', 'dog_log')),
+  data        jsonb not null default '{}'::jsonb,
+  updated_at  timestamptz not null default now(),
+  primary key (trainer_id, app_key)
+);
+
+create index app_state_updated_at_idx on public.app_state(updated_at desc);
+
+create trigger app_state_updated_at
+before update on public.app_state
+for each row execute function public.set_updated_at();
+
+alter table public.app_state enable row level security;
+
+create policy "app_state_all_own" on public.app_state
+  for all using (auth.uid() = trainer_id)
+  with check (auth.uid() = trainer_id);
