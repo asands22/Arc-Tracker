@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Steady Hand - Geoffrey</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Raleway:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: #1E1E1E; }
+body { background: #1E1E1E; color: #F6F4F1; font-family: 'Raleway', Georgia, sans-serif; font-size: 15px; min-height: 100vh; overflow-x: hidden; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #1E1E1E; }
+::-webkit-scrollbar-thumb { background: #6F745C; border-radius: 3px; }
+
+.banner { background: #1E1E1E; border-bottom: 1px solid rgba(200,169,110,0.25); padding: 16px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding-top: calc(16px + env(safe-area-inset-top)); }
+.banner-center { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.banner-title { font-family: 'Cinzel Decorative', 'Cinzel', Georgia, serif; font-size: 18px; color: #C8A96E; letter-spacing: 0.06em; line-height: 1; margin-bottom: 7px; }
+.banner-sub { font-family: 'Cinzel', Georgia, serif; font-size: 14px; color: #6F745C; letter-spacing: 0.28em; text-transform: uppercase; }
+.banner-rule { width: 32px; height: 1px; background: linear-gradient(90deg, transparent, #C8A96E, transparent); margin: 0 auto 7px auto; }
+.banner-left { width: 40px; }
+.banner-right { width: 40px; display: flex; justify-content: flex-end; }
+.gear-btn { width: 36px; height: 36px; background: transparent; border: 1px solid rgba(111,116,92,0.35); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6F745C; font-size: 17px; position: relative; transition: border-color 0.2s, background 0.2s; }
+.gear-btn:hover { border-color: #C8A96E; color: #C8A96E; background: rgba(200,169,110,0.06); }
+
+.tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 76px; background: #1E1E1E; border-top: 1px solid rgba(111,116,92,0.35); display: flex; align-items: stretch; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: transparent; border: none; cursor: pointer; padding: 14px 4px 10px 4px; }
+.tab-icon { font-size: 20px; color: #6F745C; line-height: 1; }
+.tab-btn.active .tab-icon { color: #C8A96E; filter: drop-shadow(0 0 6px rgba(200,169,110,0.45)); }
+.tab-label { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: #6F745C; }
+.tab-btn.active .tab-label { color: #C8A96E; }
+
+.chat-wrap { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 140px; min-height: calc(100vh - 70px); display: flex; flex-direction: column; }
+
+.msg { max-width: 85%; margin-bottom: 14px; padding: 12px 16px; border-radius: 10px; line-height: 1.6; font-size: 15px; word-wrap: break-word; white-space: pre-wrap; animation: fadeUp 0.3s ease both; }
+.msg.user { align-self: flex-end; background: rgba(200,169,110,0.12); border: 1px solid rgba(200,169,110,0.35); color: #F6F4F1; border-bottom-right-radius: 3px; }
+.msg.assistant { align-self: flex-start; background: rgba(111,116,92,0.08); border: 1px solid rgba(111,116,92,0.25); color: #F6F4F1; border-bottom-left-radius: 3px; }
+.msg.system { align-self: center; background: transparent; border: none; color: #6F745C; font-size: 14px; font-style: italic; padding: 6px 14px; text-align: center; font-family: 'EB Garamond', Georgia, serif; }
+.msg.assistant .attribution { font-family: 'Cinzel', Georgia, serif; font-size: 13px; color: #C8A96E; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; display: block; }
+
+.thinking { align-self: flex-start; display: flex; gap: 5px; padding: 14px 18px; background: rgba(111,116,92,0.08); border: 1px solid rgba(111,116,92,0.25); border-radius: 10px; border-bottom-left-radius: 3px; margin-bottom: 14px; }
+.thinking-dot { width: 7px; height: 7px; background: #6F745C; border-radius: 50%; animation: bounce 1.4s infinite; }
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+
+.input-bar { position: fixed; bottom: 76px; left: 0; right: 0; background: #1E1E1E; border-top: 1px solid rgba(111,116,92,0.25); padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0)); z-index: 99; }
+.input-inner { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+.input-box { flex: 1; background: rgba(111,116,92,0.1); border: 1px solid rgba(111,116,92,0.3); border-radius: 8px; padding: 10px 14px; font-family: 'Raleway', Georgia, sans-serif; font-size: 15px; color: #F6F4F1; outline: none; resize: none; min-height: 42px; max-height: 140px; line-height: 1.4; transition: border-color 0.2s; }
+.input-box:focus { border-color: #C8A96E; }
+.input-box::placeholder { color: #6F745C; }
+.send-btn { background: rgba(200,169,110,0.12); border: 1px solid #C8A96E; color: #C8A96E; padding: 10px 18px; border-radius: 8px; font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.12em; cursor: pointer; transition: all 0.2s; text-transform: uppercase; flex-shrink: 0; height: 42px; }
+.send-btn:hover:not(:disabled) { background: rgba(200,169,110,0.22); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.mode-toggle { display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; padding: 10px; background: rgba(111,116,92,0.05); border: 1px solid rgba(111,116,92,0.2); border-radius: 6px; font-size: 14px; flex-wrap: wrap; align-items: center; }
+.mode-toggle-label { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.12em; color: #6F745C; text-transform: uppercase; }
+.mode-chip { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.1em; padding: 5px 12px; border: 1px solid rgba(111,116,92,0.35); border-radius: 4px; color: #6F745C; cursor: pointer; transition: all 0.2s; background: transparent; text-transform: uppercase; }
+.mode-chip:hover { border-color: #C8A96E; color: #F6F4F1; }
+.mode-chip.active { border-color: #C8A96E; color: #C8A96E; background: rgba(200,169,110,0.1); }
+.mode-note { font-size: 14px; color: #6F745C; font-style: italic; width: 100%; text-align: center; margin-top: 4px; }
+
+.drawer-overlay { position: fixed; inset: 0; background: rgba(14,14,10,0.7); z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.drawer-overlay.open { opacity: 1; pointer-events: all; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 320px; max-width: 88vw; background: #1E1E1E; border-left: 1px solid rgba(111,116,92,0.35); z-index: 301; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); overflow-y: auto; }
+.drawer-overlay.open .drawer { transform: translateX(0); }
+.drawer-hdr { padding: 22px 20px 16px 20px; border-bottom: 1px solid rgba(111,116,92,0.25); display: flex; align-items: center; justify-content: space-between; }
+.drawer-title { font-family: 'Cinzel', Georgia, serif; font-size: 14px; color: #C8A96E; letter-spacing: 0.12em; text-transform: uppercase; }
+.drawer-body { padding: 20px; flex: 1; overflow-y: auto; }
+.drawer-section-title { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.22em; color: #6F745C; text-transform: uppercase; margin-bottom: 12px; margin-top: 22px; }
+.drawer-section-title:first-child { margin-top: 0; }
+.drawer-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: rgba(111,116,92,0.07); border: 1px solid rgba(111,116,92,0.25); border-radius: 5px; font-family: 'Cinzel', Georgia, serif; font-size: 14px; color: #F6F4F1; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 8px; letter-spacing: 0.06em; text-align: left; }
+.drawer-btn:hover { border-color: #C8A96E; background: rgba(200,169,110,0.08); color: #C8A96E; }
+.drawer-btn-icon { font-size: 16px; color: #6F745C; }
+.info-box { background: rgba(111,116,92,0.06); border: 1px solid rgba(111,116,92,0.2); border-left: 2px solid #C8A96E; border-radius: 4px; padding: 12px 14px; font-size: 14px; color: #6F745C; line-height: 1.65; margin-bottom: 10px; }
+.info-box strong { color: #C8A96E; font-family: 'Cinzel', Georgia, serif; }
+.key-input { width: 100%; background: rgba(111,116,92,0.1); border: 1px solid rgba(111,116,92,0.3); border-radius: 5px; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #F6F4F1; outline: none; margin-bottom: 10px; }
+.key-input:focus { border-color: #C8A96E; }
+.key-status { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6F745C; margin-bottom: 10px; }
+.key-status strong { color: #C8A96E; font-family: 'Cinzel', Georgia, serif; }
+.key-dot { width: 8px; height: 8px; border-radius: 50%; background: #B05A4A; }
+.key-dot.set { background: #7FA86B; box-shadow: 0 0 6px rgba(127,168,107,0.5); }
+
+.welcome { text-align: center; padding: 30px 20px 20px; color: #6F745C; }
+.welcome-title { font-family: 'Cinzel Decorative', 'Cinzel', Georgia, serif; font-size: 22px; color: #C8A96E; margin-bottom: 10px; letter-spacing: 0.06em; }
+.welcome-sub { font-size: 14px; font-style: italic; font-family: 'EB Garamond', Georgia, serif; line-height: 1.6; margin-bottom: 22px; color: #9A9686; }
+.prompt-btn { display: block; width: 100%; text-align: left; padding: 11px 14px; margin-bottom: 8px; background: rgba(111,116,92,0.05); border: 1px solid rgba(111,116,92,0.25); border-radius: 5px; font-family: 'EB Garamond', Georgia, serif; font-size: 15px; color: #F6F4F1; cursor: pointer; transition: border-color 0.2s, background 0.2s; font-style: italic; }
+.prompt-btn:hover { border-color: #C8A96E; background: rgba(200,169,110,0.06); }
+
+.handler-picker { background: rgba(200,169,110,0.04); border: 1px solid rgba(200,169,110,0.18); border-left: 3px solid #C8A96E; border-radius: 5px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px; color: #F6F4F1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.handler-picker select { flex: 1; min-width: 150px; background: rgba(111,116,92,0.1); border: 1px solid rgba(111,116,92,0.3); border-radius: 4px; padding: 6px 10px; font-family: 'Raleway', sans-serif; font-size: 14px; color: #F6F4F1; outline: none; }
+.handler-picker select option { background: #1E1E1E; }
+.handler-picker button { background: transparent; border: 1px solid rgba(200,169,110,0.4); color: #C8A96E; padding: 5px 12px; border-radius: 4px; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.08em; cursor: pointer; text-transform: uppercase; }
+.handler-picker button:hover { background: rgba(200,169,110,0.1); }
+
+.error-banner { background: rgba(176,90,74,0.1); border: 1px solid rgba(176,90,74,0.4); color: #D89680; padding: 10px 14px; border-radius: 5px; font-size: 14px; margin: 14px 0; line-height: 1.5; }
+
+.idle-warning { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(176,120,64,0.15); border: 1px solid rgba(176,120,64,0.5); color: #C89880; padding: 10px 18px; border-radius: 5px; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.idle-warning.show { opacity: 1; }
+
+.boot-screen { position: fixed; inset: 0; background: #1E1E1E; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-family: 'Cinzel', Georgia, serif; color: #C8A96E; font-size: 14px; letter-spacing: 0.18em; text-transform: uppercase; }
+.boot-spinner { width: 28px; height: 28px; border: 2px solid rgba(200,169,110,0.2); border-top-color: #C8A96E; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 18px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media(max-width:480px) {
+  .banner-title { font-size: 16px; }
+  .msg { max-width: 92%; }
+}
+</style>
+</head>
+<body>
+
+<div class="boot-screen" id="boot-screen">
+  <div class="boot-spinner"></div>
+  <div id="boot-msg">Loading</div>
+</div>
+
+<div class="banner" id="app-banner" style="display:none">
+  <div class="banner-left"></div>
+  <div class="banner-center">
+    <div class="banner-title">Geoffrey</div>
+    <div class="banner-rule"></div>
+    <div class="banner-sub">At Your Service</div>
+  </div>
+  <div class="banner-right">
+    <button class="gear-btn" onclick="openDrawer()">&#9881;</button>
+  </div>
+</div>
+
+<div class="idle-warning" id="idle-warning">Session expiring &mdash; tap anywhere</div>
+
+<div class="chat-wrap" id="chat-wrap" style="display:none">
+
+  <div class="mode-toggle" id="mode-toggle">
+    <span class="mode-toggle-label">Mode:</span>
+    <button class="mode-chip active" id="mode-method" onclick="setMode('methodology')">Methodology</button>
+    <button class="mode-chip" id="mode-data" onclick="setMode('data')">Clinical</button>
+    <div class="mode-note" id="mode-note">Pure methodology companion. No client data sent.</div>
+  </div>
+
+  <div id="handler-picker-wrap"></div>
+
+  <div id="messages"></div>
+
+</div>
+
+<div class="input-bar" id="input-bar" style="display:none">
+  <div class="input-inner">
+    <textarea class="input-box" id="input-box" placeholder="Ask Geoffrey..." rows="1" onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<div class="tab-bar" id="tab-bar" style="display:none">
+  <button class="tab-btn active"><span class="tab-icon">&#9830;</span><span class="tab-label">Geoffrey</span></button>
+  <button class="tab-btn" onclick="goTo('arc-tracker.html')"><span class="tab-icon">&#9651;</span><span class="tab-label">Arc</span></button>
+  <button class="tab-btn" onclick="goTo('dog-tracker.html')"><span class="tab-icon">&#9679;</span><span class="tab-label">Dogs</span></button>
+  <button class="tab-btn" onclick="goTo('community.html')"><span class="tab-icon">&#9670;</span><span class="tab-label">Fam</span></button>
+  <button class="tab-btn" onclick="goTo('index.html')"><span class="tab-icon">&#9632;</span><span class="tab-label">Hub</span></button>
+</div>
+
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()">
+  <div class="drawer" onclick="event.stopPropagation()">
+    <div class="drawer-hdr"><div class="drawer-title">Settings</div><button class="gear-btn" onclick="closeDrawer()" style="width:30px;height:30px">&times;</button></div>
+    <div class="drawer-body">
+
+      <div class="drawer-section-title">Anthropic API Key</div>
+      <div class="info-box">
+        Stored <strong>on this device only</strong>. Never synced to the cloud. Get one from <strong>console.anthropic.com</strong>, then paste below.
+      </div>
+      <div class="key-status">
+        <span class="key-dot" id="key-dot"></span>
+        <span id="key-status-text">Not set</span>
+      </div>
+      <input type="password" class="key-input" id="key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+      <button class="drawer-btn" onclick="saveKey()"><span class="drawer-btn-icon">&#10003;</span> Save Key</button>
+      <button class="drawer-btn" onclick="clearKey()"><span class="drawer-btn-icon">&times;</span> Clear Key from Device</button>
+
+      <div class="drawer-section-title">Privacy</div>
+      <div class="info-box">
+        <strong>Pseudonymization on:</strong> Handler names become "Handler T.P." style before being sent to Anthropic. Dog names first-letter only.<br><br>
+        <strong>Auto-timeout:</strong> 30 min idle.<br><br>
+        <strong>Mode default:</strong> Methodology-only (no client data sent).
+      </div>
+
+      <div class="drawer-section-title">Conversation</div>
+      <button class="drawer-btn" onclick="clearConversation()"><span class="drawer-btn-icon">&#8634;</span> Clear Chat</button>
+
+      <div class="drawer-section-title">Session</div>
+      <button class="drawer-btn" onclick="doSignOut()"><span class="drawer-btn-icon">&#8594;</span> Sign Out of Steady Hand</button>
+
+      <div class="drawer-section-title">About</div>
+      <div class="info-box">
+        <strong>Geoffrey</strong><br>
+        Methodology companion &middot; Claude-powered<br>
+        <span style="color:#6F745C;font-size:14px">Steady Hand Dog Training</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   SUPABASE AUTH (read-only - Geoffrey just needs to know who you are)
+   ════════════════════════════════════════════════════════════════════════ */
+var SUPABASE_URL = 'https://sltdnnspznasywppyred.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
+var APP_KEY = 'arc_tracker';
+
+var sb = null;
+if (window.supabase && window.supabase.createClient) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage }
+  });
+}
+
+var trainerId = null;
+var trainerEmail = null;
+var DB = { handlers: [], dogs: [], pairings: [], events: [] };
+
+async function pullData() {
+  if (!sb || !trainerId) return;
+  try {
+    var res = await sb.from('app_state').select('data').eq('app_key', APP_KEY).maybeSingle();
+    if (res.data && res.data.data) {
+      var d = res.data.data;
+      if (!Array.isArray(d.handlers)) d.handlers = [];
+      if (!Array.isArray(d.dogs)) d.dogs = [];
+      if (!Array.isArray(d.pairings)) d.pairings = [];
+      if (!Array.isArray(d.events)) d.events = [];
+      DB = d;
+    }
+  } catch(e) { console.warn('pullData exception', e); }
+}
+
+async function doSignOut() {
+  if (!sb) return;
+  if (!confirm('Sign out?')) return;
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+function goTo(page) { window.location.href = page; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   GEOFFREY - Anthropic API + personality
+   ════════════════════════════════════════════════════════════════════════ */
+var CLAUDE_MODEL = 'claude-sonnet-4-5-20250929';
+var API_KEY_STORAGE = 'shdt-geoffrey-key';
+var CONVO_STORAGE = 'shdt-geoffrey-convo';
+var IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+var IDLE_WARNING_MS = 29 * 60 * 1000;
+
+var apiKey = null;
+var messages = []; // { role: 'user'|'assistant', content: string }
+var mode = 'methodology'; // 'methodology' | 'data'
+var selectedHandlerId = null;
+var idleTimer = null;
+var idleWarningTimer = null;
+var sending = false;
+
+/* ─ The system prompt. Geoffrey's soul lives here ─ */
+function buildSystemPrompt() {
+  var base = "You are Geoffrey, a British butler serving as a training companion for Alexander Sands, " +
+    "co-founder of Steady Hand Dog Training in Surprise, Arizona. Your personality is warm, " +
+    "long-suffering, dry-witted \u2014 think Geoffrey from The Fresh Prince, but steeped in " +
+    "Alexander's proprietary dog training methodology. You address him as 'sir' unironically " +
+    "but occasionally pair it with gentle teasing when he's being dramatic. You are never sycophantic. " +
+    "You push back when his reads seem off. You don't use emojis. You don't use asterisked actions. " +
+    "Keep responses conversational length \u2014 a butler doesn't lecture. Speak in plain prose, not lists, " +
+    "unless asked for a list specifically.\n\n" +
+
+    "# STEADY HAND METHODOLOGY (The Handler Index\u2122)\n\n" +
+
+    "You know the Four Pressure Channels\u2122, the Handler Index\u2122 diagnostic framework, the handler " +
+    "Signature system, the Compass scoring, and the Handler Profiles. These are Alexander's " +
+    "proprietary systems \u2014 never conflate them with anything else in the industry.\n\n" +
+
+    "## The Four Pressure Channels (NOT the four quadrants)\n" +
+    "1. **Spatial** \u2014 The physical relationship between handler and dog: distance, direction, body angle, movement. Spatial pressure is constant.\n" +
+    "2. **Verbal** \u2014 Tone, volume, cadence, word choice, frequency of speech. Verbal-dominant handlers narrate.\n" +
+    "3. **Environmental** \u2014 Everything that isn't the handler or dog: location, distractions, surfaces, sounds, other animals.\n" +
+    "4. **Internal** \u2014 The handler's emotional state, anticipatory anxiety, belief system, self-narrative. Hardest to see.\n\n" +
+
+    "## The Handler Signature\n" +
+    "Every handler runs all four channels, but three are diagnostic:\n" +
+    "- **Dominant** \u2014 The channel they lean on hardest. Their default.\n" +
+    "- **Blind** \u2014 The channel they use constantly without awareness. Friction when named.\n" +
+    "- **Ghost** \u2014 The channel they can't access at all. Blankness when named.\n\n" +
+    "The reaction to naming the channel is the diagnostic: friction means Blind, blankness means Ghost.\n\n" +
+
+    "## Handler Profiles (9 diagnostic snapshots \u2014 not permanent labels)\n" +
+    "- **Reactive** \u2014 Volatile, corrections leak emotion. Lead with Spatial channel stability. ER is first compass target.\n" +
+    "- **Rigid** \u2014 Over-structured. Introduce Environmental variation carefully. Don't disrupt structure, redirect it.\n" +
+    "- **Avoidant** \u2014 Withdrawing. Ghost channel likely Internal. Don't introduce by correcting \u2014 introduce it. Vocabulary before reps.\n" +
+    "- **Passive** \u2014 Dog fills the gap. Timing is the core issue. Handler needs to move first.\n" +
+    "- **Imp. Reactive / Rigid / Avoidant / Passive** \u2014 Improved versions. Same core with some awareness. Don't rush the framing.\n" +
+    "- **Attuned** \u2014 Signature runs clean. Maintain intentionality. The dog is the proof.\n\n" +
+
+    "## The Compass (scored 1-10 each, /50 total)\n" +
+    "- **ER** (Emotional Regulation): frustration leaking \u2192 neutral regardless\n" +
+    "- **T** (Timing & Pacing): late/early \u2192 pre-decision tension\n" +
+    "- **CC** (Correction Confidence): hesitating/apologizing \u2192 clean & proportionate\n" +
+    "- **CO** (Consistency): rules shift with state \u2192 same boundary every time\n" +
+    "- **IN** (Intentionality): going through motions \u2192 every action has purpose\n\n" +
+    "Scored at four checkpoints: Intake, Day 25, Day 60, Day 84.\n\n" +
+
+    "## Core Axioms (cite these verbatim when relevant)\n" +
+    "- \"You are adding to the pressure load or stabilizing it. There is no neutral.\"\n" +
+    "- \"The Signature is the map. The Compass is the proof of movement.\"\n" +
+    "- \"Pressure is not correction. Pressure is not force. Pressure is constant.\"\n" +
+    "- \"The dog was always the mirror.\"\n" +
+    "- \"Blind = friction when named. Ghost = blankness when named. The reaction is the diagnostic.\"\n" +
+    "- \"Do not introduce the ghost channel by correcting it. Introduce it. They need vocabulary before reps.\"\n" +
+    "- \"Handler profiles are diagnostic snapshots, not permanent labels.\"\n\n" +
+
+    "## Five-State Awareness Map (the handler's state, not the dog's)\n" +
+    "- State 1: Grounded \u2014 present, regulated, reading accurately\n" +
+    "- State 2: Loaded \u2014 elevated pressure, still functional\n" +
+    "- State 3: Reactive \u2014 responding to dog instead of leading, timing breaks\n" +
+    "- State 4: Collapsed \u2014 exited the training loop, ghost channel takes over\n" +
+    "- State 5: Escalated \u2014 crossed into correction without intention\n\n" +
+
+    "## Your job\n" +
+    "Help Alexander sharpen his diagnostic reads. Push back when evidence doesn't support his call. " +
+    "Don't just agree. Ask what he saw first, what the handler did when the dog broke, " +
+    "what the reaction was to naming the channel. You're a training partner \u2014 honest, useful, " +
+    "occasionally funny. Not a cheerleader.\n\n" +
+
+    "Respect Alexander's confirmed words and methodology. Don't paraphrase his terms into " +
+    "something else. When he describes a session, help him read the signature, sharpen the " +
+    "diagnostic, score the compass, confirm the profile, and challenge him if the read seems off.";
+
+  if (mode === 'data' && selectedHandlerId) {
+    var handler = DB.handlers.find(function(h){return h.id === selectedHandlerId;});
+    if (handler) {
+      base += "\n\n---\n\n# CURRENT CASE CONTEXT\n\n";
+      base += "Alexander has opened a case file. Data below has been pseudonymized " +
+              "(real names replaced) before being shared with you. Refer to this handler " +
+              "by the pseudonymized name only.\n\n";
+      base += buildPseudonymizedHandler(handler);
+    }
+  }
+
+  return base;
+}
+
+/* ─ Pseudonymization layer ─ */
+function pseudonymize(name) {
+  if (!name) return 'Handler ?';
+  var parts = String(name).trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase() + '.';
+  return 'Handler ' + parts[0].charAt(0).toUpperCase() + '.' + parts[parts.length-1].charAt(0).toUpperCase() + '.';
+}
+function pseudoDog(name) {
+  if (!name) return 'dog';
+  return String(name).charAt(0).toUpperCase() + '.';
+}
+
+function buildPseudonymizedHandler(h) {
+  var alias = pseudonymize(h.name);
+  var s = "**" + alias + "** (pseudonymized)\n";
+  if (h.profile) s += "- Profile: " + h.profile + "\n";
+  s += "- Signature: Dominant=" + (h.dominant || '?') + ", Blind=" + (h.blind || '?') + ", Ghost=" + (h.ghost || '?') + "\n";
+  if (h.program) s += "- Program: " + h.program + "\n";
+  if (h.startDate) s += "- Started: " + h.startDate + "\n";
+
+  // Attached dogs (pseudonymized)
+  var dogs = (DB.pairings || []).filter(function(p){return p.handlerId===h.id;})
+    .map(function(p){
+      var d = DB.dogs.find(function(dd){return dd.id===p.dogId;});
+      if (!d) return null;
+      return {
+        alias: pseudoDog(d.name),
+        breed: d.breed || '?',
+        age: d.age || '?',
+        sex: d.sex || '?',
+        matchScore: p.matchScore || null,
+        why: p.why || null
+      };
+    }).filter(Boolean);
+  if (dogs.length) {
+    s += "- Dogs: " + dogs.map(function(d){
+      var bits = [d.alias + ' (' + d.breed + ', ' + d.age + ')'];
+      if (d.matchScore) bits.push('match ' + d.matchScore + '/10');
+      return bits.join(' ');
+    }).join('; ') + "\n";
+  }
+
+  // Compass history
+  var comp = h.compassHistory || [];
+  if (comp.length) {
+    s += "- Compass history:\n";
+    comp.forEach(function(c){
+      var total = (c.ER||0)+(c.T||0)+(c.CC||0)+(c.CO||0)+(c.IN||0);
+      s += "  - " + (c.checkpoint||'?') + " (" + (c.date||'?') + "): ER " + (c.ER||0) +
+           ", T " + (c.T||0) + ", CC " + (c.CC||0) + ", CO " + (c.CO||0) + ", IN " + (c.IN||0) +
+           " \u2014 total " + total + "/50\n";
+    });
+  }
+
+  // Recent sessions (last 5)
+  var sess = (h.sessions || []).slice(-5);
+  if (sess.length) {
+    s += "- Recent sessions:\n";
+    sess.forEach(function(ss){
+      s += "  - " + (ss.date||'?') + (ss.focus?' ['+ss.focus+']':'') +
+           (ss.channel?' channel:'+ss.channel:'') +
+           ": " + (ss.notes || '').slice(0, 200) + (ss.notes && ss.notes.length > 200 ? '...' : '') + "\n";
+    });
+  }
+
+  // Homework
+  var hw = (h.homework || []).filter(function(x){return !x.done;});
+  if (hw.length) {
+    s += "- Open homework: " + hw.map(function(x){return x.text;}).join('; ') + "\n";
+  }
+
+  // Issues
+  if ((h.issues||[]).length) {
+    s += "- Recurring issues: " + h.issues.join('; ') + "\n";
+  }
+
+  // Intake notes (scrubbed)
+  if (h.notes) {
+    s += "- Intake notes: " + h.notes.slice(0, 400) + (h.notes.length > 400 ? '...' : '') + "\n";
+  }
+
+  return s;
+}
+
+/* ─ API call ─ */
+async function callClaude(userMsg) {
+  if (!apiKey) {
+    throw new Error('No API key. Open Settings (gear icon) to add one.');
+  }
+  var apiMessages = messages.concat([{ role: 'user', content: userMsg }]);
+
+  var res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 1500,
+      system: buildSystemPrompt(),
+      messages: apiMessages
+    })
+  });
+
+  if (!res.ok) {
+    var errText = await res.text();
+    var errObj = null;
+    try { errObj = JSON.parse(errText); } catch(e){}
+    var errMsg = (errObj && errObj.error && errObj.error.message) || errText || 'HTTP ' + res.status;
+    throw new Error(errMsg);
+  }
+
+  var data = await res.json();
+  var reply = '';
+  if (Array.isArray(data.content)) {
+    data.content.forEach(function(b){ if (b.type === 'text') reply += b.text; });
+  }
+  return reply.trim();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   UI
+   ════════════════════════════════════════════════════════════════════════ */
+function setMode(m) {
+  mode = m;
+  document.getElementById('mode-method').classList.toggle('active', m === 'methodology');
+  document.getElementById('mode-data').classList.toggle('active', m === 'data');
+  var note = document.getElementById('mode-note');
+  if (m === 'methodology') {
+    note.textContent = 'Pure methodology companion. No client data sent.';
+    selectedHandlerId = null;
+    renderHandlerPicker();
+  } else {
+    note.textContent = 'Clinical mode. Pick a handler to give Geoffrey context. Data is pseudonymized before sending.';
+    renderHandlerPicker();
+  }
+}
+
+function renderHandlerPicker() {
+  var wrap = document.getElementById('handler-picker-wrap');
+  if (mode !== 'data') { wrap.innerHTML = ''; return; }
+  if (!DB.handlers.length) {
+    wrap.innerHTML = '<div class="handler-picker">No handlers in your caseload yet. Add some in Arc Tracker, or switch back to Methodology mode.</div>';
+    return;
+  }
+  var opts = '<option value="">(no handler selected)</option>';
+  DB.handlers.slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');})
+    .forEach(function(h){
+      var sel = h.id === selectedHandlerId ? ' selected' : '';
+      opts += '<option value="' + h.id + '"' + sel + '>' + esc(h.name||'(unnamed)') + '</option>';
+    });
+  wrap.innerHTML = '<div class="handler-picker">' +
+    '<span style="color:#6F745C;font-family:Cinzel,serif;font-size:14px;letter-spacing:0.1em;text-transform:uppercase">Case:</span>' +
+    '<select onchange="pickHandler(this.value)">' + opts + '</select>' +
+    (selectedHandlerId ? '<button onclick="clearHandler()">Clear</button>' : '') +
+    '</div>';
+}
+
+function pickHandler(id) {
+  selectedHandlerId = id || null;
+  renderHandlerPicker();
+  if (selectedHandlerId) {
+    var h = DB.handlers.find(function(x){return x.id===id;});
+    if (h) {
+      addMessage('system', 'Case file loaded: ' + pseudonymize(h.name) + ' (pseudonymized for Geoffrey)');
+    }
+  } else {
+    addMessage('system', 'Case file cleared.');
+  }
+  saveConvo();
+}
+
+function clearHandler() {
+  selectedHandlerId = null;
+  renderHandlerPicker();
+  addMessage('system', 'Case file cleared.');
+  saveConvo();
+}
+
+function addMessage(role, content, save) {
+  if (save !== false) messages.push({ role: role, content: content });
+  var el = document.createElement('div');
+  el.className = 'msg ' + role;
+  if (role === 'assistant') {
+    el.innerHTML = '<span class="attribution">Geoffrey</span>' + esc(content).replace(/\n/g, '<br>');
+  } else {
+    el.textContent = content;
+  }
+  document.getElementById('messages').appendChild(el);
+  removeWelcome();
+  scrollToBottom();
+  if (save !== false) saveConvo();
+}
+
+function addThinking() {
+  var el = document.createElement('div');
+  el.className = 'thinking';
+  el.id = 'thinking';
+  el.innerHTML = '<div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div>';
+  document.getElementById('messages').appendChild(el);
+  scrollToBottom();
+}
+function removeThinking() {
+  var el = document.getElementById('thinking');
+  if (el) el.remove();
+}
+
+function scrollToBottom() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+function removeWelcome() {
+  var w = document.getElementById('welcome');
+  if (w) w.remove();
+}
+
+function handleKey(ev) {
+  if (ev.key === 'Enter' && !ev.shiftKey) {
+    ev.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+async function sendMessage() {
+  if (sending) return;
+  var box = document.getElementById('input-box');
+  var text = box.value.trim();
+  if (!text) return;
+  if (!apiKey) {
+    showError('No API key set. Tap the gear icon to add one.');
+    openDrawer();
+    return;
+  }
+  box.value = '';
+  autoGrow(box);
+  sending = true;
+  document.getElementById('send-btn').disabled = true;
+
+  addMessage('user', text);
+  addThinking();
+  resetIdleTimer();
+
+  try {
+    var reply = await callClaude(text);
+    removeThinking();
+    if (reply) addMessage('assistant', reply);
+    else addMessage('assistant', "Apologies, sir. I've no reply to offer. Try again?");
+  } catch(e) {
+    removeThinking();
+    console.error('Claude error', e);
+    showError('Geoffrey encountered an error: ' + (e.message || e));
+  } finally {
+    sending = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+}
+
+function showError(msg) {
+  var el = document.createElement('div');
+  el.className = 'error-banner';
+  el.textContent = msg;
+  document.getElementById('messages').appendChild(el);
+  scrollToBottom();
+  setTimeout(function(){ el.remove(); }, 8000);
+}
+
+function sendPrompt(p) {
+  document.getElementById('input-box').value = p;
+  sendMessage();
+}
+
+function clearConversation() {
+  if (!confirm('Clear this conversation with Geoffrey?')) return;
+  messages = [];
+  selectedHandlerId = null;
+  try { localStorage.removeItem(CONVO_STORAGE); } catch(e){}
+  document.getElementById('messages').innerHTML = '';
+  renderHandlerPicker();
+  renderWelcome();
+  closeDrawer();
+}
+
+function renderWelcome() {
+  var m = document.getElementById('messages');
+  var w = document.createElement('div');
+  w.id = 'welcome';
+  w.className = 'welcome';
+  w.innerHTML =
+    '<div class="welcome-title">Good to see you, sir.</div>' +
+    '<div class="welcome-sub">At your service. Methodology companion, clinical sounding board, and occasional voice of reason.</div>' +
+    '<div style="max-width:440px;margin:0 auto">' +
+    '<button class="prompt-btn" onclick="sendPrompt(\'Walk me through reading a handler signature.\')">"Walk me through reading a handler signature."</button>' +
+    '<button class="prompt-btn" onclick="sendPrompt(\'I\\\'ve got a Passive handler with a Spatial blind. Where do I start?\')">"I\'ve got a Passive handler with a Spatial blind. Where do I start?"</button>' +
+    '<button class="prompt-btn" onclick="sendPrompt(\'Remind me what to look for at the Day 25 checkpoint.\')">"Remind me what to look for at the Day 25 checkpoint."</button>' +
+    '<button class="prompt-btn" onclick="sendPrompt(\'I need to challenge my read on a client. Ready?\')">"I need to challenge my read. Ready?"</button>' +
+    '</div>';
+  m.appendChild(w);
+}
+
+/* ─ API key management ─ */
+function loadKey() {
+  try { apiKey = localStorage.getItem(API_KEY_STORAGE); } catch(e){ apiKey = null; }
+  renderKeyStatus();
+}
+function renderKeyStatus() {
+  var dot = document.getElementById('key-dot');
+  var txt = document.getElementById('key-status-text');
+  if (apiKey) {
+    dot.classList.add('set');
+    txt.innerHTML = '<strong>Key set</strong> \u2014 ending ...' + apiKey.slice(-4);
+  } else {
+    dot.classList.remove('set');
+    txt.textContent = 'No key saved';
+  }
+}
+function saveKey() {
+  var val = document.getElementById('key-input').value.trim();
+  if (!val) { alert('Paste your key first.'); return; }
+  if (!val.startsWith('sk-ant-')) { if (!confirm('That doesn\'t look like an Anthropic key. Save anyway?')) return; }
+  try { localStorage.setItem(API_KEY_STORAGE, val); } catch(e){ alert('Failed to save: ' + e.message); return; }
+  apiKey = val;
+  document.getElementById('key-input').value = '';
+  renderKeyStatus();
+  closeDrawer();
+}
+function clearKey() {
+  if (!confirm('Clear the API key from this device?')) return;
+  try { localStorage.removeItem(API_KEY_STORAGE); } catch(e){}
+  apiKey = null;
+  renderKeyStatus();
+}
+
+/* ─ Conversation persistence (on-device only) ─ */
+function saveConvo() {
+  try {
+    localStorage.setItem(CONVO_STORAGE, JSON.stringify({
+      messages: messages,
+      mode: mode,
+      handlerId: selectedHandlerId
+    }));
+  } catch(e){}
+}
+function loadConvo() {
+  try {
+    var raw = localStorage.getItem(CONVO_STORAGE);
+    if (!raw) return;
+    var obj = JSON.parse(raw);
+    messages = obj.messages || [];
+    mode = obj.mode || 'methodology';
+    selectedHandlerId = obj.handlerId || null;
+    setMode(mode);
+    messages.forEach(function(m){ addMessage(m.role, m.content, false); });
+  } catch(e){}
+}
+
+/* ─ Drawer ─ */
+function openDrawer() {
+  renderKeyStatus();
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+function closeDrawer() { document.getElementById('drawer-overlay').classList.remove('open'); }
+
+/* ─ Idle timeout (security layer) ─ */
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  clearTimeout(idleWarningTimer);
+  document.getElementById('idle-warning').classList.remove('show');
+  idleWarningTimer = setTimeout(function(){
+    document.getElementById('idle-warning').classList.add('show');
+  }, IDLE_WARNING_MS);
+  idleTimer = setTimeout(function(){
+    // On idle timeout: clear the in-memory convo and return to hub
+    try { localStorage.removeItem(CONVO_STORAGE); } catch(e){}
+    window.location.href = 'index.html';
+  }, IDLE_TIMEOUT_MS);
+}
+['click','keydown','touchstart','mousemove'].forEach(function(ev){
+  document.addEventListener(ev, resetIdleTimer, { passive: true });
+});
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BOOT
+   ════════════════════════════════════════════════════════════════════════ */
+async function boot() {
+  var msgEl = document.getElementById('boot-msg');
+  if (!sb) { msgEl.textContent = 'SDK failed to load'; return; }
+  try {
+    var res = await sb.auth.getSession();
+    if (!res.data || !res.data.session) {
+      window.location.href = 'index.html';
+      return;
+    }
+    trainerId = res.data.session.user.id;
+    trainerEmail = res.data.session.user.email;
+
+    msgEl.textContent = 'Pulling caseload...';
+    await pullData();
+
+    loadKey();
+    loadConvo();
+
+    document.getElementById('app-banner').style.display = 'flex';
+    document.getElementById('chat-wrap').style.display = 'flex';
+    document.getElementById('input-bar').style.display = 'block';
+    document.getElementById('tab-bar').style.display = 'flex';
+    document.getElementById('boot-screen').style.display = 'none';
+
+    if (!messages.length) renderWelcome();
+
+    if (!apiKey) {
+      setTimeout(function(){
+        addMessage('system', 'Welcome, sir. Before we begin: tap the gear icon to add your Anthropic API key. Stored on this device only.');
+      }, 500);
+    }
+
+    resetIdleTimer();
+  } catch(e) {
+    msgEl.textContent = 'Error: ' + e.message;
+    console.error('boot error', e);
+  }
+}
+
+boot();
+</script>
+
+</body>
+</html>
