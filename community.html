@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Steady Hand - Community</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Raleway:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: #1E1E1E; }
+body { background: #1E1E1E; color: #F6F4F1; font-family: 'Raleway', Georgia, sans-serif; font-size: 15px; min-height: 100vh; overflow-x: hidden; padding-bottom: 92px; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #1E1E1E; }
+::-webkit-scrollbar-thumb { background: #6F745C; border-radius: 3px; }
+
+.banner { background: #1E1E1E; border-bottom: 1px solid rgba(200,169,110,0.25); padding: 16px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+.banner-center { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.banner-title { font-family: 'Cinzel Decorative', 'Cinzel', Georgia, serif; font-size: 18px; color: #C8A96E; letter-spacing: 0.06em; line-height: 1; margin-bottom: 7px; }
+.banner-sub { font-family: 'Cinzel', Georgia, serif; font-size: 14px; color: #6F745C; letter-spacing: 0.28em; text-transform: uppercase; }
+.banner-rule { width: 32px; height: 1px; background: linear-gradient(90deg, transparent, #C8A96E, transparent); margin: 0 auto 7px auto; }
+.banner-left { width: 40px; }
+.banner-right { width: 40px; display: flex; justify-content: flex-end; }
+.gear-btn { width: 36px; height: 36px; background: transparent; border: 1px solid rgba(111,116,92,0.35); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6F745C; font-size: 17px; position: relative; transition: border-color 0.2s, background 0.2s; }
+.gear-btn:hover { border-color: #C8A96E; color: #C8A96E; background: rgba(200,169,110,0.06); }
+.sync-dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: #6F745C; transition: background 0.25s; }
+.sync-dot.ok { background: #7FA86B; box-shadow: 0 0 6px rgba(127,168,107,0.6); }
+.sync-dot.saving { background: #C8A96E; animation: pulse 1s infinite; }
+.sync-dot.err { background: #B05A4A; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.tab-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 76px; background: #1E1E1E; border-top: 1px solid rgba(111,116,92,0.35); display: flex; align-items: stretch; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: transparent; border: none; cursor: pointer; padding: 14px 4px 10px 4px; position: relative; }
+.tab-btn::before { content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 2px; background: #C8A96E; transform: scaleX(0); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+.tab-btn.active::before { transform: scaleX(1); box-shadow: 0 0 14px rgba(200,169,110,0.55); }
+.tab-icon { font-size: 20px; color: #6F745C; transition: color 0.25s, transform 0.25s, filter 0.25s; line-height: 1; }
+.tab-btn.active .tab-icon { color: #C8A96E; transform: translateY(-1px); filter: drop-shadow(0 0 6px rgba(200,169,110,0.45)); }
+.tab-label { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: #6F745C; transition: color 0.25s; }
+.tab-btn.active .tab-label { color: #C8A96E; text-shadow: 0 0 8px rgba(200,169,110,0.35); }
+
+main { padding: 22px 20px; max-width: 900px; width: 100%; margin: 0 auto; }
+.view { display: none; animation: fadeUp 0.32s cubic-bezier(0.4,0,0.2,1) both; }
+.view.active { display: block; }
+
+.drawer-overlay { position: fixed; inset: 0; background: rgba(14,14,10,0.7); z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.drawer-overlay.open { opacity: 1; pointer-events: all; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 300px; max-width: 85vw; background: #1E1E1E; border-left: 1px solid rgba(111,116,92,0.35); z-index: 301; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+.drawer-overlay.open .drawer { transform: translateX(0); }
+.drawer-hdr { padding: 22px 20px 16px 20px; border-bottom: 1px solid rgba(111,116,92,0.25); display: flex; align-items: center; justify-content: space-between; }
+.drawer-title { font-family: 'Cinzel', Georgia, serif; font-size: 14px; color: #C8A96E; letter-spacing: 0.12em; text-transform: uppercase; }
+.drawer-body { padding: 20px; flex: 1; overflow-y: auto; }
+.drawer-section-title { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.22em; color: #6F745C; text-transform: uppercase; margin-bottom: 12px; margin-top: 20px; }
+.drawer-section-title:first-child { margin-top: 0; }
+.drawer-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: rgba(111,116,92,0.07); border: 1px solid rgba(111,116,92,0.25); border-radius: 5px; font-family: 'Cinzel', Georgia, serif; font-size: 14px; color: #F6F4F1; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 8px; letter-spacing: 0.06em; text-align: left; }
+.drawer-btn:hover { border-color: #C8A96E; background: rgba(200,169,110,0.08); color: #C8A96E; }
+.drawer-btn-icon { font-size: 16px; color: #6F745C; }
+.storage-info { background: rgba(111,116,92,0.06); border: 1px solid rgba(111,116,92,0.2); border-left: 2px solid #C8A96E; border-radius: 4px; padding: 12px 14px; font-size: 14px; color: #6F745C; line-height: 1.65; }
+.storage-info strong { color: #C8A96E; font-family: 'Cinzel', Georgia, serif; }
+.storage-info .sync-line { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.storage-info .sync-mini-dot { width: 8px; height: 8px; border-radius: 50%; background: #6F745C; flex-shrink: 0; }
+.storage-info .sync-mini-dot.ok { background: #7FA86B; }
+.storage-info .sync-mini-dot.saving { background: #C8A96E; animation: pulse 1s infinite; }
+.storage-info .sync-mini-dot.err { background: #B05A4A; }
+.user-line { font-size: 14px; color: #6F745C; margin-bottom: 12px; }
+.user-line strong { color: #C8A96E; font-family: 'Cinzel', Georgia, serif; letter-spacing: 0.04em; display: block; margin-top: 2px; }
+
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 22px; }
+.stat-tile { background: rgba(111,116,92,0.07); border: 1px solid rgba(111,116,92,0.3); border-radius: 6px; padding: 14px; }
+.stat-label { font-family:'Cinzel',Georgia,serif; font-size:14px; letter-spacing:0.18em; text-transform:uppercase; color:#6F745C; margin-bottom:6px; }
+.stat-val { font-family:'Cinzel',Georgia,serif; font-size:24px; font-weight:700; color:#C8A96E; line-height:1; }
+.stat-sub { font-size:14px; color:#6F745C; margin-top:3px; }
+
+.filter-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.filter-chip { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.1em; padding: 6px 14px; border: 1px solid rgba(111,116,92,0.3); border-radius: 4px; color: #6F745C; cursor: pointer; transition: all 0.2s; background: transparent; text-transform: uppercase; }
+.filter-chip:hover { border-color: #C8A96E; color: #F6F4F1; }
+.filter-chip.active { border-color: #C8A96E; color: #C8A96E; background: rgba(200,169,110,0.1); }
+
+.event-section { margin-bottom: 26px; }
+.section-title { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.22em; color: #6F745C; text-transform: uppercase; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(111,116,92,0.2); }
+
+.event-card { background: rgba(111,116,92,0.07); border: 1px solid rgba(111,116,92,0.3); border-radius: 6px; padding: 16px; margin-bottom: 12px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s; }
+.event-card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:#C8A96E; transform:scaleX(0); transform-origin:left; transition:transform 0.3s; }
+.event-card:hover { border-color:#C8A96E; transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,0.4); }
+.event-card:hover::after { transform:scaleX(1); }
+.event-card.past { opacity: 0.72; }
+.event-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.event-title-wrap { flex: 1; min-width: 200px; }
+.event-title { font-family:'Cinzel',Georgia,serif; font-size:16px; color:#F6F4F1; line-height: 1.3; }
+.event-type { font-family:'Cinzel',Georgia,serif; font-size:14px; padding: 3px 9px; border-radius: 3px; letter-spacing: 0.05em; white-space: nowrap; }
+.type-Workshop { background:rgba(200,169,110,0.12); color:#C8A96E; border:1px solid rgba(200,169,110,0.4); }
+.type-GroupClass { background:rgba(111,116,92,0.2); color:#8A8F76; border:1px solid rgba(111,116,92,0.4); }
+.type-FamEvent { background:rgba(176,120,64,0.12); color:#B07840; border:1px solid rgba(176,120,64,0.4); }
+.type-Tuneup { background:rgba(127,168,107,0.12); color:#7FA86B; border:1px solid rgba(127,168,107,0.4); }
+.event-meta { display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap; }
+.event-meta-item { font-size: 14px; color: #6F745C; display: flex; align-items: center; gap: 5px; }
+.event-meta-item strong { color: #F6F4F1; font-family: 'Cinzel', Georgia, serif; letter-spacing: 0.04em; font-weight: 500; }
+.capacity-bar { height: 4px; background: rgba(111,116,92,0.15); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+.capacity-fill { height: 100%; background: linear-gradient(90deg, #6F745C, #C8A96E); transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+.capacity-fill.full { background: linear-gradient(90deg, #B07840, #A04030); }
+
+.fab { position: fixed; bottom: 92px; right: 20px; width: 52px; height: 52px; background: rgba(200,169,110,0.12); border: 1px solid #C8A96E; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #C8A96E; cursor: pointer; transition: background 0.2s, transform 0.2s, box-shadow 0.2s; z-index: 99; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+.fab:hover { background: rgba(200,169,110,0.22); transform: scale(1.06); box-shadow: 0 6px 28px rgba(200,169,110,0.15); }
+
+.back-btn { display:inline-flex; align-items:center; gap:7px; font-family:'Cinzel',Georgia,serif; font-size:14px; letter-spacing:0.12em; color:#6F745C; cursor:pointer; margin-bottom:20px; padding:6px 0; border:none; background:transparent; transition:color 0.2s; text-transform:uppercase; }
+.back-btn:hover { color:#C8A96E; }
+
+.detail-head { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(111,116,92,0.3); }
+.detail-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.detail-title { font-family: Cinzel, Georgia, serif; font-size: 22px; color: #F6F4F1; margin-bottom: 4px; }
+.detail-meta { font-size: 14px; color: #6F745C; }
+.detail-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.info-blk { background: rgba(111,116,92,0.05); border: 1px solid rgba(111,116,92,0.2); border-radius: 5px; padding: 12px 14px; }
+.info-lbl { font-family:'Cinzel',Georgia,serif; font-size:14px; letter-spacing:0.18em; color:#6F745C; text-transform:uppercase; margin-bottom:5px; }
+.info-val { font-size: 15px; color: #F6F4F1; }
+
+.attendee-section { margin-top: 20px; }
+.attendee-section-title { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.18em; color: #C8A96E; text-transform: uppercase; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+.attendee-section-title .count { color: #6F745C; font-size: 14px; }
+
+.attendee-card { background: rgba(111,116,92,0.08); border: 1px solid rgba(111,116,92,0.3); border-radius: 5px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.attendee-info { flex: 1; min-width: 150px; }
+.attendee-name { font-family: 'Cinzel', Georgia, serif; font-size: 15px; color: #F6F4F1; }
+.attendee-dogs { font-size: 14px; color: #6F745C; font-style: italic; margin-top: 2px; }
+.attendee-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.status-btn { font-family: 'Cinzel', Georgia, serif; font-size: 14px; letter-spacing: 0.08em; padding: 5px 10px; border: 1px solid rgba(111,116,92,0.35); border-radius: 3px; cursor: pointer; transition: all 0.2s; background: transparent; color: #6F745C; text-transform: uppercase; }
+.status-btn.active.Attending { border-color: #C8A96E; background: rgba(200,169,110,0.1); color: #C8A96E; }
+.status-btn.active.Waitlisted { border-color: #B07840; background: rgba(176,120,64,0.1); color: #B07840; }
+.status-btn.active.CheckedIn { border-color: #7FA86B; background: rgba(127,168,107,0.1); color: #7FA86B; }
+.status-btn:hover { border-color: #C8A96E; }
+.btn-unpair-attendee { background: transparent; border: none; color: #6F745C; cursor: pointer; font-size: 16px; padding: 4px 6px; line-height: 1; transition: color 0.2s; }
+.btn-unpair-attendee:hover { color: #A06050; }
+
+.overlay { position:fixed; inset:0; background:rgba(14,14,10,0.88); z-index:200; display:flex; align-items:flex-end; justify-content:center; padding:0; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+.overlay.open { opacity:1; pointer-events:all; }
+.modal { background:#1E1E1E; border:1px solid rgba(200,169,110,0.3); border-radius:14px 14px 0 0; width:100%; max-width:680px; max-height:92vh; overflow-y:auto; transform:translateY(100%); transition:transform 0.38s cubic-bezier(0.4,0,0.2,1); box-shadow:0 -12px 60px rgba(0,0,0,0.6); }
+.overlay.open .modal { transform:translateY(0); }
+.modal-hdr { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid rgba(111,116,92,0.3); position:sticky; top:0; background:#1E1E1E; z-index:1; }
+.modal-handle { width:36px; height:4px; background:rgba(111,116,92,0.4); border-radius:2px; position:absolute; top:10px; left:50%; transform:translateX(-50%); }
+.modal-title { font-family:'Cinzel',Georgia,serif; font-size:14px; color:#C8A96E; letter-spacing:0.1em; }
+.modal-body { padding:20px; padding-bottom:32px; }
+
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-family:'Cinzel',Georgia,serif; font-size:14px; letter-spacing:0.18em; color:#6F745C; text-transform:uppercase; }
+.form-input, .form-select, .form-textarea { background:rgba(111,116,92,0.08); border:1px solid rgba(111,116,92,0.3); border-radius:4px; padding:9px 12px; font-family:'Raleway',Georgia,sans-serif; font-size:14px; color:#F6F4F1; outline:none; transition:border-color 0.2s; width:100%; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color:#C8A96E; }
+.form-textarea { resize:vertical; min-height:75px; }
+.form-select option { background:#1E1E1E; }
+
+.btn { font-family:'Cinzel',Georgia,serif; font-size:14px; letter-spacing:0.1em; padding:9px 17px; border:1px solid rgba(111,116,92,0.35); border-radius:4px; cursor:pointer; transition:all 0.2s; background:transparent; color:#F6F4F1; display:inline-flex; align-items:center; gap:7px; }
+.btn:hover { border-color:#C8A96E; color:#C8A96E; }
+.btn-primary { background:rgba(200,169,110,0.1); border-color:rgba(200,169,110,0.5); color:#C8A96E; }
+.btn-primary:hover { background:rgba(200,169,110,0.2); border-color:#C8A96E; }
+.btn-danger { border-color:rgba(200,100,80,0.25); color:#A06050; }
+.btn-danger:hover { background:rgba(200,100,80,0.08); }
+.btn-sm { padding:6px 13px; font-size:14px; }
+.btn-icon { padding:7px; border:none; background:transparent; color:#6F745C; cursor:pointer; border-radius:4px; transition:color 0.2s; font-size:15px; line-height:1; }
+.btn-icon:hover { color:#C8A96E; }
+
+.check-list { max-height: 300px; overflow-y: auto; background: rgba(111,116,92,0.05); border: 1px solid rgba(111,116,92,0.25); border-radius: 5px; padding: 8px; }
+.check-item { padding: 9px 10px; border-radius: 4px; cursor: pointer; transition: background 0.15s; display: flex; flex-direction: column; }
+.check-item:hover { background: rgba(200,169,110,0.05); }
+.check-row { display: flex; align-items: center; gap: 10px; }
+.check-box { width: 18px; height: 18px; border: 1px solid rgba(111,116,92,0.5); border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 13px; }
+.check-box.on { background: rgba(200,169,110,0.2); border-color: #C8A96E; color: #C8A96E; }
+.check-label { flex: 1; font-size: 14px; color: #F6F4F1; }
+.check-sub { font-size: 14px; color: #6F745C; font-style: italic; }
+.dog-selector { margin-top: 8px; padding-left: 28px; }
+.dog-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; background: rgba(111,116,92,0.1); border: 1px solid rgba(111,116,92,0.3); border-radius: 3px; font-size: 14px; color: #6F745C; margin: 3px 4px 3px 0; cursor: pointer; transition: all 0.15s; }
+.dog-chip.on { background: rgba(200,169,110,0.12); border-color: #C8A96E; color: #C8A96E; }
+.dog-chip:hover { border-color: #C8A96E; }
+
+.empty { text-align:center; padding:44px 20px; color:#6F745C; }
+.empty-icon { font-size:32px; margin-bottom:12px; opacity:0.3; }
+.empty-title { font-family:'Cinzel',Georgia,serif; font-size:14px; color:#6F745C; margin-bottom:5px; }
+.empty-sub { font-size:14px; }
+
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(30px); background:#1E1E1E; border:1px solid rgba(200,169,110,0.4); border-radius:5px; padding:10px 20px; font-family:'Cinzel',Georgia,serif; font-size:14px; color:#C8A96E; z-index:999; opacity:0; transition:transform 0.3s ease,opacity 0.3s; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+.boot-screen { position:fixed; inset:0; background:#1E1E1E; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999; font-family:'Cinzel',Georgia,serif; color:#C8A96E; font-size:14px; letter-spacing:0.18em; text-transform:uppercase; }
+.boot-spinner { width:28px; height:28px; border:2px solid rgba(200,169,110,0.2); border-top-color:#C8A96E; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:18px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+@media(max-width:480px){
+  .form-grid { grid-template-columns:1fr; }
+  .info-grid { grid-template-columns:1fr; }
+  .stat-row { grid-template-columns:1fr 1fr; }
+  .banner-title { font-size:16px; }
+}
+</style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<div class="boot-screen" id="boot-screen">
+  <div class="boot-spinner"></div>
+  <div id="boot-msg">Loading</div>
+</div>
+
+<div class="banner" id="app-banner" style="display:none">
+  <div class="banner-left"></div>
+  <div class="banner-center">
+    <div class="banner-title">Steady Hand</div>
+    <div class="banner-rule"></div>
+    <div class="banner-sub">Community</div>
+  </div>
+  <div class="banner-right">
+    <button class="gear-btn" onclick="openDrawer()">&#9881;<span class="sync-dot" id="sync-dot"></span></button>
+  </div>
+</div>
+
+<main id="app-main" style="display:none">
+
+  <div class="view active" id="view-events">
+    <div class="stat-row">
+      <div class="stat-tile"><div class="stat-label">Upcoming</div><div class="stat-val" id="s-upcoming">0</div><div class="stat-sub">on the calendar</div></div>
+      <div class="stat-tile"><div class="stat-label">Past</div><div class="stat-val" id="s-past">0</div><div class="stat-sub">completed</div></div>
+      <div class="stat-tile"><div class="stat-label">Attending</div><div class="stat-val" id="s-attending">0</div><div class="stat-sub">total RSVPs</div></div>
+    </div>
+
+    <div class="filter-row">
+      <button class="filter-chip active" onclick="setFilter('all', this)">All</button>
+      <button class="filter-chip" onclick="setFilter('Workshop', this)">Workshops</button>
+      <button class="filter-chip" onclick="setFilter('Group Class', this)">Group Class</button>
+      <button class="filter-chip" onclick="setFilter('Fam Event', this)">Fam Events</button>
+      <button class="filter-chip" onclick="setFilter('Tune-up', this)">Tune-ups</button>
+    </div>
+
+    <div id="events-wrap"></div>
+  </div>
+
+  <div class="view" id="view-detail">
+    <button class="back-btn" onclick="backToEvents()">&#8592; &nbsp;Events</button>
+    <div id="detail-content"></div>
+  </div>
+
+</main>
+
+<div class="tab-bar" id="tab-bar" style="display:none">
+  <button class="tab-btn active" id="tb-events" onclick="showView('events')"><span class="tab-icon">&#9670;</span><span class="tab-label">Events</span></button>
+  <button class="tab-btn" onclick="goToArc()"><span class="tab-icon">&#9651;</span><span class="tab-label">Arc Tracker</span></button>
+  <button class="tab-btn" onclick="goToDog()"><span class="tab-icon">&#9679;</span><span class="tab-label">Dog Log</span></button>
+  <button class="tab-btn" onclick="goToHub()"><span class="tab-icon">&#9632;</span><span class="tab-label">Hub</span></button>
+</div>
+
+<div class="fab" id="fab" onclick="openEvent(null)" style="display:none">+</div>
+
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()">
+  <div class="drawer" onclick="event.stopPropagation()">
+    <div class="drawer-hdr"><div class="drawer-title">Settings</div><button class="btn-icon" onclick="closeDrawer()">&times;</button></div>
+    <div class="drawer-body">
+      <div class="drawer-section-title">Signed In</div>
+      <div class="user-line">Trainer<strong id="user-email">&mdash;</strong></div>
+
+      <div class="drawer-section-title">Data</div>
+      <button class="drawer-btn" onclick="manualPull()"><span class="drawer-btn-icon">&#8634;</span> Pull from Cloud</button>
+      <button class="drawer-btn" onclick="exportData()"><span class="drawer-btn-icon">&#8595;</span> Export Backup</button>
+      <button class="drawer-btn" onclick="doSignOut()"><span class="drawer-btn-icon">&#8594;</span> Sign Out</button>
+
+      <div class="drawer-section-title">Storage</div>
+      <div class="storage-info">
+        Source of truth: <strong>Supabase</strong>.<br>
+        <span style="color:#6F745C">Shared with Arc Tracker &amp; Dog Log</span>
+        <div class="sync-line"><span class="sync-mini-dot" id="sync-mini"></span><span id="sync-txt">Checking&hellip;</span></div>
+      </div>
+
+      <div class="drawer-section-title">About</div>
+      <div class="storage-info"><strong>Steady Hand</strong><br>Community<br><span style="color:#6F745C;font-size:14px">Workshops &middot; Group Class &middot; Fam &middot; Tune-ups</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="overlay" id="event-modal"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr"><div class="modal-title" id="event-modal-title">NEW EVENT</div><button class="btn-icon" onclick="closeEventModal()">&times;</button></div>
+  <div class="modal-body">
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">Title</label><input class="form-input" id="e-title" placeholder="e.g. October Leash Handling Workshop"></div>
+      <div class="form-group"><label class="form-label">Type</label>
+        <select class="form-select" id="e-type"><option>Workshop</option><option>Group Class</option><option>Fam Event</option><option>Tune-up</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="e-date" type="date"></div>
+      <div class="form-group"><label class="form-label">Start Time</label><input class="form-input" id="e-start" type="time"></div>
+      <div class="form-group"><label class="form-label">End Time</label><input class="form-input" id="e-end" type="time"></div>
+      <div class="form-group full"><label class="form-label">Location</label><input class="form-input" id="e-location" placeholder="Address or venue name"></div>
+      <div class="form-group"><label class="form-label">Capacity</label><input class="form-input" id="e-cap" type="number" min="1" placeholder="Max attendees"></div>
+      <div class="form-group"><label class="form-label">Price ($)</label><input class="form-input" id="e-price" type="number" min="0" step="5" placeholder="0"></div>
+      <div class="form-group full"><label class="form-label">Description / Notes</label><textarea class="form-textarea" id="e-notes" placeholder="What they will work on, what to bring..."></textarea></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(111,116,92,0.25)">
+      <button class="btn btn-danger btn-sm" id="btn-del-event" onclick="deleteEvent()" style="display:none">Delete</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn btn-sm" onclick="closeEventModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEvent()">Save</button>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ADD ATTENDEES MODAL -->
+<div class="overlay" id="attendee-modal"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr"><div class="modal-title">ADD ATTENDEES</div><button class="btn-icon" onclick="closeAttendeeModal()">&times;</button></div>
+  <div class="modal-body">
+    <div style="font-size:14px;color:#6F745C;margin-bottom:12px;line-height:1.6">
+      Tap a handler to add them. If their dogs appear below, tap the ones attending.
+    </div>
+    <div class="check-list" id="handler-check-list"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(111,116,92,0.25)">
+      <button class="btn btn-sm" onclick="closeAttendeeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddAttendees()">Add Selected</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   SUPABASE - shared blob with Arc Tracker + Dog Log
+   ═══════════════════════════════════════════════════════════════════════ */
+var SUPABASE_URL = 'https://sltdnnspznasywppyred.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
+var APP_KEY = 'arc_tracker';
+
+var sb = null;
+if (window.supabase && window.supabase.createClient) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage }
+  });
+}
+
+var trainerId = null;
+var trainerEmail = null;
+var _pushTimer = null;
+var _pushInFlight = false;
+
+function setSync(state, note) {
+  var dot = document.getElementById('sync-dot');
+  var mini = document.getElementById('sync-mini');
+  var txt = document.getElementById('sync-txt');
+  if (dot) { dot.classList.remove('ok','saving','err'); if (state) dot.classList.add(state); }
+  if (mini) { mini.classList.remove('ok','saving','err'); if (state) mini.classList.add(state); }
+  if (txt) {
+    if (state === 'ok') txt.textContent = 'Synced ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    else if (state === 'saving') txt.textContent = 'Saving...';
+    else if (state === 'err') txt.textContent = 'Offline - cached locally' + (note ? ' (' + note + ')' : '');
+    else txt.textContent = 'Checking...';
+  }
+}
+
+async function pullFromCloud() {
+  if (!sb || !trainerId) return null;
+  try {
+    var res = await sb.from('app_state').select('data').eq('app_key', APP_KEY).maybeSingle();
+    if (res.error) { console.warn('pullFromCloud error', res.error); return null; }
+    return (res.data && res.data.data) ? res.data.data : null;
+  } catch(e) { console.warn('pullFromCloud exception', e); return null; }
+}
+
+async function pushToCloud() {
+  if (!sb || !trainerId) return;
+  if (_pushInFlight) { schedulePush(); return; }
+  _pushInFlight = true;
+  setSync('saving');
+  try {
+    var res = await sb.from('app_state').upsert({
+      trainer_id: trainerId,
+      app_key: APP_KEY,
+      data: DB
+    }, { onConflict: 'trainer_id,app_key' });
+    _pushInFlight = false;
+    if (res.error) { setSync('err', res.error.message); console.warn('push error', res.error); return; }
+    setSync('ok');
+  } catch(e) { _pushInFlight = false; setSync('err', e.message); console.warn('push exception', e); }
+}
+
+function schedulePush() {
+  if (_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushToCloud, 400);
+}
+
+function saveDB() {
+  try { localStorage.setItem('shdt-unified', JSON.stringify(DB)); } catch(e){}
+  schedulePush();
+}
+
+async function manualPull() {
+  closeDrawer();
+  var cloud = await pullFromCloud();
+  if (cloud) {
+    DB = normalizeDB(cloud);
+    try { localStorage.setItem('shdt-unified', JSON.stringify(DB)); } catch(e){}
+    renderAll();
+    toast('Pulled from cloud');
+    setSync('ok');
+  } else {
+    toast('Cloud is empty');
+  }
+}
+
+async function doSignOut() {
+  if (!sb) return;
+  if (!confirm('Sign out? Your data stays in the cloud.')) return;
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+function goToHub() { window.location.href = 'index.html'; }
+function goToArc() { window.location.href = 'arc-tracker.html'; }
+function goToDog() { window.location.href = 'dog-tracker.html'; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════════════════════════════════════ */
+var DB = { handlers: [], dogs: [], pairings: [], events: [] };
+var editEventId = null;
+var detailEventId = null;
+var activeFilter = 'all';
+var addSelections = {}; // { handlerId: { selected: true, dogs: [dogId, ...] } }
+
+function uid() { return Date.now().toString() + Math.floor(Math.random()*1000); }
+
+function normalizeDB(d) {
+  if (!d || typeof d !== 'object') d = {};
+  if (!Array.isArray(d.handlers)) d.handlers = [];
+  if (!Array.isArray(d.dogs))     d.dogs = [];
+  if (!Array.isArray(d.pairings)) d.pairings = [];
+  if (!Array.isArray(d.events))   d.events = [];
+  d.events.forEach(function(ev){ if (!Array.isArray(ev.attendees)) ev.attendees = []; });
+  return d;
+}
+
+async function loadDB() {
+  var cloud = await pullFromCloud();
+  if (cloud) {
+    DB = normalizeDB(cloud);
+    try { localStorage.setItem('shdt-unified', JSON.stringify(DB)); } catch(e){}
+  } else {
+    try {
+      var raw = localStorage.getItem('shdt-unified');
+      if (raw) DB = normalizeDB(JSON.parse(raw));
+    } catch(e){}
+  }
+  renderAll();
+  setSync('ok');
+}
+
+function handlerById(id) { return DB.handlers.find(function(h){return h.id===id;}); }
+function dogById(id) { return DB.dogs.find(function(d){return d.id===id;}); }
+function eventById(id) { return DB.events.find(function(e){return e.id===id;}); }
+function pairingsForHandler(hid) { return DB.pairings.filter(function(p){return p.handlerId===hid;}); }
+function dogsForHandler(hid) { return pairingsForHandler(hid).map(function(p){return dogById(p.dogId);}).filter(Boolean); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   VIEWS + RENDER
+   ═══════════════════════════════════════════════════════════════════════ */
+function showView(name) {
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  var v = document.getElementById('view-'+name); if (v) v.classList.add('active');
+  var b = document.getElementById('tb-'+name); if (b) b.classList.add('active');
+  document.getElementById('fab').style.display = (name === 'events') ? 'flex' : 'none';
+  if (name === 'events') renderEvents();
+}
+
+function backToEvents() {
+  detailEventId = null;
+  showView('events');
+  document.getElementById('tb-events').classList.add('active');
+}
+
+function setFilter(v, btn) {
+  activeFilter = v;
+  document.querySelectorAll('.filter-chip').forEach(function(c){c.classList.remove('active');});
+  btn.classList.add('active');
+  renderEvents();
+}
+
+function renderAll() { renderEvents(); if (detailEventId) renderDetail(detailEventId); }
+
+function renderEvents() {
+  var today = new Date().toISOString().split('T')[0];
+  var upcoming = [], past = [];
+  var allEvents = DB.events.slice();
+  if (activeFilter !== 'all') allEvents = allEvents.filter(function(e){return e.type === activeFilter;});
+  allEvents.forEach(function(e){
+    if ((e.date || '') >= today) upcoming.push(e); else past.push(e);
+  });
+  upcoming.sort(function(a,b){return (a.date||'').localeCompare(b.date||'');});
+  past.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+
+  var allUpcoming = DB.events.filter(function(e){return (e.date||'') >= today;});
+  var allPast = DB.events.filter(function(e){return (e.date||'') < today;});
+  var totalAttending = 0;
+  allUpcoming.forEach(function(e){ (e.attendees||[]).forEach(function(a){ if (a.status === 'Attending') totalAttending++; }); });
+  document.getElementById('s-upcoming').textContent = allUpcoming.length;
+  document.getElementById('s-past').textContent = allPast.length;
+  document.getElementById('s-attending').textContent = totalAttending;
+
+  var wrap = document.getElementById('events-wrap');
+  if (!allEvents.length) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">&#9670;</div><div class="empty-title">No events yet</div><div class="empty-sub">Tap + to create one</div></div>';
+    return;
+  }
+  var html = '';
+  if (upcoming.length) {
+    html += '<div class="event-section"><div class="section-title">Upcoming</div>';
+    html += upcoming.map(function(e){return eventCardHTML(e, false);}).join('');
+    html += '</div>';
+  }
+  if (past.length) {
+    html += '<div class="event-section"><div class="section-title">Past</div>';
+    html += past.map(function(e){return eventCardHTML(e, true);}).join('');
+    html += '</div>';
+  }
+  wrap.innerHTML = html;
+}
+
+function typeClassFor(t) {
+  return 'type-' + String(t || '').replace(/[-\s]/g, '');
+}
+
+function eventCardHTML(ev, isPast) {
+  var attending = (ev.attendees||[]).filter(function(a){return a.status === 'Attending' || a.status === 'CheckedIn';}).length;
+  var waitlist = (ev.attendees||[]).filter(function(a){return a.status === 'Waitlisted';}).length;
+  var capacity = parseInt(ev.capacity) || 0;
+  var pct = capacity ? Math.min(100, (attending / capacity) * 100) : 0;
+  var full = capacity && attending >= capacity;
+  var dateStr = ev.date ? fmtDate(ev.date) : 'No date';
+  var timeStr = (ev.startTime ? ev.startTime : '') + (ev.endTime ? ' - ' + ev.endTime : '');
+
+  var s = '<div class="event-card' + (isPast ? ' past' : '') + '" onclick="showDetail(\'' + ev.id + '\')">';
+  s += '<div class="event-head">';
+  s += '<div class="event-title-wrap"><div class="event-title">' + esc(ev.title || 'Untitled') + '</div></div>';
+  s += '<div class="event-type ' + typeClassFor(ev.type) + '">' + esc(ev.type || '') + '</div>';
+  s += '</div>';
+  s += '<div class="event-meta">';
+  s += '<div class="event-meta-item"><strong>' + esc(dateStr) + '</strong>' + (timeStr ? ' &middot; ' + esc(timeStr) : '') + '</div>';
+  if (ev.location) s += '<div class="event-meta-item">' + esc(ev.location) + '</div>';
+  s += '</div>';
+  s += '<div class="event-meta" style="margin-top:6px">';
+  s += '<div class="event-meta-item"><strong>' + attending + (capacity ? '/' + capacity : '') + '</strong> attending</div>';
+  if (waitlist) s += '<div class="event-meta-item"><strong>' + waitlist + '</strong> waitlisted</div>';
+  if (ev.price) s += '<div class="event-meta-item"><strong>$' + esc(ev.price) + '</strong></div>';
+  s += '</div>';
+  if (capacity) s += '<div class="capacity-bar"><div class="capacity-fill' + (full ? ' full' : '') + '" style="width:' + pct + '%"></div></div>';
+  s += '</div>';
+  return s;
+}
+
+function fmtDate(iso) {
+  try {
+    var d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  } catch(e) { return iso; }
+}
+
+function showDetail(id) {
+  detailEventId = id;
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+  document.getElementById('view-detail').classList.add('active');
+  document.getElementById('fab').style.display = 'none';
+  renderDetail(id);
+  window.scrollTo(0,0);
+}
+
+function renderDetail(id) {
+  var ev = eventById(id); if (!ev) { backToEvents(); return; }
+  var el = document.getElementById('detail-content');
+  var attendees = ev.attendees || [];
+  var attending = attendees.filter(function(a){return a.status==='Attending';});
+  var waitlisted = attendees.filter(function(a){return a.status==='Waitlisted';});
+  var checkedIn = attendees.filter(function(a){return a.status==='CheckedIn';});
+  var capacity = parseInt(ev.capacity) || 0;
+
+  var html = '';
+  html += '<div class="detail-head">';
+  html += '<div class="detail-top">';
+  html += '<div style="flex:1;min-width:200px"><div class="detail-title">' + esc(ev.title || 'Untitled') + '</div>';
+  html += '<div class="detail-meta">' + esc(fmtDate(ev.date || '')) + (ev.startTime ? ' &middot; ' + esc(ev.startTime) : '') + (ev.endTime ? ' - ' + esc(ev.endTime) : '') + '</div></div>';
+  html += '<div class="detail-actions">';
+  html += '<span class="event-type ' + typeClassFor(ev.type) + '" style="align-self:flex-start">' + esc(ev.type || '') + '</span>';
+  html += '<button class="btn btn-sm" onclick="openEvent(\'' + id + '\')">Edit</button>';
+  html += '<button class="btn btn-primary btn-sm" onclick="openAttendeeModal(\'' + id + '\')">+ Add</button>';
+  html += '</div></div></div>';
+
+  html += '<div class="info-grid">';
+  html += infoBlk('Location', ev.location ? esc(ev.location) : '&mdash;');
+  html += infoBlk('Capacity', capacity ? (attending.length + checkedIn.length) + ' / ' + capacity : '&mdash;');
+  html += infoBlk('Price', ev.price ? '$' + esc(ev.price) : 'Free');
+  html += infoBlk('Status', (ev.date||'') >= new Date().toISOString().split('T')[0] ? 'Upcoming' : 'Past');
+  html += '</div>';
+
+  if (ev.notes) {
+    html += '<div style="margin-bottom:20px"><div style="font-family:Cinzel,Georgia,serif;font-size:14px;letter-spacing:0.18em;color:#C8A96E;text-transform:uppercase;margin-bottom:8px">Notes</div><div style="font-size:14px;color:#F6F4F1;line-height:1.75">' + esc(ev.notes) + '</div></div>';
+  }
+
+  html += attendeeSectionHTML(id, 'Attending', attending);
+  if (checkedIn.length) html += attendeeSectionHTML(id, 'Checked In', checkedIn);
+  html += attendeeSectionHTML(id, 'Waitlisted', waitlisted);
+
+  if (!attendees.length) {
+    html += '<div class="empty" style="padding-top:20px"><div class="empty-title">No attendees yet</div><div class="empty-sub">Tap + Add to invite handlers</div></div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function attendeeSectionHTML(eventId, label, list) {
+  if (!list.length && label === 'Waitlisted') return '';
+  var s = '<div class="attendee-section">';
+  s += '<div class="attendee-section-title"><span>' + label + '</span><span class="count">' + list.length + '</span></div>';
+  if (!list.length) {
+    s += '<div style="font-size:14px;color:#6F745C;font-style:italic;padding:6px 0">None</div>';
+  } else {
+    list.forEach(function(a){
+      var h = handlerById(a.handlerId); if (!h) return;
+      var dogNames = (a.dogIds || []).map(function(did){var d = dogById(did); return d ? d.name : '';}).filter(Boolean).join(', ');
+      s += '<div class="attendee-card">';
+      s += '<div class="attendee-info">';
+      s += '<div class="attendee-name">' + esc(h.name || '') + '</div>';
+      if (dogNames) s += '<div class="attendee-dogs">with ' + esc(dogNames) + '</div>';
+      s += '</div>';
+      s += '<div class="attendee-actions">';
+      s += statusBtn(eventId, a.handlerId, 'Attending', a.status);
+      s += statusBtn(eventId, a.handlerId, 'Waitlisted', a.status);
+      s += statusBtn(eventId, a.handlerId, 'CheckedIn', a.status, 'Checked In');
+      s += '<button class="btn-unpair-attendee" onclick="removeAttendee(\'' + eventId + '\',\'' + a.handlerId + '\')" title="Remove">&times;</button>';
+      s += '</div></div>';
+    });
+  }
+  s += '</div>';
+  return s;
+}
+
+function statusBtn(eventId, handlerId, target, current, displayLabel) {
+  var active = current === target ? ' active ' + target : '';
+  var lbl = displayLabel || target;
+  return '<button class="status-btn' + active + '" onclick="setAttendeeStatus(\'' + eventId + '\',\'' + handlerId + '\',\'' + target + '\')">' + lbl + '</button>';
+}
+
+function infoBlk(lbl, val) {
+  return '<div class="info-blk"><div class="info-lbl">' + lbl + '</div><div class="info-val">' + val + '</div></div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EVENT CRUD
+   ═══════════════════════════════════════════════════════════════════════ */
+function openEvent(id) {
+  editEventId = id || null;
+  var ev = id ? eventById(id) : null;
+  document.getElementById('event-modal-title').textContent = ev ? 'EDIT EVENT' : 'NEW EVENT';
+  document.getElementById('btn-del-event').style.display = ev ? 'inline-flex' : 'none';
+  document.getElementById('e-title').value = ev ? (ev.title||'') : '';
+  document.getElementById('e-type').value = ev ? (ev.type||'Workshop') : 'Workshop';
+  document.getElementById('e-date').value = ev ? (ev.date||'') : '';
+  document.getElementById('e-start').value = ev ? (ev.startTime||'') : '';
+  document.getElementById('e-end').value = ev ? (ev.endTime||'') : '';
+  document.getElementById('e-location').value = ev ? (ev.location||'') : '';
+  document.getElementById('e-cap').value = ev ? (ev.capacity||'') : '';
+  document.getElementById('e-price').value = ev ? (ev.price||'') : '';
+  document.getElementById('e-notes').value = ev ? (ev.notes||'') : '';
+  document.getElementById('event-modal').classList.add('open');
+}
+function closeEventModal() { document.getElementById('event-modal').classList.remove('open'); editEventId = null; }
+
+function saveEvent() {
+  var title = document.getElementById('e-title').value.trim();
+  if (!title) { toast('Title required'); return; }
+  var payload = {
+    title: title,
+    type: document.getElementById('e-type').value,
+    date: document.getElementById('e-date').value,
+    startTime: document.getElementById('e-start').value,
+    endTime: document.getElementById('e-end').value,
+    location: document.getElementById('e-location').value.trim(),
+    capacity: document.getElementById('e-cap').value,
+    price: document.getElementById('e-price').value,
+    notes: document.getElementById('e-notes').value.trim()
+  };
+  if (editEventId) {
+    var ex = eventById(editEventId);
+    if (ex) { for (var k in payload) ex[k] = payload[k]; }
+    toast('Event updated');
+  } else {
+    payload.id = uid();
+    payload.attendees = [];
+    payload.created = new Date().toISOString();
+    DB.events.push(payload);
+    toast('Event created');
+  }
+  saveDB(); closeEventModal(); renderAll();
+}
+
+function deleteEvent() {
+  if (!editEventId) return;
+  var ev = eventById(editEventId);
+  if (!confirm('Delete "' + (ev ? ev.title : 'this event') + '"? This cannot be undone.')) return;
+  DB.events = DB.events.filter(function(e){return e.id !== editEventId;});
+  saveDB(); closeEventModal(); backToEvents(); toast('Event deleted');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ATTENDEES
+   ═══════════════════════════════════════════════════════════════════════ */
+function openAttendeeModal(eventId) {
+  detailEventId = eventId;
+  addSelections = {};
+  renderHandlerCheckList();
+  document.getElementById('attendee-modal').classList.add('open');
+}
+function closeAttendeeModal() { document.getElementById('attendee-modal').classList.remove('open'); addSelections = {}; }
+
+function renderHandlerCheckList() {
+  var ev = eventById(detailEventId);
+  if (!ev) return;
+  var existingIds = (ev.attendees || []).map(function(a){return a.handlerId;});
+  var list = DB.handlers.slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+  var el = document.getElementById('handler-check-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px"><div class="empty-title">No handlers yet</div><div class="empty-sub">Add handlers in Arc Tracker first</div></div>';
+    return;
+  }
+  el.innerHTML = list.map(function(h){
+    var isExisting = existingIds.indexOf(h.id) >= 0;
+    var isSelected = !!(addSelections[h.id] && addSelections[h.id].selected);
+    var dogs = dogsForHandler(h.id);
+    var sel = addSelections[h.id] || { dogs: [] };
+    var dogChips = dogs.map(function(d){
+      var on = (sel.dogs||[]).indexOf(d.id) >= 0 ? ' on' : '';
+      return '<span class="dog-chip' + on + '" onclick="event.stopPropagation();toggleDogForHandler(\'' + h.id + '\',\'' + d.id + '\')">' + esc(d.name) + '</span>';
+    }).join('');
+    var s = '<div class="check-item" onclick="toggleHandlerSelection(\'' + h.id + '\')">';
+    s += '<div class="check-row">';
+    s += '<div class="check-box' + (isSelected ? ' on' : '') + '">' + (isSelected ? '&#10003;' : '') + '</div>';
+    s += '<div class="check-label">' + esc(h.name || '') + (isExisting ? ' <span class="check-sub">(already added)</span>' : '') + '</div>';
+    s += '</div>';
+    if (dogs.length && isSelected) {
+      s += '<div class="dog-selector">' + (dogChips || '<span class="check-sub">No dogs paired</span>') + '</div>';
+    }
+    s += '</div>';
+    return s;
+  }).join('');
+}
+
+function toggleHandlerSelection(hid) {
+  if (!addSelections[hid]) addSelections[hid] = { selected: true, dogs: [] };
+  else addSelections[hid].selected = !addSelections[hid].selected;
+  renderHandlerCheckList();
+}
+
+function toggleDogForHandler(hid, did) {
+  if (!addSelections[hid]) addSelections[hid] = { selected: true, dogs: [] };
+  var dogs = addSelections[hid].dogs || [];
+  var idx = dogs.indexOf(did);
+  if (idx >= 0) dogs.splice(idx, 1);
+  else dogs.push(did);
+  addSelections[hid].dogs = dogs;
+  addSelections[hid].selected = true;
+  renderHandlerCheckList();
+}
+
+function confirmAddAttendees() {
+  var ev = eventById(detailEventId);
+  if (!ev) return;
+  if (!Array.isArray(ev.attendees)) ev.attendees = [];
+  var existingIds = ev.attendees.map(function(a){return a.handlerId;});
+  var capacity = parseInt(ev.capacity) || 0;
+  var currentAttending = ev.attendees.filter(function(a){return a.status === 'Attending' || a.status === 'CheckedIn';}).length;
+  var added = 0, waitlisted = 0, skipped = 0;
+
+  Object.keys(addSelections).forEach(function(hid){
+    var sel = addSelections[hid];
+    if (!sel.selected) return;
+    if (existingIds.indexOf(hid) >= 0) { skipped++; return; }
+    var status = 'Attending';
+    if (capacity && currentAttending + added >= capacity) { status = 'Waitlisted'; waitlisted++; }
+    else { added++; }
+    ev.attendees.push({
+      handlerId: hid,
+      dogIds: sel.dogs || [],
+      status: status,
+      addedAt: new Date().toISOString()
+    });
+  });
+
+  saveDB(); closeAttendeeModal(); renderDetail(detailEventId);
+  var msg = added + ' added';
+  if (waitlisted) msg += ', ' + waitlisted + ' waitlisted';
+  if (skipped) msg += ', ' + skipped + ' already on list';
+  toast(msg);
+}
+
+function setAttendeeStatus(eventId, handlerId, newStatus) {
+  var ev = eventById(eventId); if (!ev) return;
+  var att = (ev.attendees || []).find(function(a){return a.handlerId === handlerId;});
+  if (!att) return;
+  att.status = newStatus;
+  saveDB(); renderDetail(eventId);
+}
+
+function removeAttendee(eventId, handlerId) {
+  if (!confirm('Remove this attendee?')) return;
+  var ev = eventById(eventId); if (!ev) return;
+  ev.attendees = (ev.attendees || []).filter(function(a){return a.handlerId !== handlerId;});
+  saveDB(); renderDetail(eventId); toast('Removed');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   UTILS
+   ═══════════════════════════════════════════════════════════════════════ */
+function openDrawer() { document.getElementById('drawer-overlay').classList.add('open'); }
+function closeDrawer() { document.getElementById('drawer-overlay').classList.remove('open'); }
+
+function exportData() {
+  closeDrawer();
+  var a = document.createElement('a');
+  a.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(DB, null, 2)));
+  a.setAttribute('download', 'shdt-community-' + new Date().toISOString().split('T')[0] + '.json');
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg) { var el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(function(){el.classList.remove('show');},2800); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════════════════════ */
+async function boot() {
+  var msg = document.getElementById('boot-msg');
+  if (!sb) { msg.textContent = 'SDK failed to load'; return; }
+  try {
+    var res = await sb.auth.getSession();
+    if (!res.data || !res.data.session) {
+      window.location.href = 'index.html';
+      return;
+    }
+    trainerId = res.data.session.user.id;
+    trainerEmail = res.data.session.user.email;
+    var emailEl = document.getElementById('user-email');
+    if (emailEl) emailEl.textContent = trainerEmail;
+
+    msg.textContent = 'Loading events...';
+    await loadDB();
+
+    document.getElementById('app-banner').style.display = 'flex';
+    document.getElementById('app-main').style.display = 'block';
+    document.getElementById('tab-bar').style.display = 'flex';
+    document.getElementById('fab').style.display = 'flex';
+    document.getElementById('boot-screen').style.display = 'none';
+  } catch(e) {
+    msg.textContent = 'Error: ' + e.message;
+    console.error('boot error', e);
+  }
+}
+
+boot();
+</script>
+
+</body>
+</html>
