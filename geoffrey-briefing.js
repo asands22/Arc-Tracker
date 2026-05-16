@@ -62,6 +62,12 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
         opacity: 0.55;
       }
 
+      .geoffrey-alerts-scroll {
+        max-height: 52vh;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
       .geoffrey-alert-card {
         border-top: 1px solid rgba(200,169,110,0.18);
         padding: 14px 0;
@@ -69,6 +75,21 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
 
       .geoffrey-alert-card:first-child {
         border-top: none;
+      }
+
+      .geoffrey-alert-card.is-collapsed .geoffrey-alert-body,
+      .geoffrey-alert-card.is-collapsed .geoffrey-alert-action,
+      .geoffrey-alert-card.is-collapsed .geoffrey-alert-line,
+      .geoffrey-alert-card.is-collapsed .geoffrey-alert-actions {
+        display: none;
+      }
+
+      .geoffrey-alert-card.is-collapsed {
+        padding: 10px 0;
+      }
+
+      .geoffrey-alert-card.is-collapsed .geoffrey-alert-title {
+        margin-bottom: 3px;
       }
 
       .geoffrey-alert-meta {
@@ -132,13 +153,18 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
         margin-top: 10px;
       }
 
-      .geoffrey-alert-actions button {
+      .geoffrey-alert-actions button,
+      .geoffrey-alert-toggle {
         background: transparent;
         border: 1px solid rgba(200,169,110,0.3);
         color: #C8A96E;
         border-radius: 6px;
         padding: 6px 9px;
         font-size: 12px;
+      }
+
+      .geoffrey-alert-toggle {
+        margin: 4px 0 10px;
       }
 
       .geoffrey-empty {
@@ -152,6 +178,30 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
         color: #E0A0A0;
         font-size: 14px;
         line-height: 1.5;
+      }
+
+      .geoffrey-chat-collapse {
+        margin: 12px auto 10px;
+        max-width: 760px;
+        width: calc(100% - 28px);
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .geoffrey-chat-collapse button {
+        background: transparent;
+        border: 1px solid rgba(200,169,110,0.35);
+        color: #C8A96E;
+        border-radius: 7px;
+        padding: 7px 10px;
+        font-family: Georgia, serif;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      #messages.geoffrey-history-collapsed {
+        display: none;
       }
     `;
 
@@ -239,6 +289,33 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
     }
   }
 
+  function setupGeoffreyChatCollapse() {
+    var messages = document.getElementById('messages');
+    if (!messages) return;
+
+    if (document.getElementById('geoffrey-chat-collapse')) return;
+
+    var wrap = document.createElement('div');
+    wrap.id = 'geoffrey-chat-collapse';
+    wrap.className = 'geoffrey-chat-collapse';
+
+    wrap.innerHTML = `
+      <button type="button" id="geoffrey-chat-toggle">
+        Show Chat History
+      </button>
+    `;
+
+    messages.parentNode.insertBefore(wrap, messages);
+    messages.classList.add('geoffrey-history-collapsed');
+
+    var btn = document.getElementById('geoffrey-chat-toggle');
+
+    btn.addEventListener('click', function () {
+      var isCollapsed = messages.classList.toggle('geoffrey-history-collapsed');
+      btn.textContent = isCollapsed ? 'Show Chat History' : 'Hide Chat History';
+    });
+  }
+
   async function loadGeoffreyAlerts() {
     var sb = await getClient();
 
@@ -284,9 +361,14 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
     title.textContent =
       alerts.length + ' item' + (alerts.length === 1 ? '' : 's') + ' require attention.';
 
-    list.innerHTML = alerts.map(function (a) {
+    list.classList.add('geoffrey-alerts-scroll');
+
+    list.innerHTML = alerts.map(function (a, index) {
+      var collapsedClass = index === 0 ? '' : ' is-collapsed';
+      var toggleText = index === 0 ? 'Collapse' : 'Details';
+
       return `
-        <article class="geoffrey-alert-card">
+        <article class="geoffrey-alert-card${collapsedClass}">
           <div class="geoffrey-alert-meta">
             <span class="geoffrey-pill">${esc(a.severity)}</span>
             <span class="geoffrey-pill">${esc(a.alert_type)}</span>
@@ -298,6 +380,10 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
             ${esc(a.handler_name || 'Unknown handler')}
             ${a.dog_name ? ' / ' + esc(a.dog_name) : ''}
           </div>
+
+          <button type="button" class="geoffrey-alert-toggle">
+            ${toggleText}
+          </button>
 
           <div class="geoffrey-alert-body">
             ${esc(a.why_it_matters || a.summary || '')}
@@ -324,6 +410,16 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
         </article>
       `;
     }).join('');
+
+    list.querySelectorAll('.geoffrey-alert-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var card = button.closest('.geoffrey-alert-card');
+        if (!card) return;
+
+        card.classList.toggle('is-collapsed');
+        button.textContent = card.classList.contains('is-collapsed') ? 'Details' : 'Collapse';
+      });
+    });
 
     list.querySelectorAll('button[data-geoffrey-action]').forEach(function (button) {
       button.addEventListener('click', async function () {
@@ -357,54 +453,4 @@ var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
     var title = document.getElementById('geoffrey-briefing-title');
     var list = document.getElementById('geoffrey-alerts-list');
 
-    try {
-      if (title) title.textContent = 'Reviewing the house...';
-
-      var alerts = await loadGeoffreyAlerts();
-      renderGeoffreyAlerts(alerts);
-    } catch (error) {
-      if (title) title.textContent = 'Geoffrey could not review the house.';
-      if (list) {
-        list.innerHTML = '<div class="geoffrey-error">' + esc(error.message || error) + '</div>';
-      }
-    }
-  }
-
-  async function manualRefreshGeoffrey() {
-    var btn = document.getElementById('geoffrey-refresh-btn');
-
-    try {
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Reviewing';
-      }
-
-      await refreshGeoffreyAlerts();
-      await loadAndRenderGeoffreyBriefing();
-    } catch (error) {
-      var list = document.getElementById('geoffrey-alerts-list');
-      if (list) {
-        list.innerHTML = '<div class="geoffrey-error">' + esc(error.message || error) + '</div>';
-      }
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Refresh';
-      }
-    }
-  }
-
-  async function startGeoffreyBriefing() {
-    injectStyles();
-    createBriefingShell();
-    await loadAndRenderGeoffreyBriefing();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startGeoffreyBriefing);
-  } else {
-    startGeoffreyBriefing();
-  }
-
-  window.manualRefreshGeoffrey = manualRefreshGeoffrey;
-})();
+    tr})();
