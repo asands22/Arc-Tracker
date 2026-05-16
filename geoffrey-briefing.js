@@ -1,6 +1,6 @@
 (function () {
-  var SUPABASE_URL = 'PASTE_YOUR_SUPABASE_URL_HERE';
-  var SUPABASE_ANON_KEY = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
+  var SUPABASE_URL = 'https://sltdnnspznasywppyred.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_5w00av0A8YlCdMh4o6_RmQ_f-cYBVc5';
 
   var supabaseClient = null;
 
